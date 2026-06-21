@@ -130,6 +130,8 @@ export interface Driver {
   name: string
   phone: string
   avatar: string
+  /** Driving license number (rider KYC). */
+  licenseNo?: string
   vehicle: string
   status: DriverStatus
   zone: string

@@ -17,3 +17,10 @@ npm-debug.log*
 
 # Env
 .env
+
+# Build outputs
+*.tsbuildinfo
+vite.config.js
+vite.config.d.ts
+
+.vercel

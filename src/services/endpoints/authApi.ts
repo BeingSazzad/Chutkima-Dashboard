@@ -1,36 +1,29 @@
 import { api, mockDelay } from '@/services/api'
 import type { LoginResponse } from '@/types/api.types'
 
+/** Demo credentials (replace with a real auth API later). */
+export const DEMO_EMAIL = 'admin@chutkima.com'
+export const DEMO_PASSWORD = 'chutkima123'
+
 export const authApi = api.injectEndpoints({
   endpoints: (build) => ({
-    /** Step 1: request an OTP for a phone number (Sparrow SMS in production). */
-    requestOtp: build.mutation<{ sent: true }, { phone: string }>({
-      async queryFn({ phone }) {
+    /** Email + password sign-in. Mock accepts the demo credentials above. */
+    login: build.mutation<LoginResponse, { email: string; password: string }>({
+      async queryFn({ email, password }) {
         await mockDelay(600)
-        if (!/^(\+?977)?9\d{9}$/.test(phone.replace(/\s/g, ''))) {
-          return { error: { status: 400, data: 'Enter a valid Nepali mobile number' } as never }
-        }
-        return { data: { sent: true } }
-      },
-    }),
-
-    /** Step 2: verify the OTP. Mock accepts demo code 123456. */
-    verifyOtp: build.mutation<LoginResponse, { phone: string; code: string }>({
-      async queryFn({ phone, code }) {
-        await mockDelay(600)
-        if (code !== '123456') {
-          return { error: { status: 401, data: 'Invalid OTP. Use 123456 in demo mode.' } as never }
+        if (email.trim().toLowerCase() !== DEMO_EMAIL || password !== DEMO_PASSWORD) {
+          return { error: { status: 401, data: 'Invalid email or password.' } as never }
         }
         return {
           data: {
             token: 'mock-jwt-token.chutkima.admin',
             user: {
               id: 'admin-1',
-              name: 'Aarav Pradhan',
-              email: 'admin@chutkima.com',
+              name: 'Kiran Chetri',
+              email: DEMO_EMAIL,
               role: 'admin',
               avatar: 'https://i.pravatar.cc/120?u=chutkima-admin',
-              phone,
+              phone: '+977 9800000001',
             },
           },
         }
@@ -39,4 +32,4 @@ export const authApi = api.injectEndpoints({
   }),
 })
 
-export const { useRequestOtpMutation, useVerifyOtpMutation } = authApi
+export const { useLoginMutation } = authApi

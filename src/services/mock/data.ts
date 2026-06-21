@@ -288,7 +288,7 @@ export const darkStores: DarkStore[] = [
 
 // ── Admin / staff users ─────────────────────────────────────────────────────
 export const admins: AdminUser[] = [
-  { id: 'a1', name: 'Aarav Pradhan', email: 'admin@chutkima.com', phone: '+977 9800000001', role: 'admin', avatar: avatar('admin'), active: true, storeId: null, lastActiveAt: minsAgo(3), createdAt: daysAgo(320) },
+  { id: 'a1', name: 'Kiran Chetri', email: 'admin@chutkima.com', phone: '+977 9800000001', role: 'admin', avatar: avatar('admin'), active: true, storeId: null, lastActiveAt: minsAgo(3), createdAt: daysAgo(320) },
   { id: 'a2', name: 'Prakash Thapa', email: 'prakash@chutkima.com', phone: '+977 9800000002', role: 'manager', avatar: avatar('a2'), active: true, storeId: 's1', lastActiveAt: minsAgo(40), createdAt: daysAgo(180) },
   { id: 'a3', name: 'Nisha Gurung', email: 'nisha@chutkima.com', phone: '+977 9800000003', role: 'dispatcher', avatar: avatar('a3'), active: true, storeId: 's1', lastActiveAt: minsAgo(12), createdAt: daysAgo(90) },
   { id: 'a4', name: 'Rojan Shrestha', email: 'rojan@chutkima.com', phone: '+977 9800000004', role: 'dispatcher', avatar: avatar('a4'), active: false, storeId: 's2', lastActiveAt: daysAgo(6), createdAt: daysAgo(60) },

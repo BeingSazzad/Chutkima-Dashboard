@@ -1,50 +1,56 @@
+import { useState } from 'react'
 import { cn } from '@/lib/utils'
-import { BRAND } from '@/lib/constants'
+
+/**
+ * Official brand assets in /public — used automatically when present:
+ *   public/logo.png       → full logo (mark + "chutkima" wordmark)
+ *   public/logo-mark.png  → just the mark (used when iconOnly)
+ * Transparent background. On dark surfaces the file is auto-whitened.
+ * If the file is missing, the inline fallback below is shown instead.
+ */
+const LOGO_SRC = '/logo.png'
+const MARK_SRC = '/logo-mark.png'
 
 interface LogoProps {
-  /** Hide the wordmark, show only the leaf mark. */
+  /** Show only the mark, no wordmark. */
   iconOnly?: boolean
   className?: string
   onDark?: boolean
 }
 
-/** Chutkima brand mark (leaf/sprout) + wordmark. */
-export function Logo({ iconOnly, className, onDark }: LogoProps) {
+/** Chutkima crossed-fingers brand mark — inline fallback when no file is present. */
+function Mark({ className }: { className?: string }) {
   return (
-    <div className={cn('flex items-center gap-2.5', className)}>
-      <div
+    <svg viewBox="0 0 40 40" className={className} fill="currentColor" aria-hidden>
+      <circle cx="10.5" cy="11" r="3.8" />
+      <rect x="15.6" y="3" width="8.4" height="31" rx="4.2" transform="rotate(-16 20 30)" />
+      <rect x="16" y="4" width="8.4" height="31" rx="4.2" transform="rotate(15 20 30)" />
+    </svg>
+  )
+}
+
+/** Chutkima logo — uses the official file from /public when present, else the inline mark. */
+export function Logo({ iconOnly, className, onDark }: LogoProps) {
+  const [hasFile, setHasFile] = useState(false)
+
+  return (
+    <div className={cn('flex items-center gap-2.5', onDark ? 'text-white' : 'text-brand-700', className)}>
+      {/* Official asset — hidden until it loads, so a missing file never flashes a broken icon */}
+      <img
+        src={iconOnly ? MARK_SRC : LOGO_SRC}
+        alt="Chutkima"
+        onLoad={() => setHasFile(true)}
         className={cn(
-          'flex h-9 w-9 items-center justify-center rounded-xl',
-          onDark ? 'bg-white/15' : 'bg-brand-600',
+          hasFile ? 'block' : 'hidden',
+          iconOnly ? 'h-11 w-11' : 'h-11 w-auto',
+          onDark && 'brightness-0 invert',
         )}
-      >
-        <svg viewBox="0 0 64 64" className="h-6 w-6" fill="none" aria-hidden>
-          <path
-            d="M40 16c-2.2 2-4 4.6-5.2 7.6l-3.6 9c-.5 1.2-1.6 2-2.9 2H22c-2.2 0-3.7 2.2-2.9 4.2l3.4 8.4c.9 2.2 3 3.6 5.4 3.6h2.7c3.9 0 7.4-2.4 8.8-6l5.1-13.1c.6-1.6.9-3.3.9-5C45.4 22.6 43.4 18.6 40 16z"
-            fill={onDark ? '#ffffff' : '#ffffff'}
-          />
-          <circle cx="25" cy="20" r="3.4" fill="#ffffff" />
-        </svg>
-      </div>
-      {!iconOnly && (
-        <div className="leading-none">
-          <span
-            className={cn(
-              'block text-lg font-extrabold tracking-tight',
-              onDark ? 'text-white' : 'text-slate-800',
-            )}
-          >
-            {BRAND.name}
-          </span>
-          <span
-            className={cn(
-              'text-[10px] font-semibold uppercase tracking-[0.18em]',
-              onDark ? 'text-white/60' : 'text-brand-500',
-            )}
-          >
-            Admin
-          </span>
-        </div>
+      />
+
+      {/* Inline fallback (mark + wordmark) */}
+      {!hasFile && <Mark className="h-11 w-11 shrink-0" />}
+      {!hasFile && !iconOnly && (
+        <span className="text-2xl font-extrabold lowercase leading-none tracking-tight">chutkima</span>
       )}
     </div>
   )

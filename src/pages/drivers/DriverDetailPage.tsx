@@ -1,5 +1,5 @@
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Bike, Fuel, MapPin, MessageSquare, Phone, ShieldAlert, Star } from 'lucide-react'
+import { ArrowLeft, Bike, Fuel, IdCard, MapPin, MessageSquare, Phone, ShieldAlert, Star } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -72,6 +72,7 @@ export default function DriverDetailPage() {
                 <p className="flex items-center gap-2 text-slate-600"><Phone className="h-4 w-4 text-slate-400" /> {driver.phone}</p>
                 <p className="flex items-center gap-2 text-slate-600"><Bike className="h-4 w-4 text-slate-400" /> {driver.vehicle}</p>
                 <p className="flex items-center gap-2 text-slate-600"><MapPin className="h-4 w-4 text-slate-400" /> {driver.zone}</p>
+                <p className="flex items-center gap-2 text-slate-600"><IdCard className="h-4 w-4 text-slate-400" /> License: {driver.licenseNo || <span className="text-slate-400">not on file</span>}</p>
                 <p className="flex items-center gap-2 text-slate-600"><Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {avgRating.toFixed(1)} {reviews.length ? `(${reviews.length} reviews)` : 'rating'}</p>
                 <p className="flex items-center gap-2 text-slate-600"><Fuel className="h-4 w-4 text-slate-400" /> {driver.kmToday} km today · {formatNPR(driver.kmToday * FUEL_RATE_PER_KM)} fuel</p>
               </div>

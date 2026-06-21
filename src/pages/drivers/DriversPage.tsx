@@ -10,6 +10,7 @@ import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { ImageUpload } from '@/components/ui/ImageUpload'
 import { Avatar } from '@/components/shared/Avatar'
 import { StatCard } from '@/components/shared/StatCard'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
@@ -199,24 +200,35 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
   const isEdit = driver && driver !== 'new'
   const d = isEdit ? (driver as Driver) : null
 
-  const empty = { name: '', phone: '', vehicleType: 'Scooter', plate: '', zone: ZONES[0] as string }
+  const empty = { name: '', phone: '', vehicleType: 'Scooter', plate: '', zone: ZONES[0] as string, licenseNo: '' }
   const [form, setForm] = useState(empty)
+  const [photo, setPhoto] = useState('')
   const key = driver === 'new' ? 'new' : d?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
   if (key !== lastKey && driver) {
     setLastKey(key)
     if (d) {
       const [type, plate] = d.vehicle.split(' · ')
-      setForm({ name: d.name, phone: d.phone, vehicleType: type || 'Scooter', plate: plate || '', zone: d.zone })
+      setForm({ name: d.name, phone: d.phone, vehicleType: type || 'Scooter', plate: plate || '', zone: d.zone, licenseNo: d.licenseNo ?? '' })
+      setPhoto(d.avatar && !d.avatar.startsWith('https://i.pravatar') ? d.avatar : '')
     } else {
       setForm(empty)
+      setPhoto('')
     }
   }
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
   const submit = async () => {
     const vehicle = form.plate.trim() ? `${form.vehicleType} · ${form.plate.trim()}` : form.vehicleType
-    await save({ id: d?.id, name: form.name, phone: form.phone, vehicle, zone: form.zone }).unwrap()
+    await save({
+      id: d?.id,
+      name: form.name,
+      phone: form.phone,
+      vehicle,
+      zone: form.zone,
+      licenseNo: form.licenseNo,
+      ...(photo ? { avatar: photo } : {}),
+    }).unwrap()
     onClose()
   }
 
@@ -236,13 +248,18 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
       }
     >
       <div className="space-y-3">
-        <Input label="Full name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Manoj Thapa" autoFocus />
-        <Input label="Phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+977 98…" leftIcon={<Phone className="h-4 w-4" />} />
+        <ImageUpload label="Rider photo" value={photo} onChange={setPhoto} aspectClassName="aspect-square w-28 mx-auto" hint="Square photo · for the rider's profile & verification." />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input label="Full name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Manoj Thapa" autoFocus />
+          <Input label="Phone (login number)" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+977 98…" leftIcon={<Phone className="h-4 w-4" />} />
           <Select label="Vehicle type" value={form.vehicleType} onChange={(e) => set('vehicleType', e.target.value)} options={VEHICLE_TYPES.map((v) => ({ label: v, value: v }))} />
           <Input label="Vehicle number (plate)" value={form.plate} onChange={(e) => set('plate', e.target.value)} placeholder="e.g. BA 24 PA 1290" />
+          <Input label="License number" value={form.licenseNo} onChange={(e) => set('licenseNo', e.target.value)} placeholder="e.g. 03-06-074521" />
+          <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={ZONES.map((z) => ({ label: z, value: z }))} />
         </div>
-        <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={ZONES.map((z) => ({ label: z, value: z }))} />
+        <p className="rounded-xl bg-mint-50 px-3 py-2.5 text-xs text-slate-500">
+          The rider logs into the Rider App with this phone number + OTP — the account is created here by you.
+        </p>
       </div>
     </Modal>
   )

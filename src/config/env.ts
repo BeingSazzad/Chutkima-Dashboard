@@ -2,10 +2,12 @@ import { z } from 'zod'
 
 /**
  * Centralised, validated access to environment variables.
- * Fails fast (in dev) if a required variable is missing or malformed.
+ * Every field has a safe default so the app never crashes when a variable is
+ * missing (e.g. a fresh Vercel deploy with no env vars). Invalid values fall
+ * back to defaults with a console warning instead of throwing.
  */
 const envSchema = z.object({
-  VITE_API_BASE_URL: z.string().url(),
+  VITE_API_BASE_URL: z.string().url().default('https://api.chutkima.com'),
   VITE_APP_NAME: z.string().min(1).default('Chutkima Admin'),
   VITE_USE_MOCKS: z
     .enum(['true', 'false'])
@@ -16,9 +18,7 @@ const envSchema = z.object({
 const parsed = envSchema.safeParse(import.meta.env)
 
 if (!parsed.success) {
-  // Surface a clear message during development instead of a cryptic runtime crash.
-  console.error('❌ Invalid environment variables:', parsed.error.flatten().fieldErrors)
-  throw new Error('Invalid environment configuration. Check your .env file.')
+  console.warn('⚠️ Invalid environment variables — falling back to defaults:', parsed.error.flatten().fieldErrors)
 }
 
-export const env = parsed.data
+export const env = parsed.success ? parsed.data : envSchema.parse({})

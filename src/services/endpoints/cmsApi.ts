@@ -1,6 +1,17 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { contentPages, faqs, faqSections } from '@/services/mock/data'
+import { contentPages, faqs, faqSections, linksConfig } from '@/services/mock/data'
 import type { ContentPage, FaqItem, FaqSection } from '@/types/common.types'
+
+/** Social + app-store links shown in the customer app / website. */
+export interface AppLinks {
+  facebook: string
+  instagram: string
+  tiktok: string
+  youtube: string
+  whatsapp: string
+  playStore: string
+  appStore: string
+}
 
 export const cmsApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -129,6 +140,23 @@ export const cmsApi = api.injectEndpoints({
       invalidatesTags: ['FaqSection'],
     }),
 
+    // ── App & social links ────────────────────────────────────────────────────
+    getLinks: build.query<AppLinks, void>({
+      async queryFn() {
+        await mockDelay()
+        return { data: clone(linksConfig) }
+      },
+      providesTags: ['Links'],
+    }),
+
+    saveLinks: build.mutation<AppLinks, AppLinks>({
+      async queryFn(payload) {
+        await mockDelay(300)
+        Object.assign(linksConfig, payload)
+        return { data: clone(linksConfig) }
+      },
+      invalidatesTags: ['Links'],
+    }),
   }),
 })
 
@@ -142,4 +170,6 @@ export const {
   useGetFaqSectionsQuery,
   useAddFaqSectionMutation,
   useDeleteFaqSectionMutation,
+  useGetLinksQuery,
+  useSaveLinksMutation,
 } = cmsApi

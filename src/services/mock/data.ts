@@ -325,6 +325,17 @@ export const opsConfig = {
   maxRiders: 3,
 }
 
+/** Social + app-store links shown in the customer app / website footer. */
+export const linksConfig = {
+  facebook: 'https://facebook.com/chutkima',
+  instagram: 'https://instagram.com/chutkima',
+  tiktok: 'https://www.tiktok.com/@chutkima',
+  youtube: '',
+  whatsapp: 'https://wa.me/9779800000000',
+  playStore: 'https://play.google.com/store/apps/details?id=com.chutkima.app',
+  appStore: '',
+}
+
 /** Customer trust / COD-restriction config (feature 94). */
 export const trustConfig = {
   enabled: true,

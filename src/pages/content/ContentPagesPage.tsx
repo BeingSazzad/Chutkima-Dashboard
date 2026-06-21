@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Check, FileText, Pencil, Plus, Settings2, Trash2, X } from 'lucide-react'
+import { useEffect, useState, type ElementType } from 'react'
+import { Check, Facebook, FileText, Instagram, Pencil, Plus, Settings2, Trash2, X, Youtube } from 'lucide-react'
+import { WhatsappIcon, TiktokIcon, GooglePlayIcon, AppStoreIcon } from '@/components/shared/BrandIcons'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -20,10 +21,13 @@ import {
   useGetContentPagesQuery,
   useGetFaqSectionsQuery,
   useGetFaqsQuery,
+  useGetLinksQuery,
   useSaveContentPageMutation,
   useSaveFaqMutation,
+  useSaveLinksMutation,
   useToggleFaqMutation,
 } from '@/services/endpoints/cmsApi'
+import type { AppLinks } from '@/services/endpoints/cmsApi'
 import type { ContentPage, FaqItem } from '@/types/common.types'
 
 export default function ContentPagesPage() {
@@ -38,12 +42,15 @@ export default function ContentPagesPage() {
             items={[
               { label: 'Pages', value: 'pages' },
               { label: 'FAQ', value: 'faq' },
+              { label: 'App & Social', value: 'links' },
             ]}
             value={tab}
             onChange={setTab}
           />
         </div>
-        <CardContent>{tab === 'pages' ? <PagesEditor /> : <FaqManager />}</CardContent>
+        <CardContent>
+          {tab === 'pages' ? <PagesEditor /> : tab === 'faq' ? <FaqManager /> : <LinksManager />}
+        </CardContent>
       </Card>
     </>
   )
@@ -301,6 +308,91 @@ function SectionsModal({ open, onClose }: { open: boolean; onClose: () => void }
         </div>
       </div>
     </Modal>
+  )
+}
+
+// ── App & social links ────────────────────────────────────────────────────────
+type LinkField = { key: keyof AppLinks; label: string; icon: ElementType; color: string; placeholder: string }
+
+const SOCIAL_FIELDS: LinkField[] = [
+  { key: 'facebook', label: 'Facebook', icon: Facebook, color: 'text-[#1877F2]', placeholder: 'https://facebook.com/yourpage' },
+  { key: 'instagram', label: 'Instagram', icon: Instagram, color: 'text-[#E4405F]', placeholder: 'https://instagram.com/yourhandle' },
+  { key: 'tiktok', label: 'TikTok', icon: TiktokIcon, color: 'text-slate-900', placeholder: 'https://tiktok.com/@yourhandle' },
+  { key: 'youtube', label: 'YouTube', icon: Youtube, color: 'text-[#FF0000]', placeholder: 'https://youtube.com/@yourchannel' },
+  { key: 'whatsapp', label: 'WhatsApp', icon: WhatsappIcon, color: 'text-[#25D366]', placeholder: 'https://wa.me/97798XXXXXXXX' },
+]
+
+const STORE_FIELDS: LinkField[] = [
+  { key: 'playStore', label: 'Google Play', icon: GooglePlayIcon, color: 'text-[#01875F]', placeholder: 'https://play.google.com/store/apps/details?id=…' },
+  { key: 'appStore', label: 'App Store', icon: AppStoreIcon, color: 'text-slate-900', placeholder: 'https://apps.apple.com/app/…' },
+]
+
+function LinkRow({ field, value, onChange }: { field: LinkField; value: string; onChange: (v: string) => void }) {
+  const Icon = field.icon
+  return (
+    <div className="flex items-end gap-3">
+      <span className={cn('flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 ring-1 ring-slate-100', field.color)}>
+        <Icon className="h-5 w-5" />
+      </span>
+      <div className="flex-1">
+        <Input label={field.label} type="url" value={value} onChange={(e) => onChange(e.target.value)} placeholder={field.placeholder} />
+      </div>
+    </div>
+  )
+}
+
+function LinksManager() {
+  const { data, isLoading } = useGetLinksQuery()
+  const [save, { isLoading: saving }] = useSaveLinksMutation()
+  const [form, setForm] = useState<AppLinks | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (data) setForm(data)
+  }, [data])
+
+  if (isLoading || !form) return <Spinner label="Loading links…" className="py-16" />
+
+  const set = (k: keyof AppLinks, v: string) => setForm((f) => (f ? { ...f, [k]: v } : f))
+  const dirty = data ? JSON.stringify(form) !== JSON.stringify(data) : false
+
+  const onSave = async () => {
+    await save(form).unwrap()
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1800)
+  }
+
+  return (
+    <div className="max-w-2xl space-y-6">
+      <div>
+        <h3 className="text-sm font-bold text-slate-800">Social media</h3>
+        <p className="mt-0.5 text-xs text-slate-400">Shown as icons in the app &amp; website footer. Leave a field blank to hide that icon.</p>
+        <div className="mt-3 space-y-3">
+          {SOCIAL_FIELDS.map((f) => (
+            <LinkRow key={f.key} field={f} value={form[f.key]} onChange={(v) => set(f.key, v)} />
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="text-sm font-bold text-slate-800">App download links</h3>
+        <p className="mt-0.5 text-xs text-slate-400">Where “Download the app” buttons point.</p>
+        <div className="mt-3 space-y-3">
+          {STORE_FIELDS.map((f) => (
+            <LinkRow key={f.key} field={f} value={form[f.key]} onChange={(v) => set(f.key, v)} />
+          ))}
+        </div>
+      </div>
+
+      <div className="flex items-center justify-end gap-2 border-t border-slate-100 pt-4">
+        {saved && (
+          <span className="flex items-center gap-1 text-xs font-semibold text-success">
+            <Check className="h-3.5 w-3.5" /> Saved
+          </span>
+        )}
+        <Button onClick={onSave} loading={saving} disabled={!dirty}>Save changes</Button>
+      </div>
+    </div>
   )
 }
 

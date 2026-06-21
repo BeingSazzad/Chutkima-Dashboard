@@ -33,6 +33,7 @@ export const api = createApi({
     'Content',
     'Faq',
     'FaqSection',
+    'Links',
     'Admin',
     'HomeSection',
     'Coupon',

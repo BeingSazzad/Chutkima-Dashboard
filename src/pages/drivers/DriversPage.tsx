@@ -248,7 +248,7 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
       }
     >
       <div className="space-y-3">
-        <ImageUpload label="Rider photo" value={photo} onChange={setPhoto} aspectClassName="aspect-square w-28 mx-auto" hint="Square photo · for the rider's profile & verification." />
+        <ImageUpload label="Rider photo" value={photo} onChange={setPhoto} compact aspectClassName="aspect-square w-32 mx-auto" hint="Square photo · for the rider's profile & verification." />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input label="Full name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Manoj Thapa" autoFocus />
           <Input label="Phone (login number)" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+977 98…" leftIcon={<Phone className="h-4 w-4" />} />

@@ -11,6 +11,8 @@ interface ImageUploadProps {
   aspectClassName?: string
   /** Longest edge the uploaded image is downscaled to (keeps payloads small). */
   maxDimension?: number
+  /** Icon-only empty state — for small boxes (e.g. a square avatar) where the full helper text won't fit. */
+  compact?: boolean
 }
 
 /**
@@ -25,6 +27,7 @@ export function ImageUpload({
   hint,
   aspectClassName = 'aspect-[16/9]',
   maxDimension = 1000,
+  compact = false,
 }: ImageUploadProps) {
   const inputRef = useRef<HTMLInputElement>(null)
   const id = useId()
@@ -132,13 +135,20 @@ export function ImageUpload({
           onDragLeave={() => setDragging(false)}
           onDrop={onDrop}
           className={cn(
-            'focus-ring flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed text-center transition-colors',
+            'focus-ring flex w-full flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed p-3 text-center transition-colors',
             aspectClassName,
             dragging ? 'border-brand-500 bg-brand-50' : 'border-slate-200 bg-slate-50 hover:border-brand-300 hover:bg-mint-50',
           )}
         >
           {busy ? (
             <Loader2 className="h-6 w-6 animate-spin text-brand-500" />
+          ) : compact ? (
+            <>
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+                <ImagePlus className="h-5 w-5" />
+              </div>
+              <p className="text-xs font-semibold text-slate-600">Add photo</p>
+            </>
           ) : (
             <>
               <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-50 text-brand-600">

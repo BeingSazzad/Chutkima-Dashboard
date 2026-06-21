@@ -59,18 +59,18 @@ export const categories: Category[] = [
 
 // ── Products ────────────────────────────────────────────────────────────────
 export const products: Product[] = [
-  { id: 'p1', sku: 'WW-001', name: 'Wai Wai Vegetable Instant Noodles', brand: 'Wai Wai', category: 'Chips & Snacks', categoryGroup: 'Snacks & Drinks', image: img('noodles'), price: 35, mrp: 40, unit: '84g', stock: 320, lowStockThreshold: 30, shelfNo: 'A-3', onClearance: false, status: 'active', deliveryMins: 15, sold: 1240 },
-  { id: 'p2', sku: 'NO-101', name: "Nature's Pure Sunflower Oil 1L", brand: "Nature's", category: 'Cooking Oil', categoryGroup: 'Grocery & Kitchen', image: img('oil'), price: 385, mrp: 420, unit: '1L', stock: 96, lowStockThreshold: 15, shelfNo: 'C-1', onClearance: false, status: 'active', deliveryMins: 12, sold: 540 },
-  { id: 'p3', sku: 'HR-201', name: 'Heritage Select Premium Basmati Rice 1kg', brand: 'Heritage', category: 'Rice', categoryGroup: 'Grocery & Kitchen', image: img('rice'), price: 249, mrp: 280, unit: '1kg', stock: 58, lowStockThreshold: 15, shelfNo: 'C-2', onClearance: false, status: 'active', deliveryMins: 12, sold: 410 },
-  { id: 'p4', sku: 'NU-310', name: 'Choco Delight Chocolate Drink Powder 500g', brand: 'Nutri', category: 'Milk & Health Drinks', categoryGroup: 'Snacks & Drinks', image: img('choco'), price: 495, mrp: 550, unit: '500g', stock: 12, lowStockThreshold: 15, shelfNo: 'D-4', onClearance: false, status: 'low_stock', deliveryMins: 15, sold: 220 },
-  { id: 'p5', sku: 'HB-205', name: 'Heritage Select Digestive Biscuits 400g', brand: 'Heritage', category: 'Biscuits & Cookies', categoryGroup: 'Snacks & Drinks', image: img('biscuit'), price: 185, mrp: 200, unit: '400g', stock: 140, lowStockThreshold: 20, shelfNo: 'B-5', onClearance: false, status: 'active', deliveryMins: 15, sold: 360 },
-  { id: 'p6', sku: 'NJ-410', name: "Nature's Pride Mixed Fruit Juice 1L", brand: "Nature's", category: 'Soft Drinks & Juices', categoryGroup: 'Snacks & Drinks', image: img('juice'), price: 225, mrp: 250, unit: '1L', stock: 0, lowStockThreshold: 15, shelfNo: 'D-1', onClearance: false, status: 'out_of_stock', deliveryMins: 12, sold: 180 },
-  { id: 'p7', sku: 'GM-150', name: 'Gokul Full Cream Milk 500ml', brand: 'Gokul', category: 'Milk & Health Drinks', categoryGroup: 'Snacks & Drinks', image: img('milk'), price: 35, mrp: 38, unit: '500ml', stock: 210, lowStockThreshold: 40, shelfNo: 'F-2', onClearance: false, status: 'active', deliveryMins: 10, sold: 980 },
-  { id: 'p8', sku: 'TK-220', name: 'Tokla Premium Tea 200g', brand: 'Tokla', category: 'Tea & Coffee', categoryGroup: 'Grocery & Kitchen', image: img('tea'), price: 145, mrp: 160, unit: '200g', stock: 74, lowStockThreshold: 15, shelfNo: 'B-1', onClearance: true, status: 'active', deliveryMins: 12, sold: 300 },
-  { id: 'p9', sku: 'MD-130', name: 'Mustang Daal Masino 1kg', brand: 'Mustang', category: 'Daal & Pulses', categoryGroup: 'Grocery & Kitchen', image: img('daal'), price: 175, mrp: 190, unit: '1kg', stock: 41, lowStockThreshold: 15, shelfNo: 'C-3', onClearance: false, status: 'active', deliveryMins: 12, sold: 260 },
-  { id: 'p10', sku: 'CK-330', name: 'Current Tomato Ketchup 500g', brand: 'Current', category: 'Frozen & Canned', categoryGroup: 'Grocery & Kitchen', image: img('ketchup'), price: 165, mrp: 180, unit: '500g', stock: 9, lowStockThreshold: 15, shelfNo: 'B-7', onClearance: false, status: 'low_stock', deliveryMins: 15, sold: 150 },
-  { id: 'p11', sku: 'LY-140', name: 'Lays Classic Salted Chips 52g', brand: 'Lays', category: 'Chips & Snacks', categoryGroup: 'Snacks & Drinks', image: img('chips'), price: 65, mrp: 70, unit: '52g', stock: 188, lowStockThreshold: 30, shelfNo: 'A-1', onClearance: false, status: 'active', deliveryMins: 10, sold: 720 },
-  { id: 'p12', sku: 'CC-160', name: 'Coca-Cola 1.25L', brand: 'Coca-Cola', category: 'Soft Drinks & Juices', categoryGroup: 'Snacks & Drinks', image: img('coke'), price: 130, mrp: 140, unit: '1.25L', stock: 132, lowStockThreshold: 24, shelfNo: 'F-1', onClearance: false, status: 'active', deliveryMins: 10, sold: 610 },
+  { id: 'p1', sku: 'WW-001', name: 'Wai Wai Vegetable Instant Noodles', brand: 'Wai Wai', category: 'Chips & Snacks', categoryGroup: 'Snacks & Drinks', image: img('noodles'), price: 35, mrp: 40, unit: '84g', stock: 320, lowStockThreshold: 30, shelfNo: 'A-3', onClearance: false, active: true, status: 'active', deliveryMins: 15, sold: 1240 },
+  { id: 'p2', sku: 'NO-101', name: "Nature's Pure Sunflower Oil 1L", brand: "Nature's", category: 'Cooking Oil', categoryGroup: 'Grocery & Kitchen', image: img('oil'), price: 385, mrp: 420, unit: '1L', stock: 96, lowStockThreshold: 15, shelfNo: 'C-1', onClearance: false, active: true, status: 'active', deliveryMins: 12, sold: 540 },
+  { id: 'p3', sku: 'HR-201', name: 'Heritage Select Premium Basmati Rice 1kg', brand: 'Heritage', category: 'Rice', categoryGroup: 'Grocery & Kitchen', image: img('rice'), price: 249, mrp: 280, unit: '1kg', stock: 58, lowStockThreshold: 15, shelfNo: 'C-2', onClearance: false, active: true, status: 'active', deliveryMins: 12, sold: 410 },
+  { id: 'p4', sku: 'NU-310', name: 'Choco Delight Chocolate Drink Powder 500g', brand: 'Nutri', category: 'Milk & Health Drinks', categoryGroup: 'Snacks & Drinks', image: img('choco'), price: 495, mrp: 550, unit: '500g', stock: 12, lowStockThreshold: 15, shelfNo: 'D-4', onClearance: false, active: true, status: 'low_stock', deliveryMins: 15, sold: 220 },
+  { id: 'p5', sku: 'HB-205', name: 'Heritage Select Digestive Biscuits 400g', brand: 'Heritage', category: 'Biscuits & Cookies', categoryGroup: 'Snacks & Drinks', image: img('biscuit'), price: 185, mrp: 200, unit: '400g', stock: 140, lowStockThreshold: 20, shelfNo: 'B-5', onClearance: false, active: true, status: 'active', deliveryMins: 15, sold: 360 },
+  { id: 'p6', sku: 'NJ-410', name: "Nature's Pride Mixed Fruit Juice 1L", brand: "Nature's", category: 'Soft Drinks & Juices', categoryGroup: 'Snacks & Drinks', image: img('juice'), price: 225, mrp: 250, unit: '1L', stock: 0, lowStockThreshold: 15, shelfNo: 'D-1', onClearance: false, active: false, status: 'out_of_stock', deliveryMins: 12, sold: 180 },
+  { id: 'p7', sku: 'GM-150', name: 'Gokul Full Cream Milk 500ml', brand: 'Gokul', category: 'Milk & Health Drinks', categoryGroup: 'Snacks & Drinks', image: img('milk'), price: 35, mrp: 38, unit: '500ml', stock: 210, lowStockThreshold: 40, shelfNo: 'F-2', onClearance: false, active: true, status: 'active', deliveryMins: 10, sold: 980 },
+  { id: 'p8', sku: 'TK-220', name: 'Tokla Premium Tea 200g', brand: 'Tokla', category: 'Tea & Coffee', categoryGroup: 'Grocery & Kitchen', image: img('tea'), price: 145, mrp: 160, unit: '200g', stock: 74, lowStockThreshold: 15, shelfNo: 'B-1', onClearance: true, active: true, status: 'active', deliveryMins: 12, sold: 300 },
+  { id: 'p9', sku: 'MD-130', name: 'Mustang Daal Masino 1kg', brand: 'Mustang', category: 'Daal & Pulses', categoryGroup: 'Grocery & Kitchen', image: img('daal'), price: 175, mrp: 190, unit: '1kg', stock: 41, lowStockThreshold: 15, shelfNo: 'C-3', onClearance: false, active: true, status: 'active', deliveryMins: 12, sold: 260 },
+  { id: 'p10', sku: 'CK-330', name: 'Current Tomato Ketchup 500g', brand: 'Current', category: 'Frozen & Canned', categoryGroup: 'Grocery & Kitchen', image: img('ketchup'), price: 165, mrp: 180, unit: '500g', stock: 9, lowStockThreshold: 15, shelfNo: 'B-7', onClearance: false, active: true, status: 'low_stock', deliveryMins: 15, sold: 150 },
+  { id: 'p11', sku: 'LY-140', name: 'Lays Classic Salted Chips 52g', brand: 'Lays', category: 'Chips & Snacks', categoryGroup: 'Snacks & Drinks', image: img('chips'), price: 65, mrp: 70, unit: '52g', stock: 188, lowStockThreshold: 30, shelfNo: 'A-1', onClearance: false, active: true, status: 'active', deliveryMins: 10, sold: 720 },
+  { id: 'p12', sku: 'CC-160', name: 'Coca-Cola 1.25L', brand: 'Coca-Cola', category: 'Soft Drinks & Juices', categoryGroup: 'Snacks & Drinks', image: img('coke'), price: 130, mrp: 140, unit: '1.25L', stock: 132, lowStockThreshold: 24, shelfNo: 'F-1', onClearance: false, active: true, status: 'active', deliveryMins: 10, sold: 610 },
 ]
 
 // ── Drivers ─────────────────────────────────────────────────────────────────
@@ -89,25 +89,25 @@ export const drivers: Driver[] = [
 const cust = (
   id: string, name: string, phone: string, address: string, zone: string,
   totalOrders: number, totalSpent: number, joined: number, last: string,
-  banned: boolean, trustBadge: Customer['trustBadge'], codCancellations: number,
+  banned: boolean, codCancellations: number,
   notRespondingCount: number, ref: string, referredCount: number, walletBalance: number,
 ): Customer => ({
   id, name, phone, address, zone, totalOrders, totalSpent,
   joinedAt: daysAgo(joined), lastOrderAt: last, banned,
-  trustBadge, codCancellations, notRespondingCount, completedOrders: totalOrders,
+  codCancellations, notRespondingCount, completedOrders: totalOrders,
   referralCode: ref, referredCount, creditsEarned: referredCount * 50,
   creditsRedeemed: Math.max(0, referredCount * 50 - walletBalance), walletBalance,
 })
 
 export const customers: Customer[] = [
-  cust('u1', 'Ram Sharma', '+977 9844000001', 'Amarpath-4, near Buddha Marg, Butwal', 'Amarpath', 42, 28450, 210, minsAgo(18), false, 'green', 0, 0, 'RAM4821', 6, 130),
-  cust('u2', 'Sita Pandey', '+977 9844000002', 'Traffic Chowk-7, Butwal', 'Traffic Chowk', 31, 19980, 160, minsAgo(46), false, 'green', 1, 0, 'SITA7720', 3, 50),
-  cust('u3', 'Hari Adhikari', '+977 9844000003', 'Milanchowk-11, Butwal', 'Milanchowk', 18, 9120, 95, minsAgo(120), false, 'gray', 3, 1, 'HARI3310', 1, 0),
-  cust('u4', 'Gita Khadka', '+977 9844000004', 'Golpark-9, Butwal', 'Golpark', 56, 41200, 300, minsAgo(8), false, 'green', 0, 0, 'GITA9051', 9, 220),
-  cust('u5', 'Bishnu Pokharel', '+977 9844000005', 'Sukkhanagar-13, Butwal', 'Sukkhanagar', 7, 3380, 40, daysAgo(2), true, 'red', 5, 4, 'BISH4400', 0, 0),
-  cust('u6', 'Anita Rana', '+977 9844000006', 'Buddhanagar-2, Butwal', 'Buddhanagar', 24, 15600, 130, minsAgo(75), false, 'green', 0, 0, 'ANITA612', 2, 60),
-  cust('u7', 'Krishna Bhattarai', '+977 9844000007', 'Traffic Chowk-5, Butwal', 'Traffic Chowk', 12, 6740, 60, daysAgo(1), false, 'gray', 2, 2, 'KRIS1208', 0, 0),
-  cust('u8', 'Sarita Joshi', '+977 9844000008', 'Amarpath-8, Butwal', 'Amarpath', 38, 24310, 240, minsAgo(200), false, 'green', 1, 0, 'SARI8830', 4, 90),
+  cust('u1', 'Ram Sharma', '+977 9844000001', 'Amarpath-4, near Buddha Marg, Butwal', 'Amarpath', 42, 28450, 210, minsAgo(18), false, 0, 0, 'RAM4821', 6, 130),
+  cust('u2', 'Sita Pandey', '+977 9844000002', 'Traffic Chowk-7, Butwal', 'Traffic Chowk', 31, 19980, 160, minsAgo(46), false, 1, 0, 'SITA7720', 3, 50),
+  cust('u3', 'Hari Adhikari', '+977 9844000003', 'Milanchowk-11, Butwal', 'Milanchowk', 18, 9120, 95, minsAgo(120), false, 3, 1, 'HARI3310', 1, 0),
+  cust('u4', 'Gita Khadka', '+977 9844000004', 'Golpark-9, Butwal', 'Golpark', 56, 41200, 300, minsAgo(8), false, 0, 0, 'GITA9051', 9, 220),
+  cust('u5', 'Bishnu Pokharel', '+977 9844000005', 'Sukkhanagar-13, Butwal', 'Sukkhanagar', 7, 3380, 40, daysAgo(2), true, 5, 4, 'BISH4400', 0, 0),
+  cust('u6', 'Anita Rana', '+977 9844000006', 'Buddhanagar-2, Butwal', 'Buddhanagar', 24, 15600, 130, minsAgo(75), false, 0, 0, 'ANITA612', 2, 60),
+  cust('u7', 'Krishna Bhattarai', '+977 9844000007', 'Traffic Chowk-5, Butwal', 'Traffic Chowk', 12, 6740, 60, daysAgo(1), false, 2, 2, 'KRIS1208', 0, 0),
+  cust('u8', 'Sarita Joshi', '+977 9844000008', 'Amarpath-8, Butwal', 'Amarpath', 38, 24310, 240, minsAgo(200), false, 1, 0, 'SARI8830', 4, 90),
 ]
 
 // ── Category groups ─────────────────────────────────────────────────────────
@@ -136,7 +136,8 @@ function makeOrder(
 ): Order {
   const lineItems = items.map((it) => lineItem(it.p, it.qty))
   const subtotal = lineItems.reduce((s, it) => s + it.price * it.quantity, 0)
-  const deliveryFee = subtotal >= 800 ? 0 : 40
+  const deliveryFee =
+    subtotal >= 800 ? 0 : subtotal >= 600 ? 20 : subtotal >= 400 ? 40 : subtotal >= 200 ? 60 : 80
   return {
     id,
     reference: ref,
@@ -293,18 +294,12 @@ export const admins: AdminUser[] = [
   { id: 'a4', name: 'Rojan Shrestha', email: 'rojan@chutkima.com', phone: '+977 9800000004', role: 'dispatcher', avatar: avatar('a4'), active: false, storeId: 's2', lastActiveAt: daysAgo(6), createdAt: daysAgo(60) },
 ]
 
-// ── Packers (WhatsApp-only staff) ───────────────────────────────────────────
+// ── Packers (pick & pack staff) ─────────────────────────────────────────────
 export const packers: Packer[] = [
-  { id: 'pk1', name: 'Bimala Thapa', whatsapp: '+977 9845000001', active: true, packedToday: 14, createdAt: daysAgo(120) },
-  { id: 'pk2', name: 'Gokul Magar', whatsapp: '+977 9845000002', active: true, packedToday: 9, createdAt: daysAgo(80) },
-  { id: 'pk3', name: 'Sabina Rai', whatsapp: '+977 9845000003', active: false, packedToday: 0, createdAt: daysAgo(40) },
+  { id: 'pk1', name: 'Bimala Thapa', phone: '+977 9845000001', active: true, packedToday: 14, createdAt: daysAgo(120) },
+  { id: 'pk2', name: 'Gokul Magar', phone: '+977 9845000002', active: true, packedToday: 9, createdAt: daysAgo(80) },
+  { id: 'pk3', name: 'Sabina Rai', phone: '+977 9845000003', active: false, packedToday: 0, createdAt: daysAgo(40) },
 ]
-
-/** Editable WhatsApp pick-list template. Placeholders are filled per order. */
-export const packerTemplate = {
-  value:
-    'Chutkima Order {orderNo} | Customer: {customer} | Address: {address}\n---\n{items}\n---\nTotal: {skuCount} SKUs | {unitCount} units | Please pack and inform admin when ready.',
-}
 
 // ── Home feed sections ──────────────────────────────────────────────────────
 export const homeSections: HomeSection[] = [
@@ -326,12 +321,12 @@ export const coupons: Coupon[] = [
 
 // ── Delivery zones & fee config ─────────────────────────────────────────────
 export const zones: Zone[] = [
-  { id: 'z1', name: 'Traffic Chowk', etaMins: 10, deliveryFee: 40, areas: ['Traffic Chowk', 'Yogikuti', 'Hospital Line'], mapLink: 'https://maps.google.com/?q=Traffic+Chowk+Butwal', active: true },
-  { id: 'z2', name: 'Amarpath', etaMins: 12, deliveryFee: 40, areas: ['Amarpath', 'Buddha Marg', 'Devinagar'], mapLink: 'https://maps.google.com/?q=Amarpath+Butwal', active: true },
-  { id: 'z3', name: 'Milanchowk', etaMins: 14, deliveryFee: 50, areas: ['Milanchowk', 'Kalikanagar'], mapLink: '', active: true },
-  { id: 'z4', name: 'Golpark', etaMins: 13, deliveryFee: 50, areas: ['Golpark', 'Tinkune', 'Ramnagar'], mapLink: '', active: true },
-  { id: 'z5', name: 'Sukkhanagar', etaMins: 16, deliveryFee: 60, areas: ['Sukkhanagar', 'Fulbari'], mapLink: '', active: true },
-  { id: 'z6', name: 'Buddhanagar', etaMins: 18, deliveryFee: 60, areas: ['Buddhanagar', 'Manglapur'], mapLink: '', active: false },
+  { id: 'z1', name: 'Traffic Chowk', etaMins: 10, areas: ['Traffic Chowk', 'Yogikuti', 'Hospital Line'], mapLink: 'https://maps.google.com/?q=Traffic+Chowk+Butwal', active: true },
+  { id: 'z2', name: 'Amarpath', etaMins: 12, areas: ['Amarpath', 'Buddha Marg', 'Devinagar'], mapLink: 'https://maps.google.com/?q=Amarpath+Butwal', active: true },
+  { id: 'z3', name: 'Milanchowk', etaMins: 14, areas: ['Milanchowk', 'Kalikanagar'], mapLink: '', active: true },
+  { id: 'z4', name: 'Golpark', etaMins: 13, areas: ['Golpark', 'Tinkune', 'Ramnagar'], mapLink: '', active: true },
+  { id: 'z5', name: 'Sukkhanagar', etaMins: 16, areas: ['Sukkhanagar', 'Fulbari'], mapLink: '', active: true },
+  { id: 'z6', name: 'Buddhanagar', etaMins: 18, areas: ['Buddhanagar', 'Manglapur'], mapLink: '', active: false },
 ]
 
 /** Dispatch / operations config. */
@@ -340,13 +335,31 @@ export const opsConfig = {
   maxRiders: 3,
 }
 
+/** Customer trust / COD-restriction config (feature 94). */
+export const trustConfig = {
+  enabled: true,
+  codMode: 'manual' as 'alert' | 'hidden' | 'manual',
+  grayCod: 3,
+  redCod: 5,
+  grayNoResp: 2,
+  redNoResp: 4,
+}
+
 export const deliveryConfig: DeliveryConfig = {
   freeAbove: 800,
+  // SOW Strategy-B tiers (NPR cart value → fee).
   tiers: [
-    { minOrder: 0, fee: 40 },
-    { minOrder: 200, fee: 30 },
-    { minOrder: 400, fee: 20 },
+    { minOrder: 0, fee: 80 },
+    { minOrder: 200, fee: 60 },
+    { minOrder: 400, fee: 40 },
+    { minOrder: 600, fee: 20 },
   ],
+}
+
+/** Delivery fee for a cart value, from the tiered config (highest match wins). */
+export function deliveryFeeFor(subtotal: number): number {
+  if (subtotal >= deliveryConfig.freeAbove) return 0
+  return [...deliveryConfig.tiers].sort((a, b) => b.minOrder - a.minOrder).find((t) => subtotal >= t.minOrder)?.fee ?? 0
 }
 
 // ── Driver reviews ──────────────────────────────────────────────────────────

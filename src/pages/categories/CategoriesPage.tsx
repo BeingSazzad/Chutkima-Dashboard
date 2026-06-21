@@ -13,6 +13,7 @@ import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { ImageUpload } from '@/components/ui/ImageUpload'
+import { cn } from '@/lib/utils'
 import {
   useDeleteCategoryGroupMutation,
   useDeleteCategoryMutation,
@@ -29,6 +30,9 @@ interface NewCat {
   group: string
 }
 
+const UNGROUPED = '__ungrouped__'
+const OTHERS = '__none__'
+
 export default function CategoriesPage() {
   const { data: categories = [], isLoading } = useGetCategoriesQuery()
   const { data: groups = [] } = useGetCategoryGroupsQuery()
@@ -38,6 +42,7 @@ export default function CategoriesPage() {
   const [deleting, setDeleting] = useState<Category | null>(null)
   const [groupForm, setGroupForm] = useState<CategoryGroup | 'new' | null>(null)
   const [groupDelete, setGroupDelete] = useState<CategoryGroup | null>(null)
+  const [selectedGroupName, setSelectedGroupName] = useState<string | null>(null)
 
   const groupNames = groups.map((g) => g.name)
   const buckets = useMemo(() => {
@@ -46,6 +51,16 @@ export default function CategoriesPage() {
     for (const [g, list] of map) map.set(g, [...list].sort((a, b) => a.position - b.position))
     return map
   }, [categories])
+
+  // Categories whose group no longer exists (or is blank) — shown under "Others".
+  const ungrouped = useMemo(() => {
+    const names = new Set(groupNames)
+    return categories.filter((c) => !names.has(c.group)).sort((a, b) => a.position - b.position)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [categories, groups])
+
+  const isUngrouped = selectedGroupName === UNGROUPED
+  const currentGroup = isUngrouped ? null : groups.find((g) => g.name === selectedGroupName) ?? groups[0]
 
   const columns: Column<Category>[] = [
     {
@@ -141,37 +156,93 @@ export default function CategoriesPage() {
           />
         </Card>
       ) : (
-        <div className="space-y-5">
-          {groups.map((group) => {
-            const items = buckets.get(group.name) ?? []
-            return (
-              <Card key={group.id}>
-                <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
-                  <div className="flex items-center gap-2">
-                    <h2 className="text-base font-bold text-slate-800">{group.name}</h2>
-                    <Badge>{items.length}</Badge>
-                    {!group.active && <Badge tone="bg-slate-100 text-slate-500 ring-slate-500/15">Hidden</Badge>}
-                    <button onClick={() => setGroupForm(group)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label={`Edit ${group.name}`}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </button>
-                    <button onClick={() => setGroupDelete(group)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger" aria-label={`Delete ${group.name}`}>
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                  <Button variant="secondary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setEditing({ group: group.name })}>
-                    Add category
-                  </Button>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[260px_1fr]">
+          {/* Groups list */}
+          <Card className="h-fit p-2">
+            {groups.map((group) => {
+              const count = buckets.get(group.name)?.length ?? 0
+              const active = currentGroup?.id === group.id
+              return (
+                <button
+                  key={group.id}
+                  onClick={() => setSelectedGroupName(group.name)}
+                  className={cn(
+                    'mb-1 flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-left transition-colors',
+                    active ? 'bg-brand-50' : 'hover:bg-slate-50',
+                  )}
+                >
+                  <span className={cn('flex-1 truncate text-sm font-semibold', active ? 'text-brand-700' : 'text-slate-700')}>
+                    {group.name}
+                  </span>
+                  {!group.active && <span className="h-1.5 w-1.5 rounded-full bg-slate-300" title="Hidden" />}
+                  <Badge>{count}</Badge>
+                </button>
+              )
+            })}
+            {ungrouped.length > 0 && (
+              <button
+                onClick={() => setSelectedGroupName(UNGROUPED)}
+                className={cn(
+                  'mt-1 flex w-full items-center gap-2 rounded-xl border-t border-slate-100 px-3 py-2.5 text-left transition-colors',
+                  isUngrouped ? 'bg-brand-50' : 'hover:bg-slate-50',
+                )}
+              >
+                <span className={cn('flex-1 truncate text-sm font-semibold', isUngrouped ? 'text-brand-700' : 'text-slate-500')}>
+                  Others (no group)
+                </span>
+                <Badge>{ungrouped.length}</Badge>
+              </button>
+            )}
+          </Card>
+
+          {/* Categories in the selected group */}
+          {currentGroup && (
+            <Card>
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-slate-800">{currentGroup.name}</h2>
+                  {!currentGroup.active && <Badge tone="bg-slate-100 text-slate-500 ring-slate-500/15">Hidden</Badge>}
+                  <button onClick={() => setGroupForm(currentGroup)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit group">
+                    <Pencil className="h-3.5 w-3.5" />
+                  </button>
+                  <button onClick={() => setGroupDelete(currentGroup)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger" aria-label="Delete group">
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </button>
                 </div>
-                <DataTable
-                  columns={columns}
-                  data={items}
-                  rowKey={(c) => c.id}
-                  emptyTitle="No categories in this group"
-                  emptyDescription="Use “Add category” to put one here."
-                />
-              </Card>
-            )
-          })}
+                <Button variant="secondary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setEditing({ group: currentGroup.name })}>
+                  Add category
+                </Button>
+              </div>
+              <DataTable
+                columns={columns}
+                data={buckets.get(currentGroup.name) ?? []}
+                rowKey={(c) => c.id}
+                emptyTitle="No categories in this group"
+                emptyDescription="Use “Add category” to put one here."
+              />
+            </Card>
+          )}
+
+          {/* Ungrouped categories ("Others") */}
+          {isUngrouped && (
+            <Card>
+              <div className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5">
+                <div className="flex items-center gap-2">
+                  <h2 className="text-base font-bold text-slate-800">Others (no group)</h2>
+                  <Badge>{ungrouped.length}</Badge>
+                </div>
+                <Button variant="secondary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setEditing({ group: '' })}>
+                  Add category
+                </Button>
+              </div>
+              <DataTable
+                columns={columns}
+                data={ungrouped}
+                rowKey={(c) => c.id}
+                emptyTitle="No ungrouped categories"
+              />
+            </Card>
+          )}
         </div>
       )}
 
@@ -210,13 +281,14 @@ function CategoryFormModal({
   if (key !== lastKey && editing) {
     setLastKey(key)
     setName(c?.name ?? '')
-    setGroup(c?.group ?? (editing as NewCat).group ?? groups[0] ?? '')
+    const g = c?.group ?? (editing as NewCat).group ?? groups[0] ?? ''
+    setGroup(g === '' ? OTHERS : g)
     setEmoji(c?.emoji ?? '📦')
     setImage(c?.image ?? '')
   }
 
   const submit = async () => {
-    await save({ id: c?.id, name, group, emoji: image ? '' : emoji, image }).unwrap()
+    await save({ id: c?.id, name, group: group === OTHERS ? '' : group, emoji: image ? '' : emoji, image }).unwrap()
     onClose()
   }
 
@@ -243,7 +315,7 @@ function CategoryFormModal({
           <Input label="Emoji (used when no image)" value={emoji} onChange={(e) => setEmoji(e.target.value)} className="w-24 text-center text-xl" maxLength={2} />
         )}
         <Input label="Category name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Fruits & Vegetables" autoFocus />
-        <Select label="Group" value={group} onChange={(e) => setGroup(e.target.value)} placeholder="Select a group" options={groups.map((g) => ({ label: g, value: g }))} />
+        <Select label="Group" value={group} onChange={(e) => setGroup(e.target.value)} options={[...groups.map((g) => ({ label: g, value: g })), { label: 'Others (no group)', value: OTHERS }]} />
       </div>
     </Modal>
   )

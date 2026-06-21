@@ -1,5 +1,6 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { opsConfig } from '@/services/mock/data'
+import { opsConfig, trustConfig } from '@/services/mock/data'
+import type { TrustConfig } from '@/lib/trust'
 
 export interface OpsConfig {
   multiRiderEnabled: boolean
@@ -25,7 +26,29 @@ export const settingsApi = api.injectEndpoints({
       },
       invalidatesTags: ['OpsConfig'],
     }),
+
+    getTrustConfig: build.query<TrustConfig, void>({
+      async queryFn() {
+        await mockDelay(150)
+        return { data: clone(trustConfig) }
+      },
+      providesTags: ['TrustConfig'],
+    }),
+
+    saveTrustConfig: build.mutation<TrustConfig, TrustConfig>({
+      async queryFn(payload) {
+        await mockDelay(250)
+        Object.assign(trustConfig, payload)
+        return { data: clone(trustConfig) }
+      },
+      invalidatesTags: ['TrustConfig'],
+    }),
   }),
 })
 
-export const { useGetOpsConfigQuery, useSaveOpsConfigMutation } = settingsApi
+export const {
+  useGetOpsConfigQuery,
+  useSaveOpsConfigMutation,
+  useGetTrustConfigQuery,
+  useSaveTrustConfigMutation,
+} = settingsApi

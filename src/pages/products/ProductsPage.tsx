@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, Download, Pencil, Plus, Search, Trash2, Upload } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -11,10 +11,10 @@ import { Switch } from '@/components/ui/Switch'
 import { Tabs } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { ImageUpload } from '@/components/ui/ImageUpload'
+import { MultiImageUpload } from '@/components/ui/MultiImageUpload'
 import { ProductThumb } from '@/components/shared/ProductThumb'
 import { ProductStatusBadge } from '@/components/shared/StatusBadge'
-import { formatNPR } from '@/lib/utils'
+import { cn, formatNPR } from '@/lib/utils'
 import { parseCSV, readFileText } from '@/lib/csv'
 import { downloadCSV } from '@/lib/export'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -24,9 +24,10 @@ import {
   useDeleteProductMutation,
   useGetProductsQuery,
   useSaveProductMutation,
+  useToggleProductMutation,
   useUpdateStockMutation,
 } from '@/services/endpoints/productsApi'
-import { useGetCategoryGroupsQuery } from '@/services/endpoints/categoriesApi'
+import { useGetCategoriesQuery, useGetCategoryGroupsQuery } from '@/services/endpoints/categoriesApi'
 import type { Product } from '@/types/common.types'
 
 export default function ProductsPage() {
@@ -35,12 +36,12 @@ export default function ProductsPage() {
   const [search, setSearch] = useState('')
   const debounced = useDebounce(search, 300)
   const [formFor, setFormFor] = useState<Product | 'new' | null>(null)
-  const [stockFor, setStockFor] = useState<Product | null>(null)
   const [deleteFor, setDeleteFor] = useState<Product | null>(null)
   const [bulkOpen, setBulkOpen] = useState(false)
 
   const { data: groups = [] } = useGetCategoryGroupsQuery()
   const groupNames = groups.map((g) => g.name)
+  const [toggleProduct] = useToggleProductMutation()
 
   const { data: products = [], isLoading } = useGetProductsQuery({
     group: group || undefined,
@@ -56,7 +57,10 @@ export default function ProductsPage() {
         <div className="flex items-center gap-3">
           <ProductThumb src={p.image} alt={p.name} contain />
           <div className="min-w-0">
-            <p className="truncate font-semibold text-slate-800">{p.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="truncate font-semibold text-slate-800">{p.name}</p>
+              {!p.active && <Badge>Hidden</Badge>}
+            </div>
             <p className="text-xs text-slate-400">
               {p.brand} · <span className="font-mono">{p.sku}</span>
             </p>
@@ -78,30 +82,24 @@ export default function ProductsPage() {
     {
       key: 'price',
       header: 'Price',
-      cell: (p) =>
-        p.onClearance && p.clearancePrice > 0 ? (
+      cell: (p) => {
+        const off = p.mrp > p.price ? Math.round((1 - p.price / p.mrp) * 100) : 0
+        return (
           <div className="flex items-center gap-1.5">
-            <span className="font-bold text-pink-600">{formatNPR(p.clearancePrice)}</span>
-            <span className="text-xs text-slate-400 line-through">{formatNPR(p.price)}</span>
-            <Badge tone="bg-pink-50 text-pink-700 ring-pink-600/15">Clearance</Badge>
+            <span className={cn('font-bold', p.onClearance && off > 0 ? 'text-pink-600' : 'text-slate-800')}>{formatNPR(p.price)}</span>
+            {off > 0 && <span className="text-xs text-slate-400 line-through">{formatNPR(p.mrp)}</span>}
+            {off > 0 && <span className="text-xs font-semibold text-green-600">{off}% off</span>}
+            {p.onClearance && off > 0 && <Badge tone="bg-pink-50 text-pink-700 ring-pink-600/15">Clearance</Badge>}
           </div>
-        ) : (
-          <div className="flex items-center gap-1.5">
-            <span className="font-bold text-slate-800">{formatNPR(p.price)}</span>
-            {p.mrp > p.price && <span className="text-xs text-slate-400 line-through">{formatNPR(p.mrp)}</span>}
-          </div>
-        ),
+        )
+      },
     },
     {
       key: 'stock',
       header: 'Stock',
-      cell: (p) => (
-        <div className="flex items-center gap-2">
-          <span className="font-bold text-slate-700">{p.stock}</span>
-          <ProductStatusBadge status={p.status} />
-        </div>
-      ),
+      cell: (p) => <InlineStock product={p} />,
     },
+    { key: 'visible', header: 'Visible', cell: (p) => <Switch checked={p.active} onChange={() => toggleProduct(p.id)} size="sm" aria-label={`Toggle ${p.name}`} /> },
     {
       key: 'actions',
       header: 'Actions',
@@ -109,9 +107,6 @@ export default function ProductsPage() {
       className: 'text-right',
       cell: (p) => (
         <div className="flex items-center justify-end gap-0.5">
-          <button onClick={() => setStockFor(p)} className="focus-ring rounded-lg px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50">
-            Stock
-          </button>
           <button onClick={() => setFormFor(p)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit">
             <Pencil className="h-4 w-4" />
           </button>
@@ -182,25 +177,26 @@ export default function ProductsPage() {
         />
       </Card>
 
-      <ProductFormModal product={formFor} groups={groupNames} onClose={() => setFormFor(null)} />
-      <EditStockModal product={stockFor} onClose={() => setStockFor(null)} />
+      <ProductFormModal product={formFor} onClose={() => setFormFor(null)} />
       <DeleteProduct product={deleteFor} onClose={() => setDeleteFor(null)} />
       <BulkImportModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
     </>
   )
 }
 
-function ProductFormModal({ product, groups, onClose }: { product: Product | 'new' | null; groups: string[]; onClose: () => void }) {
+function ProductFormModal({ product, onClose }: { product: Product | 'new' | null; onClose: () => void }) {
   const [save, { isLoading }] = useSaveProductMutation()
+  const { data: categories = [] } = useGetCategoriesQuery()
   const isEdit = product && product !== 'new'
   const p = isEdit ? (product as Product) : null
 
   const empty = {
-    sku: '', name: '', brand: '', categoryGroup: groups[0] ?? '', category: '',
+    sku: '', name: '', brand: '', category: '',
     price: '', mrp: '', stock: '', unit: '', shelfNo: '', lowStockThreshold: '15',
-    image: '', clearancePrice: '', onClearance: false,
+    onClearance: false,
   }
   const [form, setForm] = useState(empty)
+  const [images, setImages] = useState<string[]>([])
 
   const key = product === 'new' ? 'new' : p?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
@@ -209,34 +205,34 @@ function ProductFormModal({ product, groups, onClose }: { product: Product | 'ne
     setForm(
       p
         ? {
-            sku: p.sku, name: p.name, brand: p.brand, categoryGroup: p.categoryGroup, category: p.category,
-            price: String(p.price), mrp: String(p.mrp), stock: String(p.stock), unit: p.unit,
-            shelfNo: p.shelfNo, lowStockThreshold: String(p.lowStockThreshold), image: p.image,
-            clearancePrice: p.clearancePrice ? String(p.clearancePrice) : '', onClearance: p.onClearance,
+            sku: p.sku, name: p.name, brand: p.brand, category: p.category,
+            price: String(p.price), mrp: p.mrp ? String(p.mrp) : '', stock: String(p.stock), unit: p.unit,
+            shelfNo: p.shelfNo, lowStockThreshold: String(p.lowStockThreshold), onClearance: p.onClearance,
           }
         : empty,
     )
+    setImages(p?.images?.length ? p.images : p?.image ? [p.image] : [])
   }
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }))
 
   const submit = async () => {
+    const cat = categories.find((c) => c.name === form.category)
     await save({
       id: p?.id,
       sku: form.sku,
       name: form.name,
       brand: form.brand,
-      categoryGroup: form.categoryGroup,
-      category: form.category || form.categoryGroup,
+      category: form.category,
+      categoryGroup: cat?.group ?? '',
       price: Number(form.price) || 0,
-      mrp: Number(form.mrp) || Number(form.price) || 0,
+      mrp: Number(form.mrp) || 0,
       stock: Number(form.stock) || 0,
       unit: form.unit || '1 pc',
       shelfNo: form.shelfNo,
       lowStockThreshold: Number(form.lowStockThreshold) || 15,
-      image: form.image,
+      images,
       onClearance: form.onClearance,
-      clearancePrice: form.onClearance ? Number(form.clearancePrice) || 0 : 0,
     }).unwrap()
     onClose()
   }
@@ -251,71 +247,73 @@ function ProductFormModal({ product, groups, onClose }: { product: Product | 'ne
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit} loading={isLoading} disabled={!form.name.trim()}>
+          <Button onClick={submit} loading={isLoading} disabled={!form.name.trim() || !form.category}>
             {isEdit ? 'Save changes' : 'Save product'}
           </Button>
         </>
       }
     >
       <div className="space-y-3">
-        <ImageUpload label="Product image" value={form.image} onChange={(v) => set('image', v)} aspectClassName="aspect-square w-44 mx-auto" hint="Square image · recommended 800 × 800 px (PNG/JPG)." />
+        <MultiImageUpload label="Product images" images={images} onChange={setImages} hint="First image is the cover. Recommended 800 × 800 px on a white background." />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Input label="SKU" value={form.sku} onChange={(e) => set('sku', e.target.value)} placeholder="e.g. WW-001" className="font-mono" />
-          <Input label="Shelf number" value={form.shelfNo} onChange={(e) => set('shelfNo', e.target.value)} placeholder="e.g. A-3" />
           <Input label="Product name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Wai Wai Noodles" autoFocus />
           <Input label="Brand" value={form.brand} onChange={(e) => set('brand', e.target.value)} placeholder="e.g. Wai Wai" />
-          <Select label="Group" value={form.categoryGroup} onChange={(e) => set('categoryGroup', e.target.value)} placeholder="Select group" options={groups.map((g) => ({ label: g, value: g }))} />
-          <Input label="Category" value={form.category} onChange={(e) => set('category', e.target.value)} placeholder="e.g. Chips & Snacks" />
+          <Select
+            label="Category"
+            value={form.category}
+            onChange={(e) => set('category', e.target.value)}
+            placeholder="Select a category"
+            options={categories.map((c) => ({ label: `${c.name}  ·  ${c.group}`, value: c.name }))}
+          />
+          <Input label="Unit / size" value={form.unit} onChange={(e) => set('unit', e.target.value)} placeholder="e.g. 84g, 1L" />
+          <Input label="SKU" value={form.sku} onChange={(e) => set('sku', e.target.value)} placeholder="e.g. WW-001" className="font-mono" />
+          <Input label="Shelf number" value={form.shelfNo} onChange={(e) => set('shelfNo', e.target.value)} placeholder="e.g. A-3" />
         </div>
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Input label="Price (NPR)" type="number" value={form.price} onChange={(e) => set('price', e.target.value)} />
-          <Input label="MRP (NPR)" type="number" value={form.mrp} onChange={(e) => set('mrp', e.target.value)} />
+          <Input label="Selling price (NPR)" type="number" value={form.price} onChange={(e) => set('price', e.target.value)} />
+          <Input label="Original price" type="number" value={form.mrp} onChange={(e) => set('mrp', e.target.value)} hint="Optional" />
           <Input label="Stock" type="number" value={form.stock} onChange={(e) => set('stock', e.target.value)} />
-          <Input label="Unit" value={form.unit} onChange={(e) => set('unit', e.target.value)} placeholder="84g" />
+          <Input label="Low-stock at" type="number" value={form.lowStockThreshold} onChange={(e) => set('lowStockThreshold', e.target.value)} />
         </div>
-        <Input label="Low-stock alert threshold" type="number" value={form.lowStockThreshold} onChange={(e) => set('lowStockThreshold', e.target.value)} hint="Flag as low stock when quantity drops to this level." />
-
-        <div className="rounded-xl border border-slate-200 p-3">
-          <label className="flex items-center justify-between">
-            <span className="text-sm font-medium text-slate-700">Stock clearance discount</span>
-            <Switch checked={form.onClearance} onChange={(v) => set('onClearance', v)} />
-          </label>
-          {form.onClearance && (
-            <Input className="mt-3" label="Clearance price (NPR)" type="number" value={form.clearancePrice} onChange={(e) => set('clearancePrice', e.target.value)} hint="Shown to customers as the discounted price." />
-          )}
-        </div>
+        <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5">
+          <div>
+            <span className="text-sm font-medium text-slate-700">Mark as clearance</span>
+            <p className="text-xs text-slate-400">Shows a “Clearance” badge in the app. Drop the selling price to discount.</p>
+          </div>
+          <Switch checked={form.onClearance} onChange={(v) => set('onClearance', v)} />
+        </label>
       </div>
     </Modal>
   )
 }
 
-function EditStockModal({ product, onClose }: { product: Product | null; onClose: () => void }) {
-  const [update, { isLoading }] = useUpdateStockMutation()
-  const [stock, setStock] = useState('')
+/** Inline-editable stock cell — edit the number right in the table. */
+function InlineStock({ product }: { product: Product }) {
+  const [update] = useUpdateStockMutation()
+  const [val, setVal] = useState(String(product.stock))
 
-  const submit = async () => {
-    if (!product) return
-    await update({ id: product.id, stock: stock === '' ? product.stock : Number(stock) }).unwrap()
-    setStock('')
-    onClose()
+  useEffect(() => {
+    setVal(String(product.stock))
+  }, [product.stock])
+
+  const save = () => {
+    const n = Number(val)
+    if (!Number.isNaN(n) && n !== product.stock) update({ id: product.id, stock: n })
   }
 
   return (
-    <Modal
-      open={!!product}
-      onClose={onClose}
-      title="Update stock"
-      description={product?.name}
-      size="sm"
-      footer={
-        <>
-          <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit} loading={isLoading}>Save</Button>
-        </>
-      }
-    >
-      <Input label="New stock quantity" type="number" defaultValue={product?.stock} onChange={(e) => setStock(e.target.value)} hint={product ? `Low-stock threshold for this item is ${product.lowStockThreshold}.` : undefined} autoFocus />
-    </Modal>
+    <div className="flex items-center gap-2">
+      <input
+        type="number"
+        value={val}
+        onChange={(e) => setVal(e.target.value)}
+        onBlur={save}
+        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+        className="focus-ring h-8 w-16 rounded-lg border border-slate-200 bg-white px-2 text-sm font-semibold text-slate-700"
+        title={`Low-stock threshold: ${product.lowStockThreshold}`}
+      />
+      <ProductStatusBadge status={product.status} />
+    </div>
   )
 }
 

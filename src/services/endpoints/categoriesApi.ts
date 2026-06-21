@@ -1,13 +1,18 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { categories, categoryGroups } from '@/services/mock/data'
+import { categories, categoryGroups, products } from '@/services/mock/data'
 import type { Category, CategoryGroup } from '@/types/common.types'
+
+/** Live product count per category (so the number matches the real catalog). */
+function withCounts(list: Category[]): Category[] {
+  return list.map((c) => ({ ...c, productCount: products.filter((p) => p.category === c.name).length }))
+}
 
 export const categoriesApi = api.injectEndpoints({
   endpoints: (build) => ({
     getCategories: build.query<Category[], void>({
       async queryFn() {
         await mockDelay()
-        return { data: clone(categories) }
+        return { data: clone(withCounts(categories)) }
       },
       providesTags: ['Category'],
     }),

@@ -1,28 +1,37 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bike, CheckCircle2, Phone, PowerOff, Search, Star, Truck } from 'lucide-react'
+import { Bike, CheckCircle2, Eye, Pencil, Phone, Plus, PowerOff, Search, Star, Trash2, Truck } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
+import { DataTable, type Column } from '@/components/ui/Table'
 import { Button } from '@/components/ui/Button'
+import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
-import { Spinner } from '@/components/ui/Spinner'
+import { Badge } from '@/components/ui/Badge'
+import { Modal } from '@/components/ui/Modal'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
 import { StatCard } from '@/components/shared/StatCard'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
+  useDeleteDriverMutation,
   useGetDriversQuery,
+  useSaveDriverMutation,
   useSetDriverStatusMutation,
 } from '@/services/endpoints/driversApi'
 import { useGetOrdersQuery } from '@/services/endpoints/ordersApi'
 import { ROUTES } from '@/constants/routes'
-import type { DriverStatus } from '@/types/common.types'
+import { ZONES } from '@/lib/constants'
+import type { Driver, DriverStatus } from '@/types/common.types'
 
 export default function DriversPage() {
   const navigate = useNavigate()
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
   const debounced = useDebounce(search, 300)
+  const [formFor, setFormFor] = useState<Driver | 'new' | null>(null)
+  const [deleteFor, setDeleteFor] = useState<Driver | null>(null)
 
   const { data: drivers = [], isLoading } = useGetDriversQuery({
     status: (status as DriverStatus) || undefined,
@@ -43,11 +52,95 @@ export default function DriversPage() {
 
   const orderRef = (id: string | null) => orders.find((o) => o.id === id)?.reference
 
+  const columns: Column<Driver>[] = [
+    {
+      key: 'rider',
+      header: 'Rider',
+      cell: (d) => (
+        <div className="flex items-center gap-3">
+          <Avatar name={d.name} src={d.avatar} />
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-800">{d.name}</p>
+            <p className="flex items-center gap-1 text-xs text-slate-400">
+              <Phone className="h-3 w-3" /> {d.phone}
+            </p>
+          </div>
+        </div>
+      ),
+    },
+    {
+      key: 'vehicle',
+      header: 'Vehicle',
+      cell: (d) => (
+        <span className="flex items-center gap-1.5 text-sm text-slate-600">
+          <Bike className="h-3.5 w-3.5 text-brand-500" /> {d.vehicle}
+        </span>
+      ),
+    },
+    { key: 'status', header: 'Status', cell: (d) => <DriverStatusBadge status={d.status} /> },
+    {
+      key: 'active',
+      header: 'Active order',
+      cell: (d) =>
+        d.activeOrderId ? (
+          <button onClick={(e) => { e.stopPropagation(); navigate(ROUTES.orderDetail(d.activeOrderId!)) }} className="text-sm font-semibold text-brand-600 hover:underline">
+            {orderRef(d.activeOrderId) ?? 'On order'}
+          </button>
+        ) : (
+          <span className="text-xs text-slate-300">—</span>
+        ),
+    },
+    {
+      key: 'rating',
+      header: 'Rating',
+      cell: (d) => (
+        <span className="flex items-center gap-0.5 text-sm font-bold text-amber-500">
+          <Star className="h-3.5 w-3.5 fill-amber-400" /> {d.rating}
+        </span>
+      ),
+    },
+    { key: 'today', header: 'Today', cell: (d) => <span className="font-semibold text-slate-700">{d.deliveriesToday}</span> },
+    {
+      key: 'ontime',
+      header: 'On-time',
+      cell: (d) => <Badge tone={d.onTimeRate >= 95 ? 'bg-green-50 text-green-700 ring-green-600/15' : 'bg-amber-50 text-amber-700 ring-amber-600/15'}>{d.onTimeRate}%</Badge>,
+    },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      cell: (d) => (
+        <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
+          {d.status === 'offline' ? (
+            <Button size="sm" variant="secondary" onClick={() => setDriverStatus({ id: d.id, status: 'available' })}>Set available</Button>
+          ) : d.status === 'available' ? (
+            <Button size="sm" variant="outline" onClick={() => setDriverStatus({ id: d.id, status: 'offline' })}>Set offline</Button>
+          ) : null}
+          <button onClick={() => navigate(ROUTES.driverDetail(d.id))} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="View info">
+            <Eye className="h-4 w-4" />
+          </button>
+          <button onClick={() => setFormFor(d)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit">
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button onClick={() => setDeleteFor(d)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger" aria-label="Delete">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      ),
+    },
+  ]
+
   return (
     <>
       <PageHeader
         title="Drivers"
         description="Your delivery fleet across Butwal. Assign riders from the Orders board."
+        actions={
+          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setFormFor('new')}>
+            Add rider
+          </Button>
+        }
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
@@ -82,84 +175,95 @@ export default function DriversPage() {
         </div>
       </Card>
 
-      {isLoading ? (
-        <Spinner label="Loading riders…" className="py-24" />
-      ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {drivers.map((d) => (
-            <Card key={d.id} className="cursor-pointer transition-shadow hover:shadow-card-hover" onClick={() => navigate(ROUTES.driverDetail(d.id))}>
-              <CardContent className="p-5">
-                <div className="flex items-start gap-3">
-                  <div className="relative">
-                    <Avatar name={d.name} src={d.avatar} size="lg" />
-                    {d.status === 'on_delivery' && (
-                      <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full bg-brand-500 ring-2 ring-white" />
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-2">
-                      <p className="truncate font-bold text-slate-800">{d.name}</p>
-                      <span className="flex items-center gap-0.5 text-sm font-bold text-amber-500">
-                        <Star className="h-3.5 w-3.5 fill-amber-400" /> {d.rating}
-                      </span>
-                    </div>
-                    <p className="flex items-center gap-1 text-xs text-slate-400">
-                      <Phone className="h-3 w-3" /> {d.phone}
-                    </p>
-                    <div className="mt-1.5">
-                      <DriverStatusBadge status={d.status} />
-                    </div>
-                  </div>
-                </div>
+      <Card>
+        <DataTable
+          columns={columns}
+          data={drivers}
+          rowKey={(d) => d.id}
+          onRowClick={(d) => navigate(ROUTES.driverDetail(d.id))}
+          loading={isLoading}
+          emptyTitle="No riders found"
+        />
+      </Card>
 
-                <p className="mt-3 flex items-center gap-1.5 text-xs text-slate-500">
-                  <Bike className="h-3.5 w-3.5 text-brand-500" /> {d.vehicle}
-                </p>
-
-                {d.activeOrderId && (
-                  <div className="mt-3 rounded-xl bg-brand-50 px-3 py-2 text-xs font-semibold text-brand-700">
-                    Delivering {orderRef(d.activeOrderId) ?? 'an order'} →
-                  </div>
-                )}
-
-                <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-4 text-center">
-                  <div>
-                    <p className="text-base font-extrabold text-slate-800">{d.deliveriesToday}</p>
-                    <p className="text-[11px] text-slate-400">Today</p>
-                  </div>
-                  <div>
-                    <p className="text-base font-extrabold text-slate-800">{d.totalDeliveries.toLocaleString()}</p>
-                    <p className="text-[11px] text-slate-400">Total</p>
-                  </div>
-                  <div>
-                    <p className="text-base font-extrabold text-slate-800">{d.onTimeRate}%</p>
-                    <p className="text-[11px] text-slate-400">On-time</p>
-                  </div>
-                </div>
-
-                <div className="mt-4 flex gap-2" onClick={(e) => e.stopPropagation()}>
-                  {d.status === 'offline' ? (
-                    <Button size="sm" className="flex-1" onClick={() => setDriverStatus({ id: d.id, status: 'available' })}>
-                      Set available
-                    </Button>
-                  ) : d.status === 'available' ? (
-                    <Button size="sm" variant="outline" className="flex-1" onClick={() => setDriverStatus({ id: d.id, status: 'offline' })}>
-                      Set offline
-                    </Button>
-                  ) : (
-                    <Button size="sm" variant="outline" className="flex-1" disabled>
-                      On a delivery
-                    </Button>
-                  )}
-                  <Button size="sm" variant="ghost" onClick={() => navigate(ROUTES.driverDetail(d.id))}>
-                    View
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <DriverFormModal driver={formFor} onClose={() => setFormFor(null)} />
+      <DeleteDriver driver={deleteFor} onClose={() => setDeleteFor(null)} />
     </>
+  )
+}
+
+const VEHICLE_TYPES = ['Scooter', 'Bike', 'Bicycle', 'EV Scooter']
+
+function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; onClose: () => void }) {
+  const [save, { isLoading }] = useSaveDriverMutation()
+  const isEdit = driver && driver !== 'new'
+  const d = isEdit ? (driver as Driver) : null
+
+  const empty = { name: '', phone: '', vehicleType: 'Scooter', plate: '', zone: ZONES[0] as string }
+  const [form, setForm] = useState(empty)
+  const key = driver === 'new' ? 'new' : d?.id ?? 'closed'
+  const [lastKey, setLastKey] = useState('')
+  if (key !== lastKey && driver) {
+    setLastKey(key)
+    if (d) {
+      const [type, plate] = d.vehicle.split(' · ')
+      setForm({ name: d.name, phone: d.phone, vehicleType: type || 'Scooter', plate: plate || '', zone: d.zone })
+    } else {
+      setForm(empty)
+    }
+  }
+  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
+
+  const submit = async () => {
+    const vehicle = form.plate.trim() ? `${form.vehicleType} · ${form.plate.trim()}` : form.vehicleType
+    await save({ id: d?.id, name: form.name, phone: form.phone, vehicle, zone: form.zone }).unwrap()
+    onClose()
+  }
+
+  return (
+    <Modal
+      open={!!driver}
+      onClose={onClose}
+      title={isEdit ? 'Edit rider' : 'Add rider'}
+      description={isEdit ? d?.name : 'Add a new delivery rider to the fleet.'}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={submit} loading={isLoading} disabled={!form.name.trim() || !form.phone.trim()}>
+            {isEdit ? 'Save changes' : 'Add rider'}
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-3">
+        <Input label="Full name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Manoj Thapa" autoFocus />
+        <Input label="Phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+977 98…" leftIcon={<Phone className="h-4 w-4" />} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Select label="Vehicle type" value={form.vehicleType} onChange={(e) => set('vehicleType', e.target.value)} options={VEHICLE_TYPES.map((v) => ({ label: v, value: v }))} />
+          <Input label="Vehicle number (plate)" value={form.plate} onChange={(e) => set('plate', e.target.value)} placeholder="e.g. BA 24 PA 1290" />
+        </div>
+        <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={ZONES.map((z) => ({ label: z, value: z }))} />
+      </div>
+    </Modal>
+  )
+}
+
+function DeleteDriver({ driver, onClose }: { driver: Driver | null; onClose: () => void }) {
+  const [del, { isLoading }] = useDeleteDriverMutation()
+  const confirm = async () => {
+    if (!driver) return
+    await del(driver.id).unwrap()
+    onClose()
+  }
+  return (
+    <ConfirmDialog
+      open={!!driver}
+      onClose={onClose}
+      onConfirm={confirm}
+      loading={isLoading}
+      title="Delete rider?"
+      description={driver ? `"${driver.name}" will be removed from the fleet.` : undefined}
+      confirmLabel="Delete rider"
+    />
   )
 }

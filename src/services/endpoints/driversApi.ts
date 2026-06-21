@@ -14,6 +14,13 @@ export interface RiderFinance {
   discrepancy: number
 }
 
+/** Today's delivered count for a rider, derived from real orders. */
+const deliveredToday = (driverId: string) =>
+  orders.filter((o) => o.driverId === driverId && o.status === 'delivered').length
+
+/** Attach the derived deliveriesToday so the stat matches the order data. */
+const withToday = (d: Driver): Driver => ({ ...d, deliveriesToday: deliveredToday(d.id) })
+
 export const driversApi = api.injectEndpoints({
   endpoints: (build) => ({
     getDrivers: build.query<Driver[], { status?: DriverStatus | 'all'; search?: string } | void>({
@@ -29,7 +36,7 @@ export const driversApi = api.injectEndpoints({
             (d) => d.name.toLowerCase().includes(q) || d.phone.includes(q),
           )
         }
-        return { data: clone(result) }
+        return { data: clone(result.map(withToday)) }
       },
       providesTags: ['Driver'],
     }),
@@ -39,7 +46,7 @@ export const driversApi = api.injectEndpoints({
         await mockDelay(200)
         const driver = drivers.find((d) => d.id === id)
         if (!driver) return { error: { status: 404, data: 'Not found' } as never }
-        return { data: clone(driver) }
+        return { data: clone(withToday(driver)) }
       },
       providesTags: (_r, _e, id) => [{ type: 'Driver', id }],
     }),
@@ -69,7 +76,7 @@ export const driversApi = api.injectEndpoints({
           return {
             driverId: d.id,
             name: d.name,
-            deliveriesToday: d.deliveriesToday,
+            deliveriesToday: deliveredToday(d.id),
             kmToday: d.kmToday,
             fuel: d.kmToday * FUEL_RATE_PER_KM,
             codExpected,
@@ -93,6 +100,47 @@ export const driversApi = api.injectEndpoints({
       },
       invalidatesTags: ['Driver'],
     }),
+
+    saveDriver: build.mutation<Driver, Partial<Driver> & { id?: string }>({
+      async queryFn(payload) {
+        await mockDelay(300)
+        if (payload.id) {
+          const idx = drivers.findIndex((d) => d.id === payload.id)
+          if (idx === -1) return { error: { status: 404, data: 'Not found' } as never }
+          drivers[idx] = { ...drivers[idx], ...payload } as Driver
+          return { data: clone(drivers[idx]) }
+        }
+        const created: Driver = {
+          id: `d${Date.now()}`,
+          name: payload.name ?? 'New Rider',
+          phone: payload.phone ?? '',
+          avatar: `https://i.pravatar.cc/120?u=chutkima-${Date.now()}`,
+          vehicle: payload.vehicle ?? 'Scooter',
+          status: 'offline',
+          zone: payload.zone ?? 'Traffic Chowk',
+          rating: 5,
+          activeOrderId: null,
+          deliveriesToday: 0,
+          totalDeliveries: 0,
+          onTimeRate: 100,
+          kmToday: 0,
+        }
+        drivers.unshift(created)
+        return { data: clone(created) }
+      },
+      invalidatesTags: ['Driver'],
+    }),
+
+    deleteDriver: build.mutation<{ id: string }, string>({
+      async queryFn(id) {
+        await mockDelay(250)
+        const idx = drivers.findIndex((d) => d.id === id)
+        if (idx === -1) return { error: { status: 404, data: 'Not found' } as never }
+        drivers.splice(idx, 1)
+        return { data: { id } }
+      },
+      invalidatesTags: ['Driver'],
+    }),
   }),
 })
 
@@ -102,4 +150,6 @@ export const {
   useGetDriverDeliveriesQuery,
   useGetRiderFinanceQuery,
   useSetDriverStatusMutation,
+  useSaveDriverMutation,
+  useDeleteDriverMutation,
 } = driversApi

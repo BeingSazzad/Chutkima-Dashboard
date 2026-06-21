@@ -10,6 +10,8 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
 import { CustomerTrustBadge } from '@/components/shared/StatusBadge'
 import { downloadCSV } from '@/lib/export'
+import { deriveTrustBadge } from '@/lib/trust'
+import { useGetTrustConfigQuery } from '@/services/endpoints/settingsApi'
 import { formatDateTime, formatNPR, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -25,6 +27,7 @@ export default function CustomersPage() {
   const [search, setSearch] = useState('')
   const debounced = useDebounce(search, 300)
   const { data: customers = [], isLoading } = useGetCustomersQuery({ search: debounced || undefined })
+  const { data: trustCfg } = useGetTrustConfigQuery()
   const [ban] = useBanCustomerMutation()
   const [deleteFor, setDeleteFor] = useState<Customer | null>(null)
 
@@ -51,7 +54,14 @@ export default function CustomersPage() {
     { key: 'orders', header: 'Orders', cell: (c) => <span className="font-semibold text-slate-700">{c.totalOrders}</span> },
     { key: 'spent', header: 'Lifetime spend', cell: (c) => <span className="font-bold text-slate-800">{formatNPR(c.totalSpent)}</span> },
     { key: 'last', header: 'Last order', cell: (c) => <span className="text-slate-500">{timeAgo(c.lastOrderAt)}</span> },
-    { key: 'trust', header: 'Trust', cell: (c) => <CustomerTrustBadge badge={c.trustBadge} /> },
+    {
+      key: 'trust',
+      header: 'Risk',
+      cell: (c) => {
+        const t = deriveTrustBadge(c, trustCfg)
+        return t === 'green' ? <span className="text-xs text-slate-300">—</span> : <CustomerTrustBadge badge={t} />
+      },
+    },
     {
       key: 'tier',
       header: 'Tier',

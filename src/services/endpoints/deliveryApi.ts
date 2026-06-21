@@ -26,7 +26,6 @@ export const deliveryApi = api.injectEndpoints({
           id: `z${Date.now()}`,
           name: payload.name ?? 'New Zone',
           etaMins: payload.etaMins ?? 12,
-          deliveryFee: payload.deliveryFee ?? 40,
           areas: payload.areas ?? [],
           mapLink: payload.mapLink ?? '',
           active: payload.active ?? true,

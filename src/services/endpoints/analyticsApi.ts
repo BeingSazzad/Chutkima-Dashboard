@@ -63,9 +63,10 @@ export const analyticsApi = api.injectEndpoints({
     getKpis: build.query<KpiSummary, void>({
       async queryFn() {
         await mockDelay(300)
+        // Derive from the same orders the Orders page shows — no fabricated padding.
         const delivered = orders.filter((o) => o.status === 'delivered')
-        const revenueToday = delivered.reduce((s, o) => s + o.grandTotal, 0) + 58_400
-        const ordersToday = orders.length + 196
+        const revenueToday = delivered.reduce((s, o) => s + o.grandTotal, 0)
+        const ordersToday = orders.length
         const activeDrivers = drivers.filter((d) => d.status !== 'offline').length
         return {
           data: {

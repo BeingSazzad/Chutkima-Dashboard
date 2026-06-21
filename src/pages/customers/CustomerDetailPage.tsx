@@ -10,6 +10,8 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
 import { ProductThumb } from '@/components/shared/ProductThumb'
 import { CustomerTrustBadge, OrderStatusBadge, PaymentBadge } from '@/components/shared/StatusBadge'
+import { COD_MODE_LABEL, deriveTrustBadge } from '@/lib/trust'
+import { useGetTrustConfigQuery } from '@/services/endpoints/settingsApi'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { formatDateTime, formatNPR, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
@@ -34,6 +36,7 @@ export default function CustomerDetailPage() {
   const navigate = useNavigate()
   const { data: customer, isLoading } = useGetCustomerQuery(customerId)
   const { data: orders = [], isLoading: ordersLoading } = useGetCustomerOrdersQuery(customerId)
+  const { data: trustCfg } = useGetTrustConfigQuery()
   const [ban, { isLoading: banning }] = useBanCustomerMutation()
   const [confirmDelete, setConfirmDelete] = useState(false)
   const [del, { isLoading: deleting }] = useDeleteCustomerMutation()
@@ -50,6 +53,7 @@ export default function CustomerDetailPage() {
     )
 
   const avgOrder = customer.totalOrders ? Math.round(customer.totalSpent / customer.totalOrders) : 0
+  const trustBadge = deriveTrustBadge(customer, trustCfg)
 
   const handleDelete = async () => {
     await del(customer.id).unwrap()
@@ -127,20 +131,27 @@ export default function CustomerDetailPage() {
 
           {/* Trust */}
           <Card>
-            <CardHeader title="Trust" action={<CustomerTrustBadge badge={customer.trustBadge} />} />
-            <CardContent className="grid grid-cols-3 gap-2 pt-2 text-center">
-              <div>
-                <p className="text-lg font-extrabold text-slate-800">{customer.codCancellations}</p>
-                <p className="text-[11px] text-slate-400">COD cancels</p>
+            <CardHeader title="Trust" action={<CustomerTrustBadge badge={trustBadge} />} />
+            <CardContent className="space-y-3 pt-2">
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div>
+                  <p className="text-lg font-extrabold text-slate-800">{customer.codCancellations}</p>
+                  <p className="text-[11px] text-slate-400">COD cancels</p>
+                </div>
+                <div>
+                  <p className="text-lg font-extrabold text-slate-800">{customer.notRespondingCount}</p>
+                  <p className="text-[11px] text-slate-400">No-response</p>
+                </div>
+                <div>
+                  <p className="text-lg font-extrabold text-slate-800">{customer.completedOrders}</p>
+                  <p className="text-[11px] text-slate-400">Completed</p>
+                </div>
               </div>
-              <div>
-                <p className="text-lg font-extrabold text-slate-800">{customer.notRespondingCount}</p>
-                <p className="text-[11px] text-slate-400">No-response</p>
-              </div>
-              <div>
-                <p className="text-lg font-extrabold text-slate-800">{customer.completedOrders}</p>
-                <p className="text-[11px] text-slate-400">Completed</p>
-              </div>
+              {trustBadge !== 'green' && trustCfg?.enabled && (
+                <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-xs font-medium text-amber-700">
+                  COD restriction: {COD_MODE_LABEL[trustCfg.codMode]}
+                </p>
+              )}
             </CardContent>
           </Card>
 
@@ -164,7 +175,7 @@ export default function CustomerDetailPage() {
 
         {/* Order history */}
         <Card className="lg:col-span-2">
-          <CardHeader title="Order history" subtitle={`${orders.length} orders`} />
+          <CardHeader title="Recent orders" subtitle={`Lifetime: ${customer.totalOrders} orders`} />
           <CardContent className="pt-2">
             {ordersLoading ? (
               <Spinner label="Loading orders…" className="py-10" />

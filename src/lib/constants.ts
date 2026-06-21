@@ -22,7 +22,7 @@ export const ORDER_STATUS_META: Record<
   OrderStatus,
   { label: string; dot: string; badge: string }
 > = {
-  placed: { label: 'Placed', dot: 'bg-info', badge: 'bg-blue-50 text-blue-700 ring-blue-600/15' },
+  placed: { label: 'Confirmed', dot: 'bg-info', badge: 'bg-blue-50 text-blue-700 ring-blue-600/15' },
   packing: {
     label: 'Packing',
     dot: 'bg-warning',
@@ -34,7 +34,7 @@ export const ORDER_STATUS_META: Record<
     badge: 'bg-violet-50 text-violet-700 ring-violet-600/15',
   },
   on_the_way: {
-    label: 'On the Way',
+    label: 'Out for Delivery',
     dot: 'bg-brand-500',
     badge: 'bg-brand-50 text-brand-700 ring-brand-600/15',
   },

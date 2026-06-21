@@ -1,16 +1,16 @@
 import { useState } from 'react'
-import { Bike, Clock, MapPin, Pencil, Plus, Store, Trash2 } from 'lucide-react'
+import { Clock, Pencil, Plus, Store, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
+import { DataTable, type Column } from '@/components/ui/Table'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/Switch'
 import { Badge } from '@/components/ui/Badge'
-import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { StatCard } from '@/components/shared/StatCard'
-import { cn, formatNPR } from '@/lib/utils'
+import { formatNPR } from '@/lib/utils'
 import {
   useDeleteStoreMutation,
   useGetStoreOverviewQuery,
@@ -31,6 +31,53 @@ export default function StoresPage() {
     (acc, o) => ({ orders: acc.orders + o.orders, revenue: acc.revenue + o.revenue, pending: acc.pending + o.pending }),
     { orders: 0, revenue: 0, pending: 0 },
   )
+  const statFor = (id: string) => overview.find((o) => o.store.id === id)
+
+  const columns: Column<DarkStore>[] = [
+    {
+      key: 'store',
+      header: 'Store',
+      cell: (s) => (
+        <div className="flex items-center gap-3">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
+            <Store className="h-5 w-5" />
+          </div>
+          <div className="min-w-0">
+            <p className="font-semibold text-slate-800">{s.name}</p>
+            <p className="truncate text-xs text-slate-400">{s.address}</p>
+          </div>
+        </div>
+      ),
+    },
+    { key: 'hours', header: 'Hours', cell: (s) => <span className="text-slate-600">{s.openTime}–{s.closeTime}</span> },
+    { key: 'orders', header: 'Orders', cell: (s) => <span className="font-semibold text-slate-700">{statFor(s.id)?.orders ?? 0}</span> },
+    { key: 'revenue', header: 'Revenue', cell: (s) => <span className="font-semibold text-slate-800">{formatNPR(statFor(s.id)?.revenue ?? 0)}</span> },
+    {
+      key: 'pending',
+      header: 'Pending',
+      cell: (s) => {
+        const n = statFor(s.id)?.pending ?? 0
+        return n > 0 ? <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15">{n}</Badge> : <span className="text-xs text-slate-400">0</span>
+      },
+    },
+    { key: 'active', header: 'Active', cell: (s) => <Switch checked={s.active} onChange={() => toggle(s.id)} size="sm" aria-label={`Toggle ${s.name}`} /> },
+    {
+      key: 'actions',
+      header: 'Actions',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      cell: (s) => (
+        <div className="flex items-center justify-end gap-0.5">
+          <button onClick={() => setFormFor(s)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit">
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button onClick={() => setDeleteFor(s)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger" aria-label="Delete">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
+      ),
+    },
+  ]
 
   return (
     <>
@@ -50,66 +97,9 @@ export default function StoresPage() {
         <StatCard label="Pending now" value={totals.pending} icon={<Clock className="h-5 w-5" />} iconClass="bg-amber-50 text-amber-600" />
       </div>
 
-      {isLoading ? (
-        <Spinner label="Loading stores…" className="py-24" />
-      ) : (
-        <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-          {stores.map((s) => {
-            const stat = overview.find((o) => o.store.id === s.id)
-            return (
-              <Card key={s.id} className={cn(!s.active && 'opacity-60')}>
-                <CardContent className="p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-50 text-brand-600">
-                        <Store className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-800">{s.name}</p>
-                        <p className="flex items-center gap-1 text-xs text-slate-400"><MapPin className="h-3 w-3" /> {s.address}</p>
-                      </div>
-                    </div>
-                    {!s.active && <Badge>Paused</Badge>}
-                  </div>
-
-                  <div className="mt-3 flex items-center gap-3 text-xs text-slate-400">
-                    <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {s.openTime}–{s.closeTime}</span>
-                    <span className="flex items-center gap-1"><Bike className="h-3 w-3" /> {stat?.ridersOnline ?? 0} riders online</span>
-                  </div>
-
-                  <div className="mt-4 grid grid-cols-3 gap-2 border-t border-slate-100 pt-4 text-center">
-                    <div>
-                      <p className="text-base font-extrabold text-slate-800">{stat?.orders ?? 0}</p>
-                      <p className="text-[11px] text-slate-400">Orders</p>
-                    </div>
-                    <div>
-                      <p className="text-sm font-extrabold text-slate-800">{formatNPR(stat?.revenue ?? 0)}</p>
-                      <p className="text-[11px] text-slate-400">Revenue</p>
-                    </div>
-                    <div>
-                      <p className="text-base font-extrabold text-amber-600">{stat?.pending ?? 0}</p>
-                      <p className="text-[11px] text-slate-400">Pending</p>
-                    </div>
-                  </div>
-
-                  <div className="mt-4 flex items-center gap-2">
-                    <Switch checked={s.active} onChange={() => toggle(s.id)} aria-label={`Toggle ${s.name}`} />
-                    <span className="text-xs text-slate-500">{s.active ? 'Active' : 'Paused'}</span>
-                    <div className="ml-auto flex gap-0.5">
-                      <button onClick={() => setFormFor(s)} className="focus-ring rounded-lg p-2 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit">
-                        <Pencil className="h-4 w-4" />
-                      </button>
-                      <button onClick={() => setDeleteFor(s)} className="focus-ring rounded-lg p-2 text-slate-400 hover:bg-red-50 hover:text-danger" aria-label="Delete">
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-        </div>
-      )}
+      <Card className="mt-4">
+        <DataTable columns={columns} data={stores} rowKey={(s) => s.id} loading={isLoading} emptyTitle="No dark stores yet" />
+      </Card>
 
       <StoreFormModal store={formFor} onClose={() => setFormFor(null)} />
       <DeleteStore store={deleteFor} onClose={() => setDeleteFor(null)} />

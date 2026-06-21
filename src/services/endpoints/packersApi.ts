@@ -1,5 +1,5 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { packers, packerTemplate } from '@/services/mock/data'
+import { packers } from '@/services/mock/data'
 import type { Packer } from '@/types/common.types'
 
 export const packersApi = api.injectEndpoints({
@@ -24,7 +24,7 @@ export const packersApi = api.injectEndpoints({
         const created: Packer = {
           id: `pk${Date.now()}`,
           name: payload.name ?? 'New Packer',
-          whatsapp: payload.whatsapp ?? '',
+          phone: payload.phone ?? '',
           active: payload.active ?? true,
           packedToday: 0,
           createdAt: new Date().toISOString(),
@@ -69,22 +69,6 @@ export const packersApi = api.injectEndpoints({
       invalidatesTags: ['Packer'],
     }),
 
-    getPackerTemplate: build.query<{ value: string }, void>({
-      async queryFn() {
-        await mockDelay(150)
-        return { data: clone(packerTemplate) }
-      },
-      providesTags: ['PackerTemplate'],
-    }),
-
-    savePackerTemplate: build.mutation<{ value: string }, string>({
-      async queryFn(value) {
-        await mockDelay(250)
-        packerTemplate.value = value
-        return { data: clone(packerTemplate) }
-      },
-      invalidatesTags: ['PackerTemplate'],
-    }),
   }),
 })
 
@@ -93,6 +77,4 @@ export const {
   useSavePackerMutation,
   useTogglePackerMutation,
   useDeletePackerMutation,
-  useGetPackerTemplateQuery,
-  useSavePackerTemplateMutation,
 } = packersApi

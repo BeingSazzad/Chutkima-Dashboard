@@ -98,6 +98,7 @@ export const productsApi = api.injectEndpoints({
           lowStockThreshold: threshold,
           shelfNo: payload.shelfNo ?? '',
           onClearance: payload.onClearance ?? false,
+          active: payload.active ?? true,
           status: deriveStatus(stock, threshold),
           deliveryMins: payload.deliveryMins ?? 15,
           sold: 0,
@@ -115,6 +116,18 @@ export const productsApi = api.injectEndpoints({
         if (idx === -1) return { error: { status: 404, data: 'Not found' } as never }
         products.splice(idx, 1)
         return { data: { id } }
+      },
+      invalidatesTags: ['Product'],
+    }),
+
+    /** Toggle catalog visibility (hide without deleting). */
+    toggleProduct: build.mutation<Product, string>({
+      async queryFn(id) {
+        await mockDelay(150)
+        const p = products.find((x) => x.id === id)
+        if (!p) return { error: { status: 404, data: 'Not found' } as never }
+        p.active = !p.active
+        return { data: clone(p) }
       },
       invalidatesTags: ['Product'],
     }),
@@ -160,6 +173,7 @@ export const productsApi = api.injectEndpoints({
               lowStockThreshold: 15,
               shelfNo: row.shelfNo ?? '',
               onClearance: false,
+              active: true,
               status: deriveStatus(row.stock ?? 0, 15),
               deliveryMins: 15,
               sold: 0,
@@ -200,6 +214,7 @@ export const {
   useUpdateStockMutation,
   useSaveProductMutation,
   useDeleteProductMutation,
+  useToggleProductMutation,
   useBulkImportProductsMutation,
   useBulkUpdateStockMutation,
 } = productsApi

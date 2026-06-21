@@ -1,21 +1,18 @@
-import { useEffect, useState } from 'react'
-import { Check, MessageCircle, Pencil, Plus, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Pencil, Phone, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
-import { Card, CardContent, CardHeader } from '@/components/ui/Card'
+import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Textarea } from '@/components/ui/Textarea'
 import { Modal } from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/Switch'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
 import {
   useDeletePackerMutation,
-  useGetPackerTemplateQuery,
   useGetPackersQuery,
   useSavePackerMutation,
-  useSavePackerTemplateMutation,
   useTogglePackerMutation,
 } from '@/services/endpoints/packersApi'
 import type { Packer } from '@/types/common.types'
@@ -36,7 +33,7 @@ export default function PackersPage() {
           <div>
             <p className="font-semibold text-slate-800">{p.name}</p>
             <p className="flex items-center gap-1 text-xs text-slate-400">
-              <MessageCircle className="h-3 w-3" /> {p.whatsapp}
+              <Phone className="h-3 w-3" /> {p.phone}
             </p>
           </div>
         </div>
@@ -66,7 +63,7 @@ export default function PackersPage() {
     <>
       <PageHeader
         title="Packers"
-        description="Pick-and-pack staff. No app login — they get order pick-lists on WhatsApp."
+        description="Pick-and-pack staff at the dark store. No app login needed."
         actions={
           <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setFormFor('new')}>
             Add packer
@@ -74,52 +71,13 @@ export default function PackersPage() {
         }
       />
 
-      <Card className="mb-4">
+      <Card>
         <DataTable columns={columns} data={packers} rowKey={(p) => p.id} loading={isLoading} emptyTitle="No packers yet" emptyDescription="Add a packer to assign orders for packing." />
       </Card>
-
-      <TemplateEditor />
 
       <PackerFormModal packer={formFor} onClose={() => setFormFor(null)} />
       <DeletePacker packer={deleteFor} onClose={() => setDeleteFor(null)} />
     </>
-  )
-}
-
-function TemplateEditor() {
-  const { data } = useGetPackerTemplateQuery()
-  const [save, { isLoading }] = useSavePackerTemplateMutation()
-  const [value, setValue] = useState('')
-  const [saved, setSaved] = useState(false)
-
-  useEffect(() => {
-    if (data) setValue(data.value)
-  }, [data])
-
-  const onSave = async () => {
-    await save(value).unwrap()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 1800)
-  }
-
-  return (
-    <Card>
-      <CardHeader title="WhatsApp pick-list template" subtitle="Sent to the packer when an order is assigned." />
-      <CardContent className="space-y-3 pt-2">
-        <Textarea value={value} onChange={(e) => setValue(e.target.value)} rows={6} className="font-mono text-xs" />
-        <p className="text-xs text-slate-400">
-          Placeholders: <span className="font-mono">{'{orderNo} {customer} {address} {items} {skuCount} {unitCount}'}</span>. Each item line includes SKU, name, shelf, qty and unit price.
-        </p>
-        <div className="flex items-center justify-end gap-2">
-          {saved && (
-            <span className="flex items-center gap-1 text-xs font-semibold text-success">
-              <Check className="h-3.5 w-3.5" /> Saved
-            </span>
-          )}
-          <Button onClick={onSave} loading={isLoading} disabled={!value.trim()}>Save template</Button>
-        </div>
-      </CardContent>
-    </Card>
   )
 }
 
@@ -129,17 +87,17 @@ function PackerFormModal({ packer, onClose }: { packer: Packer | 'new' | null; o
   const p = isEdit ? (packer as Packer) : null
 
   const [name, setName] = useState('')
-  const [whatsapp, setWhatsapp] = useState('')
+  const [phone, setPhone] = useState('')
   const key = packer === 'new' ? 'new' : p?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
   if (key !== lastKey && packer) {
     setLastKey(key)
     setName(p?.name ?? '')
-    setWhatsapp(p?.whatsapp ?? '')
+    setPhone(p?.phone ?? '')
   }
 
   const submit = async () => {
-    await save({ id: p?.id, name, whatsapp }).unwrap()
+    await save({ id: p?.id, name, phone }).unwrap()
     onClose()
   }
 
@@ -148,11 +106,11 @@ function PackerFormModal({ packer, onClose }: { packer: Packer | 'new' | null; o
       open={!!packer}
       onClose={onClose}
       title={isEdit ? 'Edit packer' : 'Add packer'}
-      description="Packers need only a name and WhatsApp number — no login."
+      description="Packers only need a name and phone number — no login."
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit} loading={isLoading} disabled={!name.trim() || !whatsapp.trim()}>
+          <Button onClick={submit} loading={isLoading} disabled={!name.trim() || !phone.trim()}>
             {isEdit ? 'Save changes' : 'Add packer'}
           </Button>
         </>
@@ -160,7 +118,7 @@ function PackerFormModal({ packer, onClose }: { packer: Packer | 'new' | null; o
     >
       <div className="space-y-3">
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Bimala Thapa" autoFocus />
-        <Input label="WhatsApp number" value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="+977 98…" leftIcon={<MessageCircle className="h-4 w-4" />} />
+        <Input label="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+977 98…" leftIcon={<Phone className="h-4 w-4" />} />
       </div>
     </Modal>
   )
@@ -180,7 +138,7 @@ function DeletePacker({ packer, onClose }: { packer: Packer | null; onClose: () 
       onConfirm={confirm}
       loading={isLoading}
       title="Remove packer?"
-      description={packer ? `"${packer.name}" will no longer receive pick-lists.` : undefined}
+      description={packer ? `"${packer.name}" will be removed.` : undefined}
       confirmLabel="Remove packer"
     />
   )

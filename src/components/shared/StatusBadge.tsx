@@ -61,7 +61,11 @@ export function PaymentBadge({
   status: PaymentStatus
 }) {
   if (method === 'cod') {
-    return (
+    return status === 'paid' ? (
+      <Badge tone="bg-green-50 text-green-700 ring-green-600/15">
+        <Banknote className="h-3 w-3" /> Paid · COD (cash)
+      </Badge>
+    ) : (
       <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15">
         <Banknote className="h-3 w-3" /> COD · Collect cash
       </Badge>

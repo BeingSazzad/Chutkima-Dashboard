@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Bell, MapPin, Store, Zap } from 'lucide-react'
+import { useRef, useState } from 'react'
+import { Check } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Input } from '@/components/ui/Input'
@@ -7,9 +7,14 @@ import { Button } from '@/components/ui/Button'
 import { Switch } from '@/components/ui/Switch'
 import { Select } from '@/components/ui/Select'
 import { Avatar } from '@/components/shared/Avatar'
-import { BRAND } from '@/lib/constants'
 import { useAuth } from '@/hooks/useAuth'
-import { useGetOpsConfigQuery, useSaveOpsConfigMutation } from '@/services/endpoints/settingsApi'
+import {
+  useGetOpsConfigQuery,
+  useGetTrustConfigQuery,
+  useSaveOpsConfigMutation,
+  useSaveTrustConfigMutation,
+} from '@/services/endpoints/settingsApi'
+import { COD_MODE_LABEL, type CodMode } from '@/lib/trust'
 
 function DispatchCard() {
   const { data: ops } = useGetOpsConfigQuery()
@@ -52,8 +57,75 @@ function Toggle({ label, description, defaultOn = true }: { label: string; descr
   )
 }
 
+function SaveButton({ label }: { label: string }) {
+  const [saved, setSaved] = useState(false)
+  return (
+    <div className="flex items-center gap-2">
+      {saved && (
+        <span className="flex items-center gap-1 text-xs font-semibold text-success">
+          <Check className="h-3.5 w-3.5" /> Saved
+        </span>
+      )}
+      <Button
+        onClick={() => {
+          setSaved(true)
+          setTimeout(() => setSaved(false), 1800)
+        }}
+      >
+        {label}
+      </Button>
+    </div>
+  )
+}
+
+function TrustCard() {
+  const { data } = useGetTrustConfigQuery()
+  const [save] = useSaveTrustConfigMutation()
+  if (!data) return null
+  const set = (patch: Partial<typeof data>) => save({ ...data, ...patch })
+  return (
+    <Card>
+      <CardHeader title="Customer Trust" subtitle="COD reliability badges & restriction" />
+      <CardContent className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Trust badge system</p>
+            <p className="text-xs text-slate-400">Flag risky COD customers automatically</p>
+          </div>
+          <Switch checked={data.enabled} onChange={(v) => set({ enabled: v })} aria-label="Trust system" />
+        </div>
+        {data.enabled && (
+          <>
+            <Select
+              label="COD restriction for flagged customers"
+              value={data.codMode}
+              onChange={(e) => set({ codMode: e.target.value as CodMode })}
+              options={(Object.keys(COD_MODE_LABEL) as CodMode[]).map((m) => ({ label: COD_MODE_LABEL[m], value: m }))}
+            />
+            <div className="grid grid-cols-2 gap-3">
+              <Input label="Gray: COD cancels ≥" type="number" defaultValue={data.grayCod} onBlur={(e) => set({ grayCod: Number(e.target.value) || 0 })} />
+              <Input label="Red: COD cancels ≥" type="number" defaultValue={data.redCod} onBlur={(e) => set({ redCod: Number(e.target.value) || 0 })} />
+              <Input label="Gray: no-response ≥" type="number" defaultValue={data.grayNoResp} onBlur={(e) => set({ grayNoResp: Number(e.target.value) || 0 })} />
+              <Input label="Red: no-response ≥" type="number" defaultValue={data.redNoResp} onBlur={(e) => set({ redNoResp: Number(e.target.value) || 0 })} />
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function SettingsPage() {
   const { user } = useAuth()
+  const [avatar, setAvatar] = useState<string | undefined>(undefined)
+  const fileRef = useRef<HTMLInputElement>(null)
+
+  const pickPhoto = (file?: File | null) => {
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setAvatar(reader.result as string)
+    reader.readAsDataURL(file)
+  }
 
   return (
     <>
@@ -65,12 +137,13 @@ export default function SettingsPage() {
             <CardHeader title="Profile" subtitle="Your admin account details" />
             <CardContent className="space-y-4 pt-2">
               <div className="flex items-center gap-4">
-                <Avatar name={user?.name ?? 'Admin'} src={user?.avatar} size="lg" />
+                <Avatar name={user?.name ?? 'Admin'} src={avatar ?? user?.avatar} size="lg" />
                 <div>
                   <p className="font-bold text-slate-800">{user?.name}</p>
                   <p className="text-sm capitalize text-slate-400">{user?.role}</p>
                 </div>
-                <Button variant="outline" size="sm" className="ml-auto">Change photo</Button>
+                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
+                <Button variant="outline" size="sm" className="ml-auto" onClick={() => fileRef.current?.click()}>Change photo</Button>
               </div>
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <Input label="Full name" defaultValue={user?.name} />
@@ -79,22 +152,7 @@ export default function SettingsPage() {
                 <Input label="Role" defaultValue={user?.role} disabled />
               </div>
               <div className="flex justify-end">
-                <Button>Save changes</Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader title="Store configuration" subtitle="Dark store delivery settings" />
-            <CardContent className="space-y-4 pt-2">
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input label="Store name" defaultValue={`${BRAND.name} · ${BRAND.city}`} leftIcon={<Store className="h-4 w-4" />} />
-                <Input label="Service area" defaultValue="Traffic Chowk, Butwal" leftIcon={<MapPin className="h-4 w-4" />} />
-                <Input label="Target delivery (mins)" type="number" defaultValue={10} leftIcon={<Zap className="h-4 w-4" />} />
-                <Input label="Free delivery above (NPR)" type="number" defaultValue={800} />
-              </div>
-              <div className="flex justify-end">
-                <Button>Update store</Button>
+                <SaveButton label="Save changes" />
               </div>
             </CardContent>
           </Card>
@@ -102,28 +160,15 @@ export default function SettingsPage() {
 
         <div className="space-y-4">
           <DispatchCard />
+          <TrustCard />
 
           <Card>
             <CardHeader title="Notifications" subtitle="What you get alerted about" />
             <CardContent className="divide-y divide-slate-50 pt-1">
               <Toggle label="New orders" description="Ping on every incoming order" />
-              <Toggle label="Low stock alerts" description="When a product drops below 15" />
+              <Toggle label="Low stock alerts" description="When a product drops below its threshold" />
               <Toggle label="Driver offline" description="When a rider goes offline mid-shift" defaultOn={false} />
               <Toggle label="Daily summary" description="End-of-day performance email" />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader title="Payments" subtitle="Accepted methods" />
-            <CardContent className="space-y-2 pt-2">
-              {['eSewa', 'Khalti', 'ConnectIPS', 'Cash on Delivery'].map((m) => (
-                <div key={m} className="flex items-center justify-between rounded-xl bg-mint-50 px-3 py-2.5">
-                  <span className="flex items-center gap-2 text-sm font-medium text-slate-700">
-                    <Bell className="h-4 w-4 text-brand-500" /> {m}
-                  </span>
-                  <span className="text-xs font-semibold text-success">Active</span>
-                </div>
-              ))}
             </CardContent>
           </Card>
         </div>

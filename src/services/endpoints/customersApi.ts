@@ -1,5 +1,6 @@
 import { api, clone, mockDelay } from '@/services/api'
 import { customers, orders } from '@/services/mock/data'
+import { deriveTrustBadge } from '@/lib/trust'
 import type { Customer, Order } from '@/types/common.types'
 
 export const customersApi = api.injectEndpoints({
@@ -84,7 +85,7 @@ export const customersApi = api.injectEndpoints({
 function segmentCustomers(segment: string) {
   switch (segment) {
     case 'trusted':
-      return customers.filter((c) => c.trustBadge === 'green' && !c.banned)
+      return customers.filter((c) => deriveTrustBadge(c) === 'green' && !c.banned)
     case 'vip':
       return customers.filter((c) => c.totalSpent > 25000)
     case 'wallet':

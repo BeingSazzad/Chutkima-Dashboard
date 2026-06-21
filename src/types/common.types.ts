@@ -97,6 +97,8 @@ export interface Product {
   shelfNo: string
   /** Flagged for clearance — shows a "Clearance" badge in the app. */
   onClearance: boolean
+  /** Visible in the customer catalog (hide without deleting). */
+  active: boolean
   status: ProductStatus
   deliveryMins: number
   sold: number
@@ -154,8 +156,7 @@ export interface Customer {
   joinedAt: string
   lastOrderAt: string
   banned: boolean
-  // Trust system
-  trustBadge: TrustBadge
+  // Trust system (badge is derived from these counts via lib/trust)
   codCancellations: number
   notRespondingCount: number
   completedOrders: number
@@ -267,7 +268,6 @@ export interface Zone {
   id: ID
   name: string
   etaMins: number
-  deliveryFee: number
   /** Localities/areas this zone covers (shown to customers, used for serviceability). */
   areas: string[]
   /** Optional Google Maps link to the zone area (real geofencing needs a maps SDK). */
@@ -292,11 +292,11 @@ export interface SearchKeyword {
   position: number
 }
 
-/** Packer staff — no app login; receive pick-lists via WhatsApp. */
+/** Packer staff — pick & pack orders; no app login. */
 export interface Packer {
   id: ID
   name: string
-  whatsapp: string
+  phone: string
   active: boolean
   packedToday: number
   createdAt: string

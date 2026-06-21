@@ -26,6 +26,7 @@ import {
   useUpdateOrderStatusMutation,
 } from '@/services/endpoints/ordersApi'
 import { useGetDriverQuery } from '@/services/endpoints/driversApi'
+import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
 import type { OrderItem, OrderStatus } from '@/types/common.types'
 
 export default function OrderDetailPage() {
@@ -33,6 +34,7 @@ export default function OrderDetailPage() {
   const navigate = useNavigate()
   const { data: order, isLoading } = useGetOrderQuery(orderId)
   const { data: driver } = useGetDriverQuery(order?.driverId ?? '', { skip: !order?.driverId })
+  const { data: ops } = useGetOpsConfigQuery()
   const [updateStatus, { isLoading: updating }] = useUpdateOrderStatusMutation()
   const [markCod, { isLoading: markingCod }] = useMarkCodCollectedMutation()
   const [assignOpen, setAssignOpen] = useState(false)
@@ -163,6 +165,10 @@ export default function OrderDetailPage() {
                           Assign rider
                         </Button>
                       </div>
+                    ) : nextStatus === 'delivered' && ops?.multiRiderEnabled && order.assignments.length > 1 ? (
+                      <div className="rounded-xl bg-violet-50 px-3 py-3 text-sm font-medium text-violet-700">
+                        This is a team order — it’s marked Delivered once <strong>all {order.assignments.length} riders confirm</strong> in the Riders panel.
+                      </div>
                     ) : (
                       <div className="rounded-xl bg-violet-50 px-3 py-3">
                         <p className="text-sm font-medium text-violet-700">
@@ -175,9 +181,11 @@ export default function OrderDetailPage() {
                     )
                   )}
 
-                  <Button variant="danger" size="sm" onClick={() => setCancelOpen(true)}>
-                    Cancel order
-                  </Button>
+                  {(order.status === 'placed' || order.status === 'packing') && (
+                    <Button variant="danger" size="sm" onClick={() => setCancelOpen(true)}>
+                      Cancel order
+                    </Button>
+                  )}
 
                   {/* Who-does-what legend */}
                   <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3 text-[11px]">

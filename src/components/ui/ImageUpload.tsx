@@ -99,18 +99,18 @@ export function ImageUpload({
       {value ? (
         <div className={cn('group relative w-full overflow-hidden rounded-xl border border-slate-200 bg-mint-50', aspectClassName)}>
           <img src={value} alt="Upload preview" className="h-full w-full object-cover" />
-          <div className="absolute inset-0 flex items-center justify-center gap-2 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-3 bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
             <button
               type="button"
               onClick={() => inputRef.current?.click()}
-              className="focus-ring inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
+              className="focus-ring inline-flex items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50"
             >
               <UploadCloud className="h-3.5 w-3.5" /> Replace
             </button>
             <button
               type="button"
               onClick={() => onChange('')}
-              className="focus-ring inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-danger hover:bg-red-50"
+              className="focus-ring inline-flex items-center justify-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-semibold text-danger hover:bg-red-50"
             >
               <Trash2 className="h-3.5 w-3.5" /> Remove
             </button>

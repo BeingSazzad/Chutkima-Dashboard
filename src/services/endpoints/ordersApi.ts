@@ -72,7 +72,7 @@ export const ordersApi = api.injectEndpoints({
         }
         order.driverId = driverId
         order.assignments = [{ driverId, note: '', confirmed: false }]
-        if (order.status === 'placed' || order.status === 'packing') order.status = 'picked_up'
+        // Assigning ≠ picked up. The rider marks "Picked Up" (or admin overrides).
         driver.status = 'on_delivery'
         driver.activeOrderId = orderId
         return { data: clone(order) }

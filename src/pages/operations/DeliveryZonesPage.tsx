@@ -9,7 +9,6 @@ import { Switch } from '@/components/ui/Switch'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
-import { formatNPR } from '@/lib/utils'
 import {
   useDeleteZoneMutation,
   useGetDeliveryConfigQuery,
@@ -172,8 +171,7 @@ function ZonesCard({
                   )}
                 </div>
                 <p className="flex items-center gap-2 text-xs text-slate-400">
-                  <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /> {z.etaMins} min</span>
-                  <span>· {formatNPR(z.deliveryFee)} fee</span>
+                  <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /> {z.etaMins} min ETA</span>
                 </p>
                 {z.areas.length > 0 && <p className="mt-0.5 truncate text-xs text-slate-400">Covers: {z.areas.join(', ')}</p>}
               </div>
@@ -198,13 +196,13 @@ function ZoneFormModal({ zone, onClose }: { zone: Zone | 'new' | null; onClose: 
   const isEdit = zone && zone !== 'new'
   const z = isEdit ? (zone as Zone) : null
 
-  const empty = { name: '', etaMins: '12', deliveryFee: '40', areas: '', mapLink: '' }
+  const empty = { name: '', etaMins: '12', areas: '', mapLink: '' }
   const [form, setForm] = useState(empty)
   const key = zone === 'new' ? 'new' : z?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
   if (key !== lastKey && zone) {
     setLastKey(key)
-    setForm(z ? { name: z.name, etaMins: String(z.etaMins), deliveryFee: String(z.deliveryFee), areas: z.areas.join(', '), mapLink: z.mapLink } : empty)
+    setForm(z ? { name: z.name, etaMins: String(z.etaMins), areas: z.areas.join(', '), mapLink: z.mapLink } : empty)
   }
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -213,7 +211,6 @@ function ZoneFormModal({ zone, onClose }: { zone: Zone | 'new' | null; onClose: 
       id: z?.id,
       name: form.name,
       etaMins: Number(form.etaMins) || 12,
-      deliveryFee: Number(form.deliveryFee) || 0,
       areas: form.areas.split(',').map((a) => a.trim()).filter(Boolean),
       mapLink: form.mapLink.trim(),
     }).unwrap()
@@ -236,10 +233,7 @@ function ZoneFormModal({ zone, onClose }: { zone: Zone | 'new' | null; onClose: 
     >
       <div className="space-y-3">
         <Input label="Zone name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Traffic Chowk" autoFocus />
-        <div className="grid grid-cols-2 gap-3">
-          <Input label="Avg. ETA (min)" type="number" value={form.etaMins} onChange={(e) => set('etaMins', e.target.value)} />
-          <Input label="Delivery fee (NPR)" type="number" value={form.deliveryFee} onChange={(e) => set('deliveryFee', e.target.value)} />
-        </div>
+        <Input label="Avg. ETA (min)" type="number" value={form.etaMins} onChange={(e) => set('etaMins', e.target.value)} hint="Delivery fee is set globally by cart-value tiers (left panel)." />
         <Input
           label="Covered areas"
           value={form.areas}

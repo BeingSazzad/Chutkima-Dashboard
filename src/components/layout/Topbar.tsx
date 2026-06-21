@@ -10,12 +10,12 @@ import {
   LogOut,
   MapPin,
   Menu,
-  Search,
   ShoppingBag,
   User,
   type LucideIcon,
 } from 'lucide-react'
 import { Avatar } from '@/components/shared/Avatar'
+import { GlobalSearch } from './GlobalSearch'
 import { cn } from '@/lib/utils'
 import { BRAND } from '@/lib/constants'
 import { ROUTES } from '@/constants/routes'
@@ -83,14 +83,8 @@ export function Topbar() {
         </span>
       </div>
 
-      {/* Search */}
-      <div className="relative ml-auto hidden max-w-xs flex-1 md:block">
-        <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-        <input
-          placeholder="Search orders, products, drivers…"
-          className="focus-ring h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm placeholder:text-slate-400"
-        />
-      </div>
+      {/* Global search */}
+      <GlobalSearch />
 
       <div className="ml-auto flex items-center gap-1 md:ml-0">
         {/* Notifications */}

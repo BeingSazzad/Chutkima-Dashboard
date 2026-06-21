@@ -59,10 +59,6 @@ export interface Order {
   assignments: OrderAssignment[]
   /** Dark store fulfilling this order. */
   storeId: ID
-  /** Packer assigned to pick & pack this order (optional role). */
-  packerId: ID | null
-  /** Admin has confirmed packing is complete. */
-  packed: boolean
   etaMinutes: number
   placedAt: string
   /** Customer delivery instructions / note from checkout. */
@@ -75,7 +71,7 @@ export interface Order {
 
 export interface Product {
   id: ID
-  /** Stock-keeping unit code (used in packer messages). */
+  /** Stock-keeping unit code. */
   sku: string
   name: string
   brand: string
@@ -93,7 +89,7 @@ export interface Product {
   stock: number
   /** Per-product low-stock alert threshold. */
   lowStockThreshold: number
-  /** Warehouse shelf location (used in packer messages). */
+  /** Warehouse shelf location. */
   shelfNo: string
   /** Flagged for clearance — shows a "Clearance" badge in the app. */
   onClearance: boolean
@@ -292,16 +288,6 @@ export interface SearchKeyword {
   id: ID
   term: string
   position: number
-}
-
-/** Packer staff — pick & pack orders; no app login. */
-export interface Packer {
-  id: ID
-  name: string
-  phone: string
-  active: boolean
-  packedToday: number
-  createdAt: string
 }
 
 /** A dark store (fulfilment hub). Master admin manages many. */

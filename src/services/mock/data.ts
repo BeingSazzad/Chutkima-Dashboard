@@ -5,7 +5,6 @@ import type {
   CategoryGroup,
   ContentPage,
   DarkStore,
-  Packer,
   Coupon,
   Customer,
   DeliveryConfig,
@@ -158,8 +157,6 @@ function makeOrder(
       ? [{ driverId, note: '', confirmed: ['arrived', 'delivered'].includes(status) }]
       : [],
     storeId: ['Golpark', 'Sukkhanagar', 'Buddhanagar'].includes(cust.zone) ? 's2' : 's1',
-    packerId: null,
-    packed: ['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
     etaMinutes,
     placedAt: minsAgo(placedMinsAgo),
     note,
@@ -292,13 +289,6 @@ export const admins: AdminUser[] = [
   { id: 'a2', name: 'Prakash Thapa', email: 'prakash@chutkima.com', phone: '+977 9800000002', role: 'manager', avatar: avatar('a2'), active: true, storeId: 's1', lastActiveAt: minsAgo(40), createdAt: daysAgo(180) },
   { id: 'a3', name: 'Nisha Gurung', email: 'nisha@chutkima.com', phone: '+977 9800000003', role: 'dispatcher', avatar: avatar('a3'), active: true, storeId: 's1', lastActiveAt: minsAgo(12), createdAt: daysAgo(90) },
   { id: 'a4', name: 'Rojan Shrestha', email: 'rojan@chutkima.com', phone: '+977 9800000004', role: 'dispatcher', avatar: avatar('a4'), active: false, storeId: 's2', lastActiveAt: daysAgo(6), createdAt: daysAgo(60) },
-]
-
-// ── Packers (pick & pack staff) ─────────────────────────────────────────────
-export const packers: Packer[] = [
-  { id: 'pk1', name: 'Bimala Thapa', phone: '+977 9845000001', active: true, packedToday: 14, createdAt: daysAgo(120) },
-  { id: 'pk2', name: 'Gokul Magar', phone: '+977 9845000002', active: true, packedToday: 9, createdAt: daysAgo(80) },
-  { id: 'pk3', name: 'Sabina Rai', phone: '+977 9845000003', active: false, packedToday: 0, createdAt: daysAgo(40) },
 ]
 
 // ── Home feed sections ──────────────────────────────────────────────────────

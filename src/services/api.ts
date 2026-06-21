@@ -42,7 +42,6 @@ export const api = createApi({
     'Review',
     'Report',
     'Transaction',
-    'Packer',
     'OpsConfig',
     'TrustConfig',
     'Store',

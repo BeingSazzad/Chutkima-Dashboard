@@ -13,7 +13,6 @@ import CategoriesPage from '@/pages/categories/CategoriesPage'
 import DriversPage from '@/pages/drivers/DriversPage'
 import DriverDetailPage from '@/pages/drivers/DriverDetailPage'
 import ReportsPage from '@/pages/operations/ReportsPage'
-import PackersPage from '@/pages/operations/PackersPage'
 import TransactionsPage from '@/pages/finance/TransactionsPage'
 import RiderFinancePage from '@/pages/finance/RiderFinancePage'
 import CustomersPage from '@/pages/customers/CustomersPage'
@@ -50,7 +49,6 @@ export const router = createBrowserRouter([
           { path: ROUTES.drivers, element: <DriversPage /> },
           { path: ROUTES.driverDetail(), element: <DriverDetailPage /> },
           { path: ROUTES.reports, element: <ReportsPage /> },
-          { path: ROUTES.packers, element: <PackersPage /> },
           { path: ROUTES.transactions, element: <TransactionsPage /> },
           { path: ROUTES.riderFinance, element: <RiderFinancePage /> },
           { path: ROUTES.customers, element: <CustomersPage /> },

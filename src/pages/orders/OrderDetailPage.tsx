@@ -13,12 +13,11 @@ import { ProductThumb } from '@/components/shared/ProductThumb'
 import { OrderStatusBadge, PaymentBadge } from '@/components/shared/StatusBadge'
 import { OrderJourney } from '@/components/orders/OrderJourney'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
-import { PackingCard } from '@/components/orders/PackingCard'
 import { RiderCard } from '@/components/orders/RiderCard'
 import { SubstituteModal } from '@/components/orders/SubstituteModal'
-import { ACTOR_META, ORDER_JOURNEY, ORDER_STAGE_ACTOR, ORDER_STATUS_META, PAYMENT_META } from '@/lib/constants'
+import { ORDER_JOURNEY, ORDER_STAGE_ACTOR, ORDER_STATUS_META, PAYMENT_META } from '@/lib/constants'
 import { printOrderInvoice } from '@/lib/export'
-import { cn, formatDateTime, formatNPR } from '@/lib/utils'
+import { formatDateTime, formatNPR } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import {
   useGetOrderQuery,
@@ -149,14 +148,7 @@ export default function OrderDetailPage() {
                 )
               ) : (
                 <>
-                  {/* Store/admin-controlled step */}
-                  {nextStatus && nextActor === 'store' && (
-                    <Button loading={updating} onClick={() => updateStatus({ orderId: order.id, status: nextStatus })}>
-                      Accept &amp; mark {nextLabel}
-                    </Button>
-                  )}
-
-                  {/* Rider-controlled step */}
+                  {/* Rider-controlled step (full-width info box) */}
                   {nextStatus && nextActor === 'rider' && (
                     needsRider ? (
                       <div className="rounded-xl bg-amber-50 px-3 py-3">
@@ -181,26 +173,25 @@ export default function OrderDetailPage() {
                     )
                   )}
 
-                  {(order.status === 'placed' || order.status === 'packing') && (
-                    <Button variant="danger" size="sm" onClick={() => setCancelOpen(true)}>
-                      Cancel order
-                    </Button>
+                  {/* Action buttons — spaced row */}
+                  {((nextStatus && nextActor === 'store') || order.status === 'placed' || order.status === 'packing') && (
+                    <div className="flex flex-wrap gap-2">
+                      {nextStatus && nextActor === 'store' && (
+                        <Button loading={updating} onClick={() => updateStatus({ orderId: order.id, status: nextStatus })}>
+                          Accept &amp; mark {nextLabel}
+                        </Button>
+                      )}
+                      {(order.status === 'placed' || order.status === 'packing') && (
+                        <Button variant="danger" onClick={() => setCancelOpen(true)}>
+                          Cancel order
+                        </Button>
+                      )}
+                    </div>
                   )}
-
-                  {/* Who-does-what legend */}
-                  <div className="flex flex-wrap gap-2 border-t border-slate-100 pt-3 text-[11px]">
-                    {(['system', 'store', 'rider'] as const).map((a) => (
-                      <span key={a} className={cn('rounded-full px-2 py-0.5 font-semibold ring-1 ring-inset', ACTOR_META[a].badge)}>
-                        {ACTOR_META[a].label}
-                      </span>
-                    ))}
-                  </div>
                 </>
               )}
             </CardContent>
           </Card>
-
-          <PackingCard order={order} />
         </div>
 
         {/* Right: journey + people */}

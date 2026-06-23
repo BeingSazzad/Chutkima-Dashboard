@@ -17,11 +17,13 @@ import { RiderCard } from '@/components/orders/RiderCard'
 import { SubstituteModal } from '@/components/orders/SubstituteModal'
 import { ORDER_JOURNEY, ORDER_STAGE_ACTOR, ORDER_STATUS_META, PAYMENT_META } from '@/lib/constants'
 import { printOrderInvoice } from '@/lib/export'
+import { deliveryTiming } from '@/lib/orderTiming'
 import { formatDateTime, formatNPR } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import {
   useGetOrderQuery,
   useMarkCodCollectedMutation,
+  useSetAdminNoteMutation,
   useUpdateOrderStatusMutation,
 } from '@/services/endpoints/ordersApi'
 import { useGetDriverQuery } from '@/services/endpoints/driversApi'
@@ -57,6 +59,7 @@ export default function OrderDetailPage() {
   const nextStatus = ORDER_JOURNEY[currentIndex + 1] as OrderStatus | undefined
   const isClosed = order.status === 'delivered' || order.status === 'cancelled'
   const nextActor = nextStatus ? ORDER_STAGE_ACTOR[nextStatus] : null
+  const timing = deliveryTiming(order)
   const nextLabel = nextStatus ? ORDER_STATUS_META[nextStatus].label : ''
   const needsRider = nextStatus === 'picked_up' && !order.driverId
 
@@ -198,11 +201,22 @@ export default function OrderDetailPage() {
         {/* Right: journey + people */}
         <div className="space-y-4">
           <Card>
-            <CardHeader title="Order journey" />
+            <CardHeader
+              title="Order journey"
+              action={
+                timing ? (
+                  <Badge tone={timing.tone === 'green' ? 'bg-green-50 text-green-700 ring-green-600/15' : 'bg-red-50 text-red-700 ring-red-600/15'}>
+                    {timing.label}
+                  </Badge>
+                ) : undefined
+              }
+            />
             <CardContent className="pt-2">
-              <OrderJourney status={order.status} />
+              <OrderJourney status={order.status} timestamps={order.stageTimestamps} />
             </CardContent>
           </Card>
+
+          <AdminNoteCard order={order} />
 
           <Card>
             <CardHeader title="Customer" />
@@ -304,5 +318,41 @@ export default function OrderDetailPage() {
         )}
       </Modal>
     </>
+  )
+}
+
+/** Internal admin note for disputes / follow-ups. */
+function AdminNoteCard({ order }: { order: { id: string; adminNote: string } }) {
+  const [save, { isLoading }] = useSetAdminNoteMutation()
+  const [note, setNote] = useState(order.adminNote)
+  const [saved, setSaved] = useState(false)
+  const key = `${order.id}:${order.adminNote}`
+  const [lastKey, setLastKey] = useState(key)
+  if (key !== lastKey) {
+    setLastKey(key)
+    setNote(order.adminNote)
+  }
+
+  const onSave = async () => {
+    await save({ orderId: order.id, note }).unwrap()
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1800)
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Admin note" subtitle="Internal — disputes / follow-ups (not shown to customer)" />
+      <CardContent className="space-y-2 pt-2">
+        <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="e.g. Customer disputes missing item — follow up before refund." />
+        <div className="flex items-center justify-end gap-2">
+          {saved && (
+            <span className="flex items-center gap-1 text-xs font-semibold text-success">
+              <StickyNote className="h-3.5 w-3.5" /> Saved
+            </span>
+          )}
+          <Button size="sm" onClick={onSave} loading={isLoading} disabled={note === order.adminNote}>Save note</Button>
+        </div>
+      </CardContent>
+    </Card>
   )
 }

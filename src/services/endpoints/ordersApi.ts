@@ -183,6 +183,17 @@ export const ordersApi = api.injectEndpoints({
       invalidatesTags: ['Order', 'Transaction'],
     }),
 
+    setAdminNote: build.mutation<Order, { orderId: string; note: string }>({
+      async queryFn({ orderId, note }) {
+        await mockDelay(200)
+        const order = orders.find((o) => o.id === orderId)
+        if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        order.adminNote = note
+        return { data: clone(order) }
+      },
+      invalidatesTags: ['Order'],
+    }),
+
     substituteItem: build.mutation<Order, { orderId: string; productId: string; newProductId: string }>({
       async queryFn({ orderId, productId, newProductId }) {
         await mockDelay(300)
@@ -217,5 +228,6 @@ export const {
   useConfirmRiderMutation,
   useUpdateOrderStatusMutation,
   useMarkCodCollectedMutation,
+  useSetAdminNoteMutation,
   useSubstituteItemMutation,
 } = ordersApi

@@ -139,6 +139,21 @@ function makeOrder(
   const subtotal = lineItems.reduce((s, it) => s + it.price * it.quantity, 0)
   const deliveryFee =
     subtotal >= 800 ? 0 : subtotal >= 600 ? 20 : subtotal >= 400 ? 40 : subtotal >= 200 ? 60 : 80
+
+  // Per-stage timestamps (placed → … → current), spread from placedAt to now/delivery.
+  const STAGES: OrderStatus[] = ['placed', 'packing', 'picked_up', 'on_the_way', 'arrived', 'delivered']
+  const placedAtIso = minsAgo(placedMinsAgo)
+  const placedMs = Date.parse(placedAtIso)
+  const reached = status === 'cancelled' ? 0 : STAGES.indexOf(status)
+  const slaMin = etaMinutes > 0 ? etaMinutes : 12
+  const variance = ([...id].reduce((a, c) => a + c.charCodeAt(0), 0) % 11) - 4 // -4 … +6
+  const elapsedMin = status === 'delivered' ? Math.max(5, slaMin + variance) : placedMinsAgo
+  const stageTimestamps: Partial<Record<OrderStatus, string>> = {}
+  for (let i = 0; i <= reached; i++) {
+    const offset = reached === 0 ? 0 : (elapsedMin * i) / reached
+    stageTimestamps[STAGES[i]] = new Date(placedMs + offset * 60_000).toISOString()
+  }
+
   return {
     id,
     reference: ref,
@@ -160,10 +175,12 @@ function makeOrder(
       : [],
     storeId: ['Golpark', 'Sukkhanagar', 'Buddhanagar'].includes(cust.zone) ? 's2' : 's1',
     etaMinutes,
-    placedAt: minsAgo(placedMinsAgo),
+    placedAt: placedAtIso,
     note,
     cancelReason: status === 'cancelled' ? 'Customer not reachable' : '',
     codCollected: status === 'delivered' && payment === 'cod',
+    stageTimestamps,
+    adminNote: '',
   }
 }
 

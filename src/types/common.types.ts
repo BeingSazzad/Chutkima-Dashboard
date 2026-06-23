@@ -67,6 +67,10 @@ export interface Order {
   cancelReason: string
   /** Whether the rider's COD cash has been confirmed collected. */
   codCollected: boolean
+  /** ISO timestamp each journey stage was reached. */
+  stageTimestamps: Partial<Record<OrderStatus, string>>
+  /** Internal admin note for disputes / follow-ups (not shown to customer). */
+  adminNote: string
 }
 
 export interface Product {

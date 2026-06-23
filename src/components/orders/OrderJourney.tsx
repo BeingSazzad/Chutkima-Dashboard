@@ -3,8 +3,17 @@ import { cn } from '@/lib/utils'
 import { ACTOR_META, ORDER_JOURNEY, ORDER_STAGE_ACTOR, ORDER_STATUS_META } from '@/lib/constants'
 import type { OrderStatus } from '@/types/common.types'
 
+const fmtTime = (iso?: string) =>
+  iso ? new Date(iso).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
+
 /** Vertical stepper mirroring the customer app's "Order Journey". */
-export function OrderJourney({ status }: { status: OrderStatus }) {
+export function OrderJourney({
+  status,
+  timestamps = {},
+}: {
+  status: OrderStatus
+  timestamps?: Partial<Record<OrderStatus, string>>
+}) {
   if (status === 'cancelled') {
     return (
       <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
@@ -58,6 +67,7 @@ export function OrderJourney({ status }: { status: OrderStatus }) {
                   {ACTOR_META[ORDER_STAGE_ACTOR[step]].label}
                 </span>
               </div>
+              {timestamps[step] && <p className="text-xs text-slate-400">{fmtTime(timestamps[step])}</p>}
               {active && <p className="text-xs text-brand-600">In progress…</p>}
             </div>
           </li>

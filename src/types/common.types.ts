@@ -59,6 +59,10 @@ export interface Order {
   assignments: OrderAssignment[]
   /** Dark store fulfilling this order. */
   storeId: ID
+  /** Optional packer assigned to pick & pack this order. */
+  packerId: ID | null
+  /** Admin has confirmed packing is complete. */
+  packed: boolean
   etaMinutes: number
   placedAt: string
   /** Customer delivery instructions / note from checkout. */
@@ -151,6 +155,16 @@ export interface Driver {
 /** Customer reliability badge (COD trust system). */
 export type TrustBadge = 'green' | 'gray' | 'red'
 export type CustomerTier = 'new' | 'loyal' | 'vip'
+
+/** Packer staff — pick & pack orders; no app login. */
+export interface Packer {
+  id: ID
+  name: string
+  phone: string
+  active: boolean
+  packedToday: number
+  createdAt: string
+}
 
 export interface Customer {
   id: ID

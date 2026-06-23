@@ -183,6 +183,29 @@ export const ordersApi = api.injectEndpoints({
       invalidatesTags: ['Order', 'Transaction'],
     }),
 
+    assignPacker: build.mutation<Order, { orderId: string; packerId: string }>({
+      async queryFn({ orderId, packerId }) {
+        await mockDelay(250)
+        const order = orders.find((o) => o.id === orderId)
+        if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        order.packerId = packerId
+        if (order.status === 'placed') order.status = 'packing'
+        return { data: clone(order) }
+      },
+      invalidatesTags: ['Order'],
+    }),
+
+    markPacked: build.mutation<Order, string>({
+      async queryFn(orderId) {
+        await mockDelay(200)
+        const order = orders.find((o) => o.id === orderId)
+        if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        order.packed = true
+        return { data: clone(order) }
+      },
+      invalidatesTags: ['Order'],
+    }),
+
     setAdminNote: build.mutation<Order, { orderId: string; note: string }>({
       async queryFn({ orderId, note }) {
         await mockDelay(200)
@@ -228,6 +251,8 @@ export const {
   useConfirmRiderMutation,
   useUpdateOrderStatusMutation,
   useMarkCodCollectedMutation,
+  useAssignPackerMutation,
+  useMarkPackedMutation,
   useSetAdminNoteMutation,
   useSubstituteItemMutation,
 } = ordersApi

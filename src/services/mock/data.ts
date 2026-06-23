@@ -5,6 +5,7 @@ import type {
   CategoryGroup,
   ContentPage,
   DarkStore,
+  Packer,
   Coupon,
   Customer,
   DeliveryConfig,
@@ -174,6 +175,8 @@ function makeOrder(
       ? [{ driverId, note: '', confirmed: ['arrived', 'delivered'].includes(status) }]
       : [],
     storeId: ['Golpark', 'Sukkhanagar', 'Buddhanagar'].includes(cust.zone) ? 's2' : 's1',
+    packerId: null,
+    packed: ['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
     etaMinutes,
     placedAt: placedAtIso,
     note,
@@ -355,6 +358,13 @@ export const storeSetup = {
   taxNumber: '601234567',
   vatPercent: 13,
 }
+
+// ── Packers (pick & pack staff) ─────────────────────────────────────────────
+export const packers: Packer[] = [
+  { id: 'pk1', name: 'Bimala Thapa', phone: '+977 9845000001', active: true, packedToday: 14, createdAt: daysAgo(120) },
+  { id: 'pk2', name: 'Gokul Magar', phone: '+977 9845000002', active: true, packedToday: 9, createdAt: daysAgo(80) },
+  { id: 'pk3', name: 'Sabina Rai', phone: '+977 9845000003', active: false, packedToday: 0, createdAt: daysAgo(40) },
+]
 
 /** Social + app-store links shown in the customer app / website footer. */
 export const linksConfig = {

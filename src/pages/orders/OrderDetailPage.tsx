@@ -12,6 +12,7 @@ import { Avatar } from '@/components/shared/Avatar'
 import { ProductThumb } from '@/components/shared/ProductThumb'
 import { OrderStatusBadge, PaymentBadge } from '@/components/shared/StatusBadge'
 import { OrderJourney } from '@/components/orders/OrderJourney'
+import { PackingCard } from '@/components/orders/PackingCard'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
 import { RiderCard } from '@/components/orders/RiderCard'
 import { SubstituteModal } from '@/components/orders/SubstituteModal'
@@ -196,6 +197,8 @@ export default function OrderDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          <PackingCard order={order} />
         </div>
 
         {/* Right: journey + people */}

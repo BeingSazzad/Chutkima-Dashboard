@@ -19,6 +19,7 @@ export const ROUTES = {
   drivers: '/drivers',
   driverDetail: (id = ':driverId') => `/drivers/${id}`,
   reports: '/reports',
+  packers: '/packers',
   transactions: '/transactions',
   riderFinance: '/rider-finance',
 

@@ -16,6 +16,7 @@ import {
   Truck,
   MessageSquareWarning,
   Wallet,
+  PackageCheck,
   Megaphone,
   Fuel,
   Store,
@@ -49,6 +50,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Orders', to: ROUTES.orders, icon: ShoppingBag },
       { label: 'Drivers', to: ROUTES.drivers, icon: Bike },
+      { label: 'Packers', to: ROUTES.packers, icon: PackageCheck },
       { label: 'Reports & Reviews', to: ROUTES.reports, icon: MessageSquareWarning },
       { label: 'Delivery & Zones', to: ROUTES.delivery, icon: Truck },
     ],

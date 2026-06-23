@@ -1,5 +1,10 @@
-import { useEffect, useState } from 'react'
-import { Check, Clock, ExternalLink, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { lazy, Suspense, useEffect, useState } from 'react'
+import { Check, Clock, ExternalLink, Hexagon, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
+
+// Leaflet is heavy — load the map editor only when a geo-fence modal is opened.
+const ZoneMapEditor = lazy(() =>
+  import('@/components/zones/ZoneMapEditor').then((m) => ({ default: m.ZoneMapEditor })),
+)
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -22,6 +27,7 @@ import type { DeliveryTier, Zone } from '@/types/common.types'
 export default function DeliveryZonesPage() {
   const [formFor, setFormFor] = useState<Zone | 'new' | null>(null)
   const [deleteFor, setDeleteFor] = useState<Zone | null>(null)
+  const [fenceFor, setFenceFor] = useState<Zone | null>(null)
 
   return (
     <>
@@ -29,10 +35,11 @@ export default function DeliveryZonesPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <FeeConfigCard />
-        <ZonesCard onAdd={() => setFormFor('new')} onEdit={setFormFor} onDelete={setDeleteFor} />
+        <ZonesCard onAdd={() => setFormFor('new')} onEdit={setFormFor} onDelete={setDeleteFor} onFence={setFenceFor} />
       </div>
 
       <ZoneFormModal zone={formFor} onClose={() => setFormFor(null)} />
+      <GeofenceModal zone={fenceFor} onClose={() => setFenceFor(null)} />
       <DeleteZone zone={deleteFor} onClose={() => setDeleteFor(null)} />
     </>
   )
@@ -133,10 +140,12 @@ function ZonesCard({
   onAdd,
   onEdit,
   onDelete,
+  onFence,
 }: {
   onAdd: () => void
   onEdit: (z: Zone) => void
   onDelete: (z: Zone) => void
+  onFence: (z: Zone) => void
 }) {
   const { data: zones = [], isLoading } = useGetZonesQuery()
   const [toggle] = useToggleZoneMutation()
@@ -175,8 +184,12 @@ function ZonesCard({
                 </p>
                 {z.areas.length > 0 && <p className="mt-0.5 truncate text-xs text-slate-400">Covers: {z.areas.join(', ')}</p>}
               </div>
+              {z.geofence.length >= 3 && <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15">Geo-fenced</Badge>}
               {!z.active && <Badge>Paused</Badge>}
               <Switch checked={z.active} onChange={() => toggle(z.id)} size="sm" aria-label={`Toggle ${z.name}`} />
+              <button onClick={() => onFence(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Geo-fence" title="Draw geo-fence">
+                <Hexagon className="h-4 w-4" />
+              </button>
               <button onClick={() => onEdit(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit">
                 <Pencil className="h-4 w-4" />
               </button>
@@ -246,9 +259,48 @@ function ZoneFormModal({ zone, onClose }: { zone: Zone | 'new' | null; onClose: 
           value={form.mapLink}
           onChange={(e) => set('mapLink', e.target.value)}
           placeholder="https://maps.google.com/?q=…"
-          hint="Paste a Google Maps link. Full map-drawn geofencing needs a maps integration."
+          hint="Optional reference link. Draw the actual boundary with the geo-fence (hexagon) button."
         />
       </div>
+    </Modal>
+  )
+}
+
+function GeofenceModal({ zone, onClose }: { zone: Zone | null; onClose: () => void }) {
+  const [save, { isLoading }] = useSaveZoneMutation()
+  const [pts, setPts] = useState<[number, number][]>([])
+  const key = zone?.id ?? 'closed'
+  const [lastKey, setLastKey] = useState('')
+  if (key !== lastKey && zone) {
+    setLastKey(key)
+    setPts(zone.geofence ?? [])
+  }
+
+  const submit = async () => {
+    if (!zone) return
+    await save({ id: zone.id, geofence: pts }).unwrap()
+    onClose()
+  }
+
+  return (
+    <Modal
+      open={!!zone}
+      onClose={onClose}
+      title={zone ? `Geo-fence — ${zone.name}` : 'Geo-fence'}
+      description="Draw the delivery boundary on the map."
+      size="lg"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={submit} loading={isLoading} disabled={pts.length > 0 && pts.length < 3}>
+            Save geo-fence
+          </Button>
+        </>
+      }
+    >
+      <Suspense fallback={<Spinner label="Loading map…" className="py-16" />}>
+        <ZoneMapEditor value={pts} onChange={setPts} />
+      </Suspense>
     </Modal>
   )
 }

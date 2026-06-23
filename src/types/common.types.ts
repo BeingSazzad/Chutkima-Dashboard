@@ -295,8 +295,10 @@ export interface Zone {
   etaMins: number
   /** Localities/areas this zone covers (shown to customers, used for serviceability). */
   areas: string[]
-  /** Optional Google Maps link to the zone area (real geofencing needs a maps SDK). */
+  /** Optional Google Maps link to the zone area. */
   mapLink: string
+  /** Geo-fence polygon as [lat, lng] vertices (empty = not drawn yet). */
+  geofence: [number, number][]
   active: boolean
 }
 

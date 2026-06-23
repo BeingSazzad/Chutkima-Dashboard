@@ -334,12 +334,12 @@ export const coupons: Coupon[] = [
 
 // ── Delivery zones & fee config ─────────────────────────────────────────────
 export const zones: Zone[] = [
-  { id: 'z1', name: 'Traffic Chowk', etaMins: 10, areas: ['Traffic Chowk', 'Yogikuti', 'Hospital Line'], mapLink: 'https://maps.google.com/?q=Traffic+Chowk+Butwal', active: true },
-  { id: 'z2', name: 'Amarpath', etaMins: 12, areas: ['Amarpath', 'Buddha Marg', 'Devinagar'], mapLink: 'https://maps.google.com/?q=Amarpath+Butwal', active: true },
-  { id: 'z3', name: 'Milanchowk', etaMins: 14, areas: ['Milanchowk', 'Kalikanagar'], mapLink: '', active: true },
-  { id: 'z4', name: 'Golpark', etaMins: 13, areas: ['Golpark', 'Tinkune', 'Ramnagar'], mapLink: '', active: true },
-  { id: 'z5', name: 'Sukkhanagar', etaMins: 16, areas: ['Sukkhanagar', 'Fulbari'], mapLink: '', active: true },
-  { id: 'z6', name: 'Buddhanagar', etaMins: 18, areas: ['Buddhanagar', 'Manglapur'], mapLink: '', active: false },
+  { id: 'z1', name: 'Traffic Chowk', etaMins: 10, areas: ['Traffic Chowk', 'Yogikuti', 'Hospital Line'], mapLink: 'https://maps.google.com/?q=Traffic+Chowk+Butwal', geofence: [[27.7075, 83.4445], [27.7095, 83.4525], [27.7025, 83.4565], [27.6965, 83.4515], [27.6985, 83.4435]], active: true },
+  { id: 'z2', name: 'Amarpath', etaMins: 12, areas: ['Amarpath', 'Buddha Marg', 'Devinagar'], mapLink: 'https://maps.google.com/?q=Amarpath+Butwal', geofence: [], active: true },
+  { id: 'z3', name: 'Milanchowk', etaMins: 14, areas: ['Milanchowk', 'Kalikanagar'], mapLink: '', geofence: [], active: true },
+  { id: 'z4', name: 'Golpark', etaMins: 13, areas: ['Golpark', 'Tinkune', 'Ramnagar'], mapLink: '', geofence: [], active: true },
+  { id: 'z5', name: 'Sukkhanagar', etaMins: 16, areas: ['Sukkhanagar', 'Fulbari'], mapLink: '', geofence: [], active: true },
+  { id: 'z6', name: 'Buddhanagar', etaMins: 18, areas: ['Buddhanagar', 'Manglapur'], mapLink: '', geofence: [], active: false },
 ]
 
 /** Dispatch / operations config. */

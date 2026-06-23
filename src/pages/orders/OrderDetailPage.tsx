@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Banknote, MapPin, Phone, Printer, StickyNote } from 'lucide-react'
+import { ArrowLeft, Banknote, Clock, MapPin, Phone, Printer, StickyNote } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -91,6 +91,11 @@ export default function OrderDetailPage() {
               action={<OrderStatusBadge status={order.status} />}
             />
             <CardContent className="space-y-3 pt-2">
+              {order.scheduledFor && (
+                <div className="flex items-center gap-2 rounded-xl bg-violet-50 px-3 py-2.5 text-sm font-medium text-violet-700">
+                  <Clock className="h-4 w-4" /> Scheduled delivery for {formatDateTime(order.scheduledFor)}
+                </div>
+              )}
               {order.items.map((it) => (
                 <div key={it.productId} className="flex items-center gap-3">
                   <ProductThumb src={it.image} alt={it.name} />

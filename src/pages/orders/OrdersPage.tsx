@@ -6,6 +6,7 @@ import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
 import { Tabs, type TabItem } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
+import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
 import { Avatar } from '@/components/shared/Avatar'
 import { OrderStatusBadge, PaymentBadge } from '@/components/shared/StatusBadge'
@@ -25,8 +26,12 @@ const TABS: TabItem[] = [
   { label: 'Packing', value: 'packing' },
   { label: 'On the way', value: 'on_the_way' },
   { label: 'Delivered', value: 'delivered' },
+  { label: 'Scheduled', value: 'scheduled' },
   { label: 'Cancelled', value: 'cancelled' },
 ]
+
+const fmtSchedule = (iso: string) =>
+  new Date(iso).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 export default function OrdersPage() {
   const navigate = useNavigate()
@@ -41,7 +46,7 @@ export default function OrdersPage() {
   const { data: stores = [] } = useGetStoresQuery()
 
   const { data: orders = [], isLoading } = useGetOrdersQuery({
-    status: tab as OrderStatus | 'all',
+    status: (tab === 'scheduled' ? 'all' : tab) as OrderStatus | 'all',
     zone: zone || undefined,
     payment: (payment as PaymentMethod) || undefined,
     days: days ? Number(days) : undefined,
@@ -51,13 +56,21 @@ export default function OrdersPage() {
   const { data: drivers = [] } = useGetDriversQuery()
   const { data: allOrders = [] } = useGetOrdersQuery()
 
+  // Scheduled tab shows pre-booked (after-hours) orders.
+  const shown = tab === 'scheduled' ? orders.filter((o) => o.scheduledFor) : orders
+
   const driverName = (id: string | null) => drivers.find((d) => d.id === id)?.name
 
   const tabs = useMemo<TabItem[]>(
     () =>
       TABS.map((t) => ({
         ...t,
-        count: t.value === 'all' ? allOrders.length : allOrders.filter((o) => o.status === t.value).length,
+        count:
+          t.value === 'all'
+            ? allOrders.length
+            : t.value === 'scheduled'
+              ? allOrders.filter((o) => o.scheduledFor).length
+              : allOrders.filter((o) => o.status === t.value).length,
       })),
     [allOrders],
   )
@@ -68,8 +81,11 @@ export default function OrdersPage() {
       header: 'Order',
       cell: (o) => (
         <div>
-          <p className="font-semibold text-slate-800">{o.reference}</p>
-          <p className="text-xs text-slate-400">{timeAgo(o.placedAt)}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-semibold text-slate-800">{o.reference}</p>
+            {o.scheduledFor && <Badge tone="bg-violet-50 text-violet-700 ring-violet-600/15">Scheduled</Badge>}
+          </div>
+          <p className="text-xs text-slate-400">{o.scheduledFor ? `For ${fmtSchedule(o.scheduledFor)}` : timeAgo(o.placedAt)}</p>
         </div>
       ),
     },
@@ -205,7 +221,7 @@ export default function OrdersPage() {
 
         <DataTable
           columns={columns}
-          data={orders}
+          data={shown}
           rowKey={(o) => o.id}
           onRowClick={(o) => navigate(ROUTES.orderDetail(o.id))}
           loading={isLoading}

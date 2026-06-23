@@ -18,6 +18,7 @@ import {
   useGetStoresQuery,
   useSaveStoreMutation,
   useToggleStoreMutation,
+  useToggleStoreOfflineMutation,
 } from '@/services/endpoints/storesApi'
 import type { DarkStore } from '@/types/common.types'
 
@@ -25,6 +26,7 @@ export default function StoresPage() {
   const { data: stores = [], isLoading } = useGetStoresQuery()
   const { data: overview = [] } = useGetStoreOverviewQuery()
   const [toggle] = useToggleStoreMutation()
+  const [toggleOffline] = useToggleStoreOfflineMutation()
   const [formFor, setFormFor] = useState<DarkStore | 'new' | null>(null)
   const [deleteFor, setDeleteFor] = useState<DarkStore | null>(null)
   const [featuresFor, setFeaturesFor] = useState<DarkStore | null>(null)
@@ -45,7 +47,10 @@ export default function StoresPage() {
             <Store className="h-5 w-5" />
           </div>
           <div className="min-w-0">
-            <p className="font-semibold text-slate-800">{s.name}</p>
+            <div className="flex items-center gap-2">
+              <p className="font-semibold text-slate-800">{s.name}</p>
+              {s.offline && <Badge tone="bg-red-50 text-red-700 ring-red-600/15">Offline</Badge>}
+            </div>
             <p className="truncate text-xs text-slate-400">{s.address}</p>
           </div>
         </div>
@@ -73,6 +78,11 @@ export default function StoresPage() {
           </button>
         )
       },
+    },
+    {
+      key: 'taking',
+      header: 'Taking orders',
+      cell: (s) => <Switch checked={!s.offline} onChange={() => toggleOffline(s.id)} size="sm" aria-label={`Toggle taking orders for ${s.name}`} />,
     },
     { key: 'active', header: 'Active', cell: (s) => <Switch checked={s.active} onChange={() => toggle(s.id)} size="sm" aria-label={`Toggle ${s.name}`} /> },
     {

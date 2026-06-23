@@ -58,6 +58,7 @@ export const storesApi = api.injectEndpoints({
           openTime: payload.openTime ?? '7:00 AM',
           closeTime: payload.closeTime ?? '11:00 PM',
           active: payload.active ?? true,
+          offline: payload.offline ?? false,
           features: payload.features ?? allStoreFeaturesOn(),
           createdAt: new Date().toISOString(),
         }
@@ -90,6 +91,29 @@ export const storesApi = api.injectEndpoints({
       },
     }),
 
+    toggleStoreOffline: build.mutation<DarkStore, string>({
+      async queryFn(id) {
+        await mockDelay(150)
+        const s = darkStores.find((x) => x.id === id)
+        if (!s) return { error: { status: 404, data: 'Not found' } as never }
+        s.offline = !s.offline
+        return { data: clone(s) }
+      },
+      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+        const patch = dispatch(
+          storesApi.util.updateQueryData('getStores', undefined, (draft) => {
+            const s = draft.find((x) => x.id === id)
+            if (s) s.offline = !s.offline
+          }),
+        )
+        try {
+          await queryFulfilled
+        } catch {
+          patch.undo()
+        }
+      },
+    }),
+
     deleteStore: build.mutation<{ id: string }, string>({
       async queryFn(id) {
         await mockDelay(250)
@@ -108,5 +132,6 @@ export const {
   useGetStoreOverviewQuery,
   useSaveStoreMutation,
   useToggleStoreMutation,
+  useToggleStoreOfflineMutation,
   useDeleteStoreMutation,
 } = storesApi

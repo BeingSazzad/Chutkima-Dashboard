@@ -136,6 +136,7 @@ function makeOrder(
   placedMinsAgo: number,
   etaMinutes: number,
   note = '',
+  scheduledFor: string | null = null,
 ): Order {
   const lineItems = items.map((it) => lineItem(it.p, it.qty))
   const subtotal = lineItems.reduce((s, it) => s + it.price * it.quantity, 0)
@@ -188,6 +189,7 @@ function makeOrder(
     codCollected: status === 'delivered' && payment === 'cod',
     stageTimestamps,
     adminNote: '',
+    scheduledFor,
   }
 }
 
@@ -206,6 +208,9 @@ export const orders: Order[] = [
   makeOrder('o10', '#GF-48211-NP', customers[0], [{ p: P('p3'), qty: 2 }, { p: P('p8'), qty: 2 }, { p: P('p1'), qty: 4 }], 'arrived', 'connectips', 'd1', 12, 1),
   makeOrder('o11', '#GF-48212-NP', customers[1], [{ p: P('p6'), qty: 1 }], 'cancelled', 'khalti', null, 200, 0),
   makeOrder('o12', '#GF-48213-NP', customers[5], [{ p: P('p11'), qty: 6 }], 'delivered', 'cod', 'd2', 320, 0),
+  // Scheduled (after-hours pre-booked) orders — feature 113 / 105.
+  makeOrder('o13', '#GF-48214-NP', customers[2], [{ p: P('p7'), qty: 2 }, { p: P('p1'), qty: 1 }], 'placed', 'esewa', null, 30, 15, 'Pre-booked for tomorrow morning.', daysAhead(1)),
+  makeOrder('o14', '#GF-48215-NP', customers[6], [{ p: P('p12'), qty: 1 }, { p: P('p5'), qty: 2 }], 'placed', 'cod', null, 45, 15, '', daysAhead(1)),
 ]
 
 // ── Analytics ───────────────────────────────────────────────────────────────
@@ -305,8 +310,8 @@ export const faqs: FaqItem[] = [
 
 // ── Dark stores (master admin manages many) ─────────────────────────────────
 export const darkStores: DarkStore[] = [
-  { id: 's1', name: 'Traffic Chowk Hub', address: 'Traffic Chowk, Butwal', phone: '+977 071 540001', whatsapp: '+977 9847000001', openTime: '7:00 AM', closeTime: '11:00 PM', active: true, features: allStoreFeaturesOn(), createdAt: daysAgo(400) },
-  { id: 's2', name: 'Golpark Hub', address: 'Golpark, Butwal', phone: '+977 071 540002', whatsapp: '+977 9847000002', openTime: '7:00 AM', closeTime: '10:30 PM', active: true, features: { ...allStoreFeaturesOn(), returns: false, promotions: false }, createdAt: daysAgo(120) },
+  { id: 's1', name: 'Traffic Chowk Hub', address: 'Traffic Chowk, Butwal', phone: '+977 071 540001', whatsapp: '+977 9847000001', openTime: '7:00 AM', closeTime: '11:00 PM', active: true, offline: false, features: allStoreFeaturesOn(), createdAt: daysAgo(400) },
+  { id: 's2', name: 'Golpark Hub', address: 'Golpark, Butwal', phone: '+977 071 540002', whatsapp: '+977 9847000002', openTime: '7:00 AM', closeTime: '10:30 PM', active: true, offline: false, features: { ...allStoreFeaturesOn(), returns: false, promotions: false }, createdAt: daysAgo(120) },
 ]
 
 // ── Admin / staff users ─────────────────────────────────────────────────────

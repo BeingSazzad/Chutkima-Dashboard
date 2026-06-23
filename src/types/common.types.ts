@@ -75,6 +75,8 @@ export interface Order {
   stageTimestamps: Partial<Record<OrderStatus, string>>
   /** Internal admin note for disputes / follow-ups (not shown to customer). */
   adminNote: string
+  /** Pre-booked delivery time (after-hours scheduled order); null = deliver now. */
+  scheduledFor: string | null
 }
 
 export interface Product {
@@ -344,6 +346,8 @@ export interface DarkStore {
   openTime: string
   closeTime: string
   active: boolean
+  /** Temporarily stop taking orders at this store (customers see a closure message). */
+  offline: boolean
   /** Per-store module access — disabled modules are hidden for that store's admin. */
   features: Record<StoreFeatureKey, boolean>
   createdAt: string

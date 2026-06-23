@@ -139,8 +139,11 @@ function makeOrder(
 ): Order {
   const lineItems = items.map((it) => lineItem(it.p, it.qty))
   const subtotal = lineItems.reduce((s, it) => s + it.price * it.quantity, 0)
+  // VIP customers always get free delivery (feature: VIP = 0 delivery fee).
   const deliveryFee =
-    subtotal >= 800 ? 0 : subtotal >= 600 ? 20 : subtotal >= 400 ? 40 : subtotal >= 200 ? 60 : 80
+    cust.tier === 'vip'
+      ? 0
+      : subtotal >= 800 ? 0 : subtotal >= 600 ? 20 : subtotal >= 400 ? 40 : subtotal >= 200 ? 60 : 80
 
   // Per-stage timestamps (placed → … → current), spread from placedAt to now/delivery.
   const STAGES: OrderStatus[] = ['placed', 'packing', 'picked_up', 'on_the_way', 'arrived', 'delivered']

@@ -25,7 +25,7 @@ import {
   useUpdateOrderStatusMutation,
 } from '@/services/endpoints/ordersApi'
 import { useGetDriverQuery } from '@/services/endpoints/driversApi'
-import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
+import { useGetOpsConfigQuery, useGetStoreSetupQuery } from '@/services/endpoints/settingsApi'
 import type { OrderItem, OrderStatus } from '@/types/common.types'
 
 export default function OrderDetailPage() {
@@ -34,6 +34,7 @@ export default function OrderDetailPage() {
   const { data: order, isLoading } = useGetOrderQuery(orderId)
   const { data: driver } = useGetDriverQuery(order?.driverId ?? '', { skip: !order?.driverId })
   const { data: ops } = useGetOpsConfigQuery()
+  const { data: storeSetup } = useGetStoreSetupQuery()
   const [updateStatus, { isLoading: updating }] = useUpdateOrderStatusMutation()
   const [markCod, { isLoading: markingCod }] = useMarkCodCollectedMutation()
   const [assignOpen, setAssignOpen] = useState(false)
@@ -66,7 +67,7 @@ export default function OrderDetailPage() {
         breadcrumbs={[{ label: 'Orders', to: ROUTES.orders }, { label: order.reference }]}
         actions={
           <>
-            <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />} onClick={() => printOrderInvoice(order, driver?.name)}>
+            <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />} onClick={() => printOrderInvoice(order, driver?.name, storeSetup)}>
               Print invoice
             </Button>
             <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate(ROUTES.orders)}>

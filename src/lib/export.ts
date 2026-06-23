@@ -32,8 +32,26 @@ export function downloadCSV(
   URL.revokeObjectURL(url)
 }
 
+export interface InvoiceCompany {
+  companyName: string
+  address: string
+  phone: string
+  email: string
+  taxNumber: string
+  vatPercent: number
+}
+
 /** Open a clean, printable invoice for an order in a new window. */
-export function printOrderInvoice(order: Order, driverName?: string) {
+export function printOrderInvoice(order: Order, driverName?: string, company?: InvoiceCompany) {
+  const co: InvoiceCompany = company ?? {
+    companyName: BRAND.name,
+    address: BRAND.city,
+    phone: '',
+    email: '',
+    taxNumber: '',
+    vatPercent: 0,
+  }
+  const vatIncl = co.vatPercent > 0 ? Math.round(order.grandTotal - order.grandTotal / (1 + co.vatPercent / 100)) : 0
   const rows = order.items
     .map(
       (it) => `<tr>
@@ -65,8 +83,10 @@ export function printOrderInvoice(order: Order, driverName?: string) {
     <body>
       <div class="row">
         <div>
-          <div class="brand">${BRAND.name}</div>
-          <div class="muted">${BRAND.tagline} · ${BRAND.city}</div>
+          <div class="brand">${co.companyName}</div>
+          ${co.address ? `<div class="muted">${co.address}</div>` : ''}
+          ${[co.phone, co.email].filter(Boolean).length ? `<div class="muted">${[co.phone, co.email].filter(Boolean).join(' · ')}</div>` : ''}
+          ${co.taxNumber ? `<div class="muted">PAN/VAT: ${co.taxNumber}</div>` : ''}
         </div>
         <div style="text-align:right">
           <div style="font-weight:700">Invoice</div>
@@ -98,9 +118,10 @@ export function printOrderInvoice(order: Order, driverName?: string) {
         <div><span>Subtotal</span><span>${formatNPR(order.subtotal)}</span></div>
         <div><span>Delivery fee</span><span>${order.deliveryFee === 0 ? 'FREE' : formatNPR(order.deliveryFee)}</span></div>
         <div class="grand"><span>Grand total</span><span>${formatNPR(order.grandTotal)}</span></div>
+        ${vatIncl > 0 ? `<div class="muted"><span>Incl. VAT (${co.vatPercent}%)</span><span>${formatNPR(vatIncl)}</span></div>` : ''}
       </div>
 
-      <p class="muted" style="margin-top:32px;text-align:center">Thank you for ordering with ${BRAND.name}!</p>
+      <p class="muted" style="margin-top:32px;text-align:center">Thank you for ordering with ${co.companyName}!</p>
     </body></html>`
 
   const win = window.open('', '_blank', 'width=820,height=900')

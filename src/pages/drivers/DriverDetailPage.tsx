@@ -18,6 +18,7 @@ import {
   useSetDriverStatusMutation,
 } from '@/services/endpoints/driversApi'
 import { useGetReportsQuery, useGetReviewsQuery } from '@/services/endpoints/reviewsApi'
+import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
 import { FUEL_RATE_PER_KM } from '@/lib/constants'
 import { formatNPR } from '@/lib/utils'
 
@@ -28,6 +29,7 @@ export default function DriverDetailPage() {
   const { data: reviews = [] } = useGetReviewsQuery({ driverId })
   const { data: reports = [] } = useGetReportsQuery({ driverId })
   const { data: deliveries = [] } = useGetDriverDeliveriesQuery(driverId)
+  const { data: ops } = useGetOpsConfigQuery()
   const [setStatus] = useSetDriverStatusMutation()
 
   if (isLoading) return <Spinner label="Loading rider…" className="py-24" />
@@ -74,7 +76,7 @@ export default function DriverDetailPage() {
                 <p className="flex items-center gap-2 text-slate-600"><MapPin className="h-4 w-4 text-slate-400" /> {driver.zone}</p>
                 <p className="flex items-center gap-2 text-slate-600"><IdCard className="h-4 w-4 text-slate-400" /> License: {driver.licenseNo || <span className="text-slate-400">not on file</span>}</p>
                 <p className="flex items-center gap-2 text-slate-600"><Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {avgRating.toFixed(1)} {reviews.length ? `(${reviews.length} reviews)` : 'rating'}</p>
-                <p className="flex items-center gap-2 text-slate-600"><Fuel className="h-4 w-4 text-slate-400" /> {driver.kmToday} km today · {formatNPR(driver.kmToday * FUEL_RATE_PER_KM)} fuel</p>
+                <p className="flex items-center gap-2 text-slate-600"><Fuel className="h-4 w-4 text-slate-400" /> {driver.kmToday} km today · {formatNPR(driver.kmToday * (ops?.fuelRatePerKm ?? FUEL_RATE_PER_KM))} fuel</p>
               </div>
               <div className="mt-4 flex gap-2">
                 {driver.status === 'offline' ? (

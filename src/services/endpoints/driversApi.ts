@@ -1,6 +1,5 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { drivers, orders } from '@/services/mock/data'
-import { FUEL_RATE_PER_KM } from '@/lib/constants'
+import { drivers, opsConfig, orders } from '@/services/mock/data'
 import type { Driver, DriverStatus, Order } from '@/types/common.types'
 
 export interface RiderFinance {
@@ -63,22 +62,30 @@ export const driversApi = api.injectEndpoints({
       providesTags: ['Order'],
     }),
 
-    /** Per-rider fuel + COD reconciliation for today. */
-    getRiderFinance: build.query<RiderFinance[], void>({
-      async queryFn() {
+    /** Per-rider fuel + COD reconciliation for a given day (defaults to today). */
+    getRiderFinance: build.query<RiderFinance[], string | void>({
+      async queryFn(date) {
         await mockDelay(300)
+        const today = new Date().toISOString().slice(0, 10)
+        // Demo only has live data for today; past dates get a stable derived snapshot.
+        const isPast = !!date && date !== today
+        const seed = isPast ? [...date!].reduce((s, c) => s + c.charCodeAt(0), 0) : 0
+        const factor = isPast ? 0.5 + (seed % 80) / 100 : 1
         const rows = drivers.map((d) => {
           const codOrders = orders.filter(
             (o) => o.driverId === d.id && o.paymentMethod === 'cod' && o.status === 'delivered',
           )
-          const codExpected = codOrders.reduce((s, o) => s + o.grandTotal, 0)
-          const codCollected = codOrders.filter((o) => o.codCollected).reduce((s, o) => s + o.grandTotal, 0)
+          const km = Math.round(d.kmToday * factor)
+          const codExpected = Math.round(codOrders.reduce((s, o) => s + o.grandTotal, 0) * factor)
+          const codCollected = Math.round(
+            codOrders.filter((o) => o.codCollected).reduce((s, o) => s + o.grandTotal, 0) * factor,
+          )
           return {
             driverId: d.id,
             name: d.name,
-            deliveriesToday: deliveredToday(d.id),
-            kmToday: d.kmToday,
-            fuel: d.kmToday * FUEL_RATE_PER_KM,
+            deliveriesToday: Math.round(deliveredToday(d.id) * factor),
+            kmToday: km,
+            fuel: km * opsConfig.fuelRatePerKm,
             codExpected,
             codCollected,
             discrepancy: codExpected - codCollected,

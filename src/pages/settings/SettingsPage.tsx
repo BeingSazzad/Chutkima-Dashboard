@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Check } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
@@ -10,9 +10,12 @@ import { Avatar } from '@/components/shared/Avatar'
 import { useAuth } from '@/hooks/useAuth'
 import {
   useGetOpsConfigQuery,
+  useGetStoreSetupQuery,
   useGetTrustConfigQuery,
   useSaveOpsConfigMutation,
+  useSaveStoreSetupMutation,
   useSaveTrustConfigMutation,
+  type StoreSetup,
 } from '@/services/endpoints/settingsApi'
 import { COD_MODE_LABEL, type CodMode } from '@/lib/trust'
 
@@ -22,7 +25,7 @@ function DispatchCard() {
   if (!ops) return null
   return (
     <Card>
-      <CardHeader title="Dispatch" subtitle="Multi-rider assignment" />
+      <CardHeader title="Dispatch & finance" subtitle="Multi-rider assignment · fuel allowance" />
       <CardContent className="space-y-3 pt-2">
         <div className="flex items-center justify-between">
           <div>
@@ -39,6 +42,15 @@ function DispatchCard() {
             options={[2, 3, 4].map((n) => ({ label: String(n), value: String(n) }))}
           />
         )}
+        <div className="border-t border-slate-100 pt-3">
+          <Input
+            label="Rider fuel rate (NPR per km)"
+            type="number"
+            defaultValue={ops.fuelRatePerKm}
+            onBlur={(e) => save({ ...ops, fuelRatePerKm: Number(e.target.value) || 0 })}
+            hint="Used to auto-calculate each rider's fuel allowance."
+          />
+        </div>
       </CardContent>
     </Card>
   )
@@ -115,6 +127,51 @@ function TrustCard() {
   )
 }
 
+function StoreSetupCard() {
+  const { data } = useGetStoreSetupQuery()
+  const [save, { isLoading }] = useSaveStoreSetupMutation()
+  const [form, setForm] = useState<StoreSetup | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (data) setForm(data)
+  }, [data])
+
+  if (!form) return null
+  const set = (k: keyof StoreSetup, v: string | number) => setForm((f) => (f ? { ...f, [k]: v } : f))
+  const dirty = data ? JSON.stringify(form) !== JSON.stringify(data) : false
+
+  const onSave = async () => {
+    await save(form).unwrap()
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1800)
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Store setup" subtitle="Company details printed on every invoice" />
+      <CardContent className="space-y-3 pt-2">
+        <Input label="Company name" value={form.companyName} onChange={(e) => set('companyName', e.target.value)} />
+        <Input label="Address" value={form.address} onChange={(e) => set('address', e.target.value)} />
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Input label="Phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} />
+          <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
+          <Input label="PAN / VAT / TRN number" value={form.taxNumber} onChange={(e) => set('taxNumber', e.target.value)} />
+          <Input label="VAT / Tax %" type="number" value={form.vatPercent} onChange={(e) => set('vatPercent', Number(e.target.value) || 0)} />
+        </div>
+        <div className="flex items-center justify-end gap-2">
+          {saved && (
+            <span className="flex items-center gap-1 text-xs font-semibold text-success">
+              <Check className="h-3.5 w-3.5" /> Saved
+            </span>
+          )}
+          <Button onClick={onSave} loading={isLoading} disabled={!dirty}>Save changes</Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function SettingsPage() {
   const { user } = useAuth()
   const [avatar, setAvatar] = useState<string | undefined>(undefined)
@@ -160,6 +217,7 @@ export default function SettingsPage() {
 
         <div className="space-y-4">
           <DispatchCard />
+          <StoreSetupCard />
           <TrustCard />
 
           <Card>

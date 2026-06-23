@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Banknote, Fuel, HandCoins, Wallet } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -8,12 +9,17 @@ import { Avatar } from '@/components/shared/Avatar'
 import { FUEL_RATE_PER_KM } from '@/lib/constants'
 import { cn, formatNPR } from '@/lib/utils'
 import { useGetRiderFinanceQuery, type RiderFinance } from '@/services/endpoints/driversApi'
+import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
 
 /** netToDeposit = cash the rider hands to the store after keeping their fuel allowance. */
 const net = (r: RiderFinance) => r.codCollected - r.fuel
 
 export default function RiderFinancePage() {
-  const { data: rows = [], isLoading } = useGetRiderFinanceQuery()
+  const today = new Date().toISOString().slice(0, 10)
+  const [date, setDate] = useState(today)
+  const { data: rows = [], isLoading } = useGetRiderFinanceQuery(date)
+  const { data: ops } = useGetOpsConfigQuery()
+  const fuelRate = ops?.fuelRatePerKm ?? FUEL_RATE_PER_KM
 
   const totalFuel = rows.reduce((s, r) => s + r.fuel, 0)
   const totalInHand = rows.reduce((s, r) => s + r.codCollected, 0)
@@ -37,7 +43,7 @@ export default function RiderFinancePage() {
     { key: 'km', header: 'KM', cell: (r) => <span className="text-slate-700">{r.kmToday} km</span> },
     {
       key: 'fuel',
-      header: `Fuel due (×${FUEL_RATE_PER_KM})`,
+      header: `Fuel due (×${fuelRate})`,
       cell: (r) => <span className="font-semibold text-amber-600">{formatNPR(r.fuel)}</span>,
     },
     { key: 'hand', header: 'COD in hand', cell: (r) => <span className="text-slate-700">{formatNPR(r.codCollected)}</span> },
@@ -62,7 +68,24 @@ export default function RiderFinancePage() {
 
   return (
     <>
-      <PageHeader title="Rider Finance" description="Daily fuel allowance and cash-on-delivery reconciliation per rider." />
+      <PageHeader
+        title="Rider Finance"
+        description="Daily fuel allowance and cash-on-delivery reconciliation per rider."
+        actions={
+          <input
+            type="date"
+            value={date}
+            max={today}
+            onChange={(e) => setDate(e.target.value || today)}
+            className="focus-ring h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700"
+          />
+        }
+      />
+      {date !== today && (
+        <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
+          Showing the snapshot for {date}.
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard label="Fuel due to riders" value={formatNPR(totalFuel)} icon={<Fuel className="h-5 w-5" />} iconClass="bg-amber-50 text-amber-600" />

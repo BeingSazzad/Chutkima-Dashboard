@@ -12,15 +12,26 @@ import { cn, formatDateTime, formatNPR } from '@/lib/utils'
 import { downloadCSV } from '@/lib/export'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useGetTransactionsQuery } from '@/services/endpoints/transactionsApi'
-import type { Transaction, TransactionType } from '@/types/common.types'
+import type { Transaction, TransactionStatus, TransactionType } from '@/types/common.types'
 
 export default function TransactionsPage() {
   const [type, setType] = useState<TransactionType | 'all'>('all')
+  const [method, setMethod] = useState<string>('all')
+  const [status, setStatus] = useState<TransactionStatus | 'all'>('all')
+  const [date, setDate] = useState('')
   const [search, setSearch] = useState('')
   const debounced = useDebounce(search, 300)
 
-  const { data: txns = [], isLoading } = useGetTransactionsQuery({ type, search: debounced || undefined })
+  const { data: raw = [], isLoading } = useGetTransactionsQuery({ type, search: debounced || undefined })
   const { data: all = [] } = useGetTransactionsQuery()
+
+  const methods = Array.from(new Set(all.map((t) => t.method)))
+  const txns = raw.filter(
+    (t) =>
+      (method === 'all' || t.method === method) &&
+      (status === 'all' || t.status === status) &&
+      (!date || t.createdAt.slice(0, 10) === date),
+  )
 
   const moneyIn = all
     .filter((t) => t.status === 'success' && TXN_TYPE_META[t.type].sign === 1)
@@ -103,8 +114,8 @@ export default function TransactionsPage() {
       </div>
 
       <Card className="mt-4">
-        <div className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center">
-          <div className="relative flex-1">
+        <div className="flex flex-col gap-3 p-4">
+          <div className="relative">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={search}
@@ -113,7 +124,7 @@ export default function TransactionsPage() {
               className="focus-ring h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm"
             />
           </div>
-          <div className="w-full sm:w-52">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
             <Select
               value={type}
               onChange={(e) => setType(e.target.value as TransactionType | 'all')}
@@ -121,6 +132,25 @@ export default function TransactionsPage() {
                 { label: 'All types', value: 'all' },
                 ...(Object.keys(TXN_TYPE_META) as TransactionType[]).map((t) => ({ label: TXN_TYPE_META[t].label, value: t })),
               ]}
+            />
+            <Select
+              value={method}
+              onChange={(e) => setMethod(e.target.value)}
+              options={[{ label: 'All methods', value: 'all' }, ...methods.map((m) => ({ label: m, value: m }))]}
+            />
+            <Select
+              value={status}
+              onChange={(e) => setStatus(e.target.value as TransactionStatus | 'all')}
+              options={[
+                { label: 'All statuses', value: 'all' },
+                ...(Object.keys(TXN_STATUS_META) as TransactionStatus[]).map((s) => ({ label: TXN_STATUS_META[s].label, value: s })),
+              ]}
+            />
+            <input
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className="focus-ring h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700"
             />
           </div>
         </div>

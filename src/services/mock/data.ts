@@ -323,6 +323,18 @@ export const zones: Zone[] = [
 export const opsConfig = {
   multiRiderEnabled: true,
   maxRiders: 3,
+  /** NPR paid to riders per km (fuel allowance) — feature 91, configurable. */
+  fuelRatePerKm: 4,
+}
+
+/** Company details for invoices (Store Setup) — appears on every printed invoice. */
+export const storeSetup = {
+  companyName: 'Chutkima Pvt. Ltd.',
+  address: 'Traffic Chowk, Butwal-8, Rupandehi, Nepal',
+  phone: '+977 9800000000',
+  email: 'hello@chutkima.com',
+  taxNumber: '601234567',
+  vatPercent: 13,
 }
 
 /** Social + app-store links shown in the customer app / website footer. */

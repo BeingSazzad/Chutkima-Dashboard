@@ -6,16 +6,22 @@ import { Input } from '@/components/ui/Input'
 import { Button } from '@/components/ui/Button'
 import { Switch } from '@/components/ui/Switch'
 import { Select } from '@/components/ui/Select'
+import { Textarea } from '@/components/ui/Textarea'
 import { Avatar } from '@/components/shared/Avatar'
 import { useAuth } from '@/hooks/useAuth'
 import {
   useGetOpsConfigQuery,
+  useGetReferralConfigQuery,
   useGetStoreSetupQuery,
+  useGetSystemControlsQuery,
   useGetTrustConfigQuery,
   useSaveOpsConfigMutation,
+  useSaveReferralConfigMutation,
   useSaveStoreSetupMutation,
+  useSaveSystemControlsMutation,
   useSaveTrustConfigMutation,
   type StoreSetup,
+  type ReferralConfig,
 } from '@/services/endpoints/settingsApi'
 import { COD_MODE_LABEL, type CodMode } from '@/lib/trust'
 
@@ -172,6 +178,109 @@ function StoreSetupCard() {
   )
 }
 
+function ReferralCard() {
+  const { data } = useGetReferralConfigQuery()
+  const [save, { isLoading }] = useSaveReferralConfigMutation()
+  const [form, setForm] = useState<ReferralConfig | null>(null)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    if (data) setForm(data)
+  }, [data])
+
+  if (!form) return null
+  const set = (k: keyof ReferralConfig, v: number | boolean) => setForm((f) => (f ? { ...f, [k]: v } : f))
+  const dirty = data ? JSON.stringify(form) !== JSON.stringify(data) : false
+  const num = (k: keyof ReferralConfig, label: string) => (
+    <Input label={label} type="number" value={form[k] as number} onChange={(e) => set(k, Number(e.target.value) || 0)} />
+  )
+
+  const onSave = async () => {
+    await save(form).unwrap()
+    setSaved(true)
+    setTimeout(() => setSaved(false), 1800)
+  }
+
+  return (
+    <Card>
+      <CardHeader title="Referral programme" subtitle="Reward existing & new customers" />
+      <CardContent className="space-y-3 pt-2">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Enable referrals</p>
+            <p className="text-xs text-slate-400">Customers can share their code</p>
+          </div>
+          <Switch checked={form.enabled} onChange={(v) => set('enabled', v)} aria-label="Referrals" />
+        </div>
+        {form.enabled && (
+          <>
+            <p className="pt-1 text-xs font-bold uppercase tracking-wide text-slate-400">New customer (referee)</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+              {num('refereeDiscountPct', 'Discount %')}
+              {num('refereeMaxDiscount', 'Max NPR')}
+              {num('refereeMinCart', 'Min cart NPR')}
+            </div>
+            <p className="pt-1 text-xs font-bold uppercase tracking-wide text-slate-400">Referrer (existing)</p>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              {num('referrerCreditPct', 'Wallet credit %')}
+              {num('referrerMaxCredit', 'Max NPR')}
+            </div>
+          </>
+        )}
+        <div className="flex items-center justify-end gap-2">
+          {saved && (
+            <span className="flex items-center gap-1 text-xs font-semibold text-success">
+              <Check className="h-3.5 w-3.5" /> Saved
+            </span>
+          )}
+          <Button onClick={onSave} loading={isLoading} disabled={!dirty}>Save changes</Button>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function SystemControlsCard() {
+  const { data } = useGetSystemControlsQuery()
+  const [save] = useSaveSystemControlsMutation()
+  if (!data) return null
+  const set = (patch: Partial<typeof data>) => save({ ...data, ...patch })
+  return (
+    <Card>
+      <CardHeader title="System controls" subtitle="Master switches for the whole service" />
+      <CardContent className="space-y-3 pt-2">
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Service offline</p>
+            <p className="text-xs text-slate-400">Stop taking orders; customers see a closure message</p>
+          </div>
+          <Switch checked={data.serviceOffline} onChange={(v) => set({ serviceOffline: v })} aria-label="Service offline" />
+        </div>
+        {data.serviceOffline && (
+          <Textarea label="Closure message (shown to customers)" defaultValue={data.offlineMessage} rows={2} onBlur={(e) => set({ offlineMessage: e.target.value })} />
+        )}
+        <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Training mode</p>
+            <p className="text-xs text-slate-400">Test orders & flows without real transactions</p>
+          </div>
+          <Switch checked={data.trainingMode} onChange={(v) => set({ trainingMode: v })} aria-label="Training mode" />
+        </div>
+        <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Force app update</p>
+            <p className="text-xs text-slate-400">Require the minimum version before ordering</p>
+          </div>
+          <Switch checked={data.forceUpdate} onChange={(v) => set({ forceUpdate: v })} aria-label="Force update" />
+        </div>
+        {data.forceUpdate && (
+          <Input label="Minimum app version" defaultValue={data.minAppVersion} onBlur={(e) => set({ minAppVersion: e.target.value })} placeholder="e.g. 1.2.0" />
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 export default function SettingsPage() {
   const { user } = useAuth()
   const [avatar, setAvatar] = useState<string | undefined>(undefined)
@@ -219,6 +328,8 @@ export default function SettingsPage() {
           <DispatchCard />
           <StoreSetupCard />
           <TrustCard />
+          <ReferralCard />
+          <SystemControlsCard />
 
           <Card>
             <CardHeader title="Notifications" subtitle="What you get alerted about" />

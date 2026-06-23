@@ -350,6 +350,25 @@ export const linksConfig = {
   appStore: '',
 }
 
+/** System controls (section 3.10) — master switches. */
+export const systemControls = {
+  serviceOffline: false,
+  offlineMessage: 'हामी अहिले बन्द छौं। बिहान ७ बजे फेरि सेवा सुरु हुनेछ।',
+  trainingMode: false,
+  forceUpdate: false,
+  minAppVersion: '1.0.0',
+}
+
+/** Referral programme config (feature 35) — all values admin-editable. */
+export const referralConfig = {
+  enabled: true,
+  refereeDiscountPct: 5,
+  refereeMaxDiscount: 50,
+  refereeMinCart: 500,
+  referrerCreditPct: 5,
+  referrerMaxCredit: 50,
+}
+
 /** Customer trust / COD-restriction config (feature 94). */
 export const trustConfig = {
   enabled: true,

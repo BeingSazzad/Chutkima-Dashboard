@@ -46,6 +46,8 @@ export const api = createApi({
     'OpsConfig',
     'TrustConfig',
     'StoreSetup',
+    'ReferralConfig',
+    'SystemControls',
     'Store',
   ],
   endpoints: () => ({}),

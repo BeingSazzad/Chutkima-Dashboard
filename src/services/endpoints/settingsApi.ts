@@ -1,6 +1,25 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { opsConfig, storeSetup, trustConfig } from '@/services/mock/data'
+import { opsConfig, referralConfig, storeSetup, systemControls, trustConfig } from '@/services/mock/data'
 import type { TrustConfig } from '@/lib/trust'
+
+/** Master system switches (section 3.10). */
+export interface SystemControls {
+  serviceOffline: boolean
+  offlineMessage: string
+  trainingMode: boolean
+  forceUpdate: boolean
+  minAppVersion: string
+}
+
+/** Referral programme config (feature 35). */
+export interface ReferralConfig {
+  enabled: boolean
+  refereeDiscountPct: number
+  refereeMaxDiscount: number
+  refereeMinCart: number
+  referrerCreditPct: number
+  referrerMaxCredit: number
+}
 
 export interface OpsConfig {
   multiRiderEnabled: boolean
@@ -72,6 +91,40 @@ export const settingsApi = api.injectEndpoints({
       },
       invalidatesTags: ['StoreSetup'],
     }),
+
+    getReferralConfig: build.query<ReferralConfig, void>({
+      async queryFn() {
+        await mockDelay(150)
+        return { data: clone(referralConfig) }
+      },
+      providesTags: ['ReferralConfig'],
+    }),
+
+    saveReferralConfig: build.mutation<ReferralConfig, ReferralConfig>({
+      async queryFn(payload) {
+        await mockDelay(250)
+        Object.assign(referralConfig, payload)
+        return { data: clone(referralConfig) }
+      },
+      invalidatesTags: ['ReferralConfig'],
+    }),
+
+    getSystemControls: build.query<SystemControls, void>({
+      async queryFn() {
+        await mockDelay(150)
+        return { data: clone(systemControls) }
+      },
+      providesTags: ['SystemControls'],
+    }),
+
+    saveSystemControls: build.mutation<SystemControls, SystemControls>({
+      async queryFn(payload) {
+        await mockDelay(250)
+        Object.assign(systemControls, payload)
+        return { data: clone(systemControls) }
+      },
+      invalidatesTags: ['SystemControls'],
+    }),
   }),
 })
 
@@ -82,4 +135,8 @@ export const {
   useSaveTrustConfigMutation,
   useGetStoreSetupQuery,
   useSaveStoreSetupMutation,
+  useGetReferralConfigQuery,
+  useSaveReferralConfigMutation,
+  useGetSystemControlsQuery,
+  useSaveSystemControlsMutation,
 } = settingsApi

@@ -1,6 +1,24 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { opsConfig, referralConfig, storeSetup, systemControls, trustConfig } from '@/services/mock/data'
+import {
+  operatingConfig,
+  opsConfig,
+  referralConfig,
+  storeSetup,
+  systemControls,
+  trustConfig,
+} from '@/services/mock/data'
 import type { TrustConfig } from '@/lib/trust'
+
+/** Operating hours + scheduled delivery (section 2.1 / feature 113). */
+export interface OperatingConfig {
+  openTime: string
+  lastOrderCutoff: string
+  closeTime: string
+  firstSlotNextDay: string
+  slotIntervalMin: number
+  scheduledDeliveryEnabled: boolean
+  afterHoursMessage: string
+}
 
 /** Master system switches (section 3.10). */
 export interface SystemControls {
@@ -125,6 +143,23 @@ export const settingsApi = api.injectEndpoints({
       },
       invalidatesTags: ['SystemControls'],
     }),
+
+    getOperatingConfig: build.query<OperatingConfig, void>({
+      async queryFn() {
+        await mockDelay(150)
+        return { data: clone(operatingConfig) }
+      },
+      providesTags: ['OperatingConfig'],
+    }),
+
+    saveOperatingConfig: build.mutation<OperatingConfig, OperatingConfig>({
+      async queryFn(payload) {
+        await mockDelay(250)
+        Object.assign(operatingConfig, payload)
+        return { data: clone(operatingConfig) }
+      },
+      invalidatesTags: ['OperatingConfig'],
+    }),
   }),
 })
 
@@ -139,4 +174,6 @@ export const {
   useSaveReferralConfigMutation,
   useGetSystemControlsQuery,
   useSaveSystemControlsMutation,
+  useGetOperatingConfigQuery,
+  useSaveOperatingConfigMutation,
 } = settingsApi

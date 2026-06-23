@@ -318,6 +318,21 @@ export interface SearchKeyword {
 }
 
 /** A dark store (fulfilment hub). Master admin manages many. */
+export type StoreFeatureKey =
+  | 'orders'
+  | 'inventory'
+  | 'products'
+  | 'customers'
+  | 'delivery'
+  | 'reports'
+  | 'promotions'
+  | 'returns'
+  | 'settings'
+  | 'staff'
+  | 'cash'
+  | 'invoices'
+  | 'notifications'
+
 export interface DarkStore {
   id: ID
   name: string
@@ -327,6 +342,8 @@ export interface DarkStore {
   openTime: string
   closeTime: string
   active: boolean
+  /** Per-store module access — disabled modules are hidden for that store's admin. */
+  features: Record<StoreFeatureKey, boolean>
   createdAt: string
 }
 

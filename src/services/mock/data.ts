@@ -23,6 +23,7 @@ import type {
   Transaction,
   Zone,
 } from '@/types/common.types'
+import { allStoreFeaturesOn } from '@/lib/constants'
 
 /**
  * In-memory seeded dataset for the Chutkima admin dashboard.
@@ -301,8 +302,8 @@ export const faqs: FaqItem[] = [
 
 // ── Dark stores (master admin manages many) ─────────────────────────────────
 export const darkStores: DarkStore[] = [
-  { id: 's1', name: 'Traffic Chowk Hub', address: 'Traffic Chowk, Butwal', phone: '+977 071 540001', whatsapp: '+977 9847000001', openTime: '7:00 AM', closeTime: '11:00 PM', active: true, createdAt: daysAgo(400) },
-  { id: 's2', name: 'Golpark Hub', address: 'Golpark, Butwal', phone: '+977 071 540002', whatsapp: '+977 9847000002', openTime: '7:00 AM', closeTime: '10:30 PM', active: true, createdAt: daysAgo(120) },
+  { id: 's1', name: 'Traffic Chowk Hub', address: 'Traffic Chowk, Butwal', phone: '+977 071 540001', whatsapp: '+977 9847000001', openTime: '7:00 AM', closeTime: '11:00 PM', active: true, features: allStoreFeaturesOn(), createdAt: daysAgo(400) },
+  { id: 's2', name: 'Golpark Hub', address: 'Golpark, Butwal', phone: '+977 071 540002', whatsapp: '+977 9847000002', openTime: '7:00 AM', closeTime: '10:30 PM', active: true, features: { ...allStoreFeaturesOn(), returns: false, promotions: false }, createdAt: daysAgo(120) },
 ]
 
 // ── Admin / staff users ─────────────────────────────────────────────────────
@@ -375,6 +376,18 @@ export const linksConfig = {
   whatsapp: 'https://wa.me/9779800000000',
   playStore: 'https://play.google.com/store/apps/details?id=com.chutkima.app',
   appStore: '',
+}
+
+/** Operating hours + scheduled delivery (section 2.1 / feature 113). */
+export const operatingConfig = {
+  openTime: '07:00',
+  lastOrderCutoff: '22:30',
+  closeTime: '23:00',
+  firstSlotNextDay: '07:15',
+  slotIntervalMin: 15,
+  scheduledDeliveryEnabled: true,
+  afterHoursMessage:
+    'हाम्रो आजको सेवा बन्द भयो। Operating hours: 7:00 AM – 11:00 PM। तपाईंको अर्डर भोलि बिहान deliver गर्न schedule गर्नुहुन्छ?',
 }
 
 /** System controls (section 3.10) — master switches. */

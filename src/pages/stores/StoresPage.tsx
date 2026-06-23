@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Clock, Pencil, Plus, Store, Trash2 } from 'lucide-react'
+import { Clock, Pencil, Plus, SlidersHorizontal, Store, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/Badge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { StatCard } from '@/components/shared/StatCard'
 import { formatNPR } from '@/lib/utils'
+import { STORE_FEATURES } from '@/lib/constants'
 import {
   useDeleteStoreMutation,
   useGetStoreOverviewQuery,
@@ -26,6 +27,7 @@ export default function StoresPage() {
   const [toggle] = useToggleStoreMutation()
   const [formFor, setFormFor] = useState<DarkStore | 'new' | null>(null)
   const [deleteFor, setDeleteFor] = useState<DarkStore | null>(null)
+  const [featuresFor, setFeaturesFor] = useState<DarkStore | null>(null)
 
   const totals = overview.reduce(
     (acc, o) => ({ orders: acc.orders + o.orders, revenue: acc.revenue + o.revenue, pending: acc.pending + o.pending }),
@@ -60,6 +62,18 @@ export default function StoresPage() {
         return n > 0 ? <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15">{n}</Badge> : <span className="text-xs text-slate-400">0</span>
       },
     },
+    {
+      key: 'modules',
+      header: 'Modules',
+      cell: (s) => {
+        const on = STORE_FEATURES.filter((f) => s.features[f.key]).length
+        return (
+          <button onClick={() => setFeaturesFor(s)} className="focus-ring rounded-lg text-xs font-semibold text-brand-600 hover:underline">
+            {on}/{STORE_FEATURES.length} on
+          </button>
+        )
+      },
+    },
     { key: 'active', header: 'Active', cell: (s) => <Switch checked={s.active} onChange={() => toggle(s.id)} size="sm" aria-label={`Toggle ${s.name}`} /> },
     {
       key: 'actions',
@@ -68,6 +82,9 @@ export default function StoresPage() {
       className: 'text-right',
       cell: (s) => (
         <div className="flex items-center justify-end gap-0.5">
+          <button onClick={() => setFeaturesFor(s)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Features">
+            <SlidersHorizontal className="h-4 w-4" />
+          </button>
           <button onClick={() => setFormFor(s)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit">
             <Pencil className="h-4 w-4" />
           </button>
@@ -102,8 +119,57 @@ export default function StoresPage() {
       </Card>
 
       <StoreFormModal store={formFor} onClose={() => setFormFor(null)} />
+      <StoreFeaturesModal store={featuresFor} onClose={() => setFeaturesFor(null)} />
       <DeleteStore store={deleteFor} onClose={() => setDeleteFor(null)} />
     </>
+  )
+}
+
+function StoreFeaturesModal({ store, onClose }: { store: DarkStore | null; onClose: () => void }) {
+  const [save, { isLoading }] = useSaveStoreMutation()
+  const [features, setFeatures] = useState<DarkStore['features'] | null>(null)
+  const key = store?.id ?? 'closed'
+  const [lastKey, setLastKey] = useState('')
+  if (key !== lastKey && store) {
+    setLastKey(key)
+    setFeatures({ ...store.features })
+  }
+
+  const submit = async () => {
+    if (!store || !features) return
+    await save({ id: store.id, features }).unwrap()
+    onClose()
+  }
+
+  return (
+    <Modal
+      open={!!store}
+      onClose={onClose}
+      title="Store features"
+      description={store ? `Enable or disable modules for ${store.name}. Disabled modules are hidden for that store's admin.` : undefined}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={submit} loading={isLoading}>Save features</Button>
+        </>
+      }
+    >
+      {features && (
+        <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+          {STORE_FEATURES.map((f) => (
+            <div key={f.key} className="flex items-center justify-between gap-3 rounded-xl px-3 py-2.5 hover:bg-slate-50">
+              <span className="text-sm font-medium text-slate-700">{f.label}</span>
+              <Switch
+                checked={features[f.key]}
+                onChange={(v) => setFeatures((prev) => (prev ? { ...prev, [f.key]: v } : prev))}
+                size="sm"
+                aria-label={f.label}
+              />
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
   )
 }
 

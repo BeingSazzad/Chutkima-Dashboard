@@ -1,5 +1,6 @@
 import { api, clone, mockDelay } from '@/services/api'
 import { darkStores, drivers, orders } from '@/services/mock/data'
+import { allStoreFeaturesOn } from '@/lib/constants'
 import type { DarkStore } from '@/types/common.types'
 
 export interface StoreOverview {
@@ -57,6 +58,7 @@ export const storesApi = api.injectEndpoints({
           openTime: payload.openTime ?? '7:00 AM',
           closeTime: payload.closeTime ?? '11:00 PM',
           active: payload.active ?? true,
+          features: payload.features ?? allStoreFeaturesOn(),
           createdAt: new Date().toISOString(),
         }
         darkStores.push(created)

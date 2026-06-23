@@ -10,11 +10,13 @@ import { Textarea } from '@/components/ui/Textarea'
 import { Avatar } from '@/components/shared/Avatar'
 import { useAuth } from '@/hooks/useAuth'
 import {
+  useGetOperatingConfigQuery,
   useGetOpsConfigQuery,
   useGetReferralConfigQuery,
   useGetStoreSetupQuery,
   useGetSystemControlsQuery,
   useGetTrustConfigQuery,
+  useSaveOperatingConfigMutation,
   useSaveOpsConfigMutation,
   useSaveReferralConfigMutation,
   useSaveStoreSetupMutation,
@@ -240,6 +242,56 @@ function ReferralCard() {
   )
 }
 
+function OperatingHoursCard() {
+  const { data } = useGetOperatingConfigQuery()
+  const [save] = useSaveOperatingConfigMutation()
+  if (!data) return null
+  const set = (patch: Partial<typeof data>) => save({ ...data, ...patch })
+  const timeField = (label: string, key: 'openTime' | 'lastOrderCutoff' | 'closeTime' | 'firstSlotNextDay') => (
+    <div>
+      <label className="mb-1 block text-xs font-medium text-slate-500">{label}</label>
+      <input
+        type="time"
+        value={data[key]}
+        onChange={(e) => set({ [key]: e.target.value } as Partial<typeof data>)}
+        className="focus-ring h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700"
+      />
+    </div>
+  )
+  return (
+    <Card>
+      <CardHeader title="Operating hours" subtitle="Service window + scheduled delivery" />
+      <CardContent className="space-y-3 pt-2">
+        <div className="grid grid-cols-2 gap-3">
+          {timeField('Open time', 'openTime')}
+          {timeField('Last order cutoff', 'lastOrderCutoff')}
+          {timeField('Close time', 'closeTime')}
+          {timeField('First slot next day', 'firstSlotNextDay')}
+        </div>
+        <Select
+          label="Scheduled slot interval"
+          value={String(data.slotIntervalMin)}
+          onChange={(e) => set({ slotIntervalMin: Number(e.target.value) })}
+          options={[10, 15, 30].map((n) => ({ label: `${n} min`, value: String(n) }))}
+        />
+        <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Scheduled delivery</p>
+            <p className="text-xs text-slate-400">Let customers pre-book after-hours orders</p>
+          </div>
+          <Switch checked={data.scheduledDeliveryEnabled} onChange={(v) => set({ scheduledDeliveryEnabled: v })} aria-label="Scheduled delivery" />
+        </div>
+        <Textarea
+          label="After-hours popup message (Nepali)"
+          defaultValue={data.afterHoursMessage}
+          rows={3}
+          onBlur={(e) => set({ afterHoursMessage: e.target.value })}
+        />
+      </CardContent>
+    </Card>
+  )
+}
+
 function SystemControlsCard() {
   const { data } = useGetSystemControlsQuery()
   const [save] = useSaveSystemControlsMutation()
@@ -327,6 +379,7 @@ export default function SettingsPage() {
         <div className="space-y-4">
           <DispatchCard />
           <StoreSetupCard />
+          <OperatingHoursCard />
           <TrustCard />
           <ReferralCard />
           <SystemControlsCard />

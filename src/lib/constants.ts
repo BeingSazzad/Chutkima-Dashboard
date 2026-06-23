@@ -5,6 +5,7 @@ import type {
   ProductStatus,
   ReportReason,
   ReportStatus,
+  StoreFeatureKey,
   TransactionStatus,
   TransactionType,
 } from '@/types/common.types'
@@ -162,6 +163,27 @@ export const TXN_STATUS_META: Record<TransactionStatus, { label: string; badge: 
 
 /** Rider fuel reimbursement rate (NPR per km) — configurable in production. */
 export const FUEL_RATE_PER_KM = 4
+
+/** Configurable modules per dark store (feature toggles). */
+export const STORE_FEATURES: { key: StoreFeatureKey; label: string }[] = [
+  { key: 'orders', label: 'Order Management' },
+  { key: 'inventory', label: 'Inventory Management' },
+  { key: 'products', label: 'Product Management' },
+  { key: 'customers', label: 'Customer Management' },
+  { key: 'delivery', label: 'Delivery Management' },
+  { key: 'reports', label: 'Reports & Analytics' },
+  { key: 'promotions', label: 'Promotions & Discounts' },
+  { key: 'returns', label: 'Returns & Refunds' },
+  { key: 'settings', label: 'Store Settings' },
+  { key: 'staff', label: 'Staff Management' },
+  { key: 'cash', label: 'Cash Management' },
+  { key: 'invoices', label: 'Invoice Printing' },
+  { key: 'notifications', label: 'Notifications' },
+]
+
+/** All store features enabled (default for a new store). */
+export const allStoreFeaturesOn = (): Record<StoreFeatureKey, boolean> =>
+  Object.fromEntries(STORE_FEATURES.map((f) => [f.key, true])) as Record<StoreFeatureKey, boolean>
 
 /** Service zones in Butwal (used for filtering / dispatch). */
 export const ZONES = [

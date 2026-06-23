@@ -93,7 +93,9 @@ const cust = (
 ): Customer => ({
   id, name, phone, address, zone, totalOrders, totalSpent,
   joinedAt: daysAgo(joined), lastOrderAt: last, banned,
+  tier: totalSpent > 25000 ? 'vip' : totalOrders > 15 ? 'loyal' : 'new',
   codCancellations, notRespondingCount, completedOrders: totalOrders,
+  trustOverride: 'auto',
   referralCode: ref, referredCount, creditsEarned: referredCount * 50,
   creditsRedeemed: Math.max(0, referredCount * 50 - walletBalance), walletBalance,
 })

@@ -52,6 +52,17 @@ export const customersApi = api.injectEndpoints({
       invalidatesTags: ['Customer'],
     }),
 
+    saveCustomer: build.mutation<Customer, Partial<Customer> & { id: string }>({
+      async queryFn(payload) {
+        await mockDelay(300)
+        const idx = customers.findIndex((c) => c.id === payload.id)
+        if (idx === -1) return { error: { status: 404, data: 'Not found' } as never }
+        customers[idx] = { ...customers[idx], ...payload }
+        return { data: clone(customers[idx]) }
+      },
+      invalidatesTags: ['Customer'],
+    }),
+
     deleteCustomer: build.mutation<{ id: string }, string>({
       async queryFn(id) {
         await mockDelay(250)
@@ -87,7 +98,7 @@ function segmentCustomers(segment: string) {
     case 'trusted':
       return customers.filter((c) => deriveTrustBadge(c) === 'green' && !c.banned)
     case 'vip':
-      return customers.filter((c) => c.totalSpent > 25000)
+      return customers.filter((c) => c.tier === 'vip')
     case 'wallet':
       return customers.filter((c) => c.walletBalance > 0)
     case 'inactive':
@@ -102,6 +113,7 @@ export const {
   useGetCustomerQuery,
   useGetCustomerOrdersQuery,
   useBanCustomerMutation,
+  useSaveCustomerMutation,
   useDeleteCustomerMutation,
   useGetSegmentCountQuery,
   useSendBroadcastMutation,

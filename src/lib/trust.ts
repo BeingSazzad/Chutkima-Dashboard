@@ -32,10 +32,11 @@ export const COD_MODE_LABEL: Record<CodMode, string> = {
  * thresholds, so the badge always matches the numbers shown next to it.
  */
 export function deriveTrustBadge(
-  c: { codCancellations: number; notRespondingCount: number },
+  c: { codCancellations: number; notRespondingCount: number; trustOverride?: TrustBadge | 'auto' },
   cfg: TrustConfig = DEFAULT_TRUST_CONFIG,
 ): TrustBadge {
   if (!cfg.enabled) return 'green'
+  if (c.trustOverride && c.trustOverride !== 'auto') return c.trustOverride
   if (c.codCancellations >= cfg.redCod || c.notRespondingCount >= cfg.redNoResp) return 'red'
   if (c.codCancellations >= cfg.grayCod || c.notRespondingCount >= cfg.grayNoResp) return 'gray'
   return 'green'

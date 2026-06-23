@@ -123,6 +123,8 @@ export const driversApi = api.injectEndpoints({
           phone: payload.phone ?? '',
           avatar: payload.avatar || `https://i.pravatar.cc/120?u=chutkima-${Date.now()}`,
           licenseNo: payload.licenseNo ?? '',
+          licenseDoc: payload.licenseDoc ?? '',
+          vehicleRegDoc: payload.vehicleRegDoc ?? '',
           vehicle: payload.vehicle ?? 'Scooter',
           status: 'offline',
           zone: payload.zone ?? 'Traffic Chowk',

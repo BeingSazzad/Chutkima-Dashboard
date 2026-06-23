@@ -203,6 +203,8 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
   const empty = { name: '', phone: '', vehicleType: 'Scooter', plate: '', zone: ZONES[0] as string, licenseNo: '' }
   const [form, setForm] = useState(empty)
   const [photo, setPhoto] = useState('')
+  const [licenseDoc, setLicenseDoc] = useState('')
+  const [vehicleRegDoc, setVehicleRegDoc] = useState('')
   const key = driver === 'new' ? 'new' : d?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
   if (key !== lastKey && driver) {
@@ -211,9 +213,13 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
       const [type, plate] = d.vehicle.split(' · ')
       setForm({ name: d.name, phone: d.phone, vehicleType: type || 'Scooter', plate: plate || '', zone: d.zone, licenseNo: d.licenseNo ?? '' })
       setPhoto(d.avatar && !d.avatar.startsWith('https://i.pravatar') ? d.avatar : '')
+      setLicenseDoc(d.licenseDoc ?? '')
+      setVehicleRegDoc(d.vehicleRegDoc ?? '')
     } else {
       setForm(empty)
       setPhoto('')
+      setLicenseDoc('')
+      setVehicleRegDoc('')
     }
   }
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
@@ -227,6 +233,8 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
       vehicle,
       zone: form.zone,
       licenseNo: form.licenseNo,
+      licenseDoc,
+      vehicleRegDoc,
       ...(photo ? { avatar: photo } : {}),
     }).unwrap()
     onClose()
@@ -256,6 +264,13 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
           <Input label="Vehicle number (plate)" value={form.plate} onChange={(e) => set('plate', e.target.value)} placeholder="e.g. BA 24 PA 1290" />
           <Input label="License number" value={form.licenseNo} onChange={(e) => set('licenseNo', e.target.value)} placeholder="e.g. 03-06-074521" />
           <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={ZONES.map((z) => ({ label: z, value: z }))} />
+        </div>
+        <div>
+          <p className="mb-2 text-sm font-semibold text-slate-700">Documents (KYC)</p>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+            <ImageUpload label="Driving license" value={licenseDoc} onChange={setLicenseDoc} aspectClassName="aspect-[16/10]" hint="Photo/scan of the license." />
+            <ImageUpload label="Vehicle registration" value={vehicleRegDoc} onChange={setVehicleRegDoc} aspectClassName="aspect-[16/10]" hint="Photo/scan of the bluebook." />
+          </div>
         </div>
         <p className="rounded-xl bg-mint-50 px-3 py-2.5 text-xs text-slate-500">
           The rider logs into the Rider App with this phone number + OTP — the account is created here by you.

@@ -105,6 +105,29 @@ export default function DriverDetailPage() {
             </Card>
           </div>
 
+          {(driver.licenseDoc || driver.vehicleRegDoc) && (
+            <Card>
+              <CardHeader title="Documents" subtitle="KYC — license & registration" />
+              <CardContent className="grid grid-cols-2 gap-3 pt-2">
+                {[
+                  { label: 'Driving license', src: driver.licenseDoc },
+                  { label: 'Vehicle registration', src: driver.vehicleRegDoc },
+                ].map((doc) =>
+                  doc.src ? (
+                    <a key={doc.label} href={doc.src} target="_blank" rel="noreferrer" className="group">
+                      <img src={doc.src} alt={doc.label} className="aspect-[16/10] w-full rounded-xl border border-slate-200 object-cover transition group-hover:opacity-90" />
+                      <p className="mt-1 text-xs font-medium text-slate-500">{doc.label}</p>
+                    </a>
+                  ) : (
+                    <div key={doc.label} className="flex aspect-[16/10] items-center justify-center rounded-xl border border-dashed border-slate-200 text-center text-xs text-slate-400">
+                      No {doc.label.toLowerCase()}
+                    </div>
+                  ),
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {openReports > 0 && (
             <div className="flex items-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
               <ShieldAlert className="h-4 w-4" /> {openReports} open report{openReports > 1 ? 's' : ''} need review.

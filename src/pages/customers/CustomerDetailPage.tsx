@@ -100,7 +100,11 @@ export default function CustomerDetailPage() {
                 <Avatar name={customer.name} size="lg" />
                 <div className="min-w-0">
                   <p className="font-bold text-slate-800">{customer.name}</p>
-                  <Badge className="mt-0.5">{customer.zone}</Badge>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                    <Badge>{customer.zone}</Badge>
+                    {customer.tier === 'vip' && <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15">⭐ VIP · Free delivery</Badge>}
+                    {customer.tier === 'loyal' && <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15">Loyal</Badge>}
+                  </div>
                 </div>
               </div>
               <div className="mt-4 space-y-2.5 text-sm">

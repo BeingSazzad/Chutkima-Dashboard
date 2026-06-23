@@ -128,6 +128,10 @@ export interface Driver {
   avatar: string
   /** Driving license number (rider KYC). */
   licenseNo?: string
+  /** Scanned driving-license document (data URL). */
+  licenseDoc?: string
+  /** Scanned vehicle-registration document (data URL). */
+  vehicleRegDoc?: string
   vehicle: string
   status: DriverStatus
   zone: string
@@ -142,6 +146,7 @@ export interface Driver {
 
 /** Customer reliability badge (COD trust system). */
 export type TrustBadge = 'green' | 'gray' | 'red'
+export type CustomerTier = 'new' | 'loyal' | 'vip'
 
 export interface Customer {
   id: ID
@@ -154,10 +159,14 @@ export interface Customer {
   joinedAt: string
   lastOrderAt: string
   banned: boolean
+  /** Loyalty tier — VIP customers get free delivery. */
+  tier: CustomerTier
   // Trust system (badge is derived from these counts via lib/trust)
   codCancellations: number
   notRespondingCount: number
   completedOrders: number
+  /** Manual trust-badge override; 'auto' = derive from the counts above. */
+  trustOverride: TrustBadge | 'auto'
   // Referral + wallet
   referralCode: string
   referredCount: number

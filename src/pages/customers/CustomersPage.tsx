@@ -168,6 +168,7 @@ export default function CustomersPage() {
           onRowClick={(c) => navigate(ROUTES.customerDetail(c.id))}
           loading={isLoading}
           emptyTitle="No customers found"
+          pageSize={6}
         />
       </Card>
 

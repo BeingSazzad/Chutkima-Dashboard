@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { Switch } from '@/components/ui/Switch'
 import { Select } from '@/components/ui/Select'
 import { Textarea } from '@/components/ui/Textarea'
+import { Tabs } from '@/components/ui/Tabs'
 import { Avatar } from '@/components/shared/Avatar'
 import { useAuth } from '@/hooks/useAuth'
 import {
@@ -343,7 +344,7 @@ function SystemControlsCard() {
   )
 }
 
-export default function SettingsPage() {
+function ProfileCard() {
   const { user } = useAuth()
   const [avatar, setAvatar] = useState<string | undefined>(undefined)
   const fileRef = useRef<HTMLInputElement>(null)
@@ -356,55 +357,99 @@ export default function SettingsPage() {
   }
 
   return (
+    <Card>
+      <CardHeader title="Profile" subtitle="Your admin account details" />
+      <CardContent className="space-y-4 pt-2">
+        <div className="flex items-center gap-4">
+          <Avatar name={user?.name ?? 'Admin'} src={avatar ?? user?.avatar} size="lg" />
+          <div>
+            <p className="font-bold text-slate-800">{user?.name}</p>
+            <p className="text-sm capitalize text-slate-400">{user?.role}</p>
+          </div>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
+          <Button variant="outline" size="sm" className="ml-auto" onClick={() => fileRef.current?.click()}>Change photo</Button>
+        </div>
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <Input label="Full name" defaultValue={user?.name} />
+          <Input label="Email" type="email" defaultValue={user?.email} />
+          <Input label="Phone" defaultValue="+977 9800000000" />
+          <Input label="Role" defaultValue={user?.role} disabled />
+        </div>
+        <div className="flex justify-end">
+          <SaveButton label="Save changes" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function NotificationsCard() {
+  return (
+    <Card>
+      <CardHeader title="Notifications" subtitle="What you get alerted about" />
+      <CardContent className="divide-y divide-slate-50 pt-1">
+        <Toggle label="New orders" description="Ping on every incoming order" />
+        <Toggle label="Low stock alerts" description="When a product drops below its threshold" />
+        <Toggle label="Driver offline" description="When a rider goes offline mid-shift" defaultOn={false} />
+        <Toggle label="Daily summary" description="End-of-day performance email" />
+      </CardContent>
+    </Card>
+  )
+}
+
+const SETTINGS_TABS = [
+  { label: 'Profile', value: 'profile' },
+  { label: 'Operations', value: 'operations' },
+  { label: 'Store & Billing', value: 'billing' },
+  { label: 'Customers', value: 'customers' },
+  { label: 'System', value: 'system' },
+]
+
+export default function SettingsPage() {
+  const [tab, setTab] = useState('profile')
+
+  return (
     <>
       <PageHeader title="Settings" description="Manage your profile and store configuration." />
 
-      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <div className="space-y-4 lg:col-span-2">
-          <Card>
-            <CardHeader title="Profile" subtitle="Your admin account details" />
-            <CardContent className="space-y-4 pt-2">
-              <div className="flex items-center gap-4">
-                <Avatar name={user?.name ?? 'Admin'} src={avatar ?? user?.avatar} size="lg" />
-                <div>
-                  <p className="font-bold text-slate-800">{user?.name}</p>
-                  <p className="text-sm capitalize text-slate-400">{user?.role}</p>
-                </div>
-                <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => pickPhoto(e.target.files?.[0])} />
-                <Button variant="outline" size="sm" className="ml-auto" onClick={() => fileRef.current?.click()}>Change photo</Button>
-              </div>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <Input label="Full name" defaultValue={user?.name} />
-                <Input label="Email" type="email" defaultValue={user?.email} />
-                <Input label="Phone" defaultValue="+977 9800000000" />
-                <Input label="Role" defaultValue={user?.role} disabled />
-              </div>
-              <div className="flex justify-end">
-                <SaveButton label="Save changes" />
-              </div>
-            </CardContent>
-          </Card>
+      <Card className="mb-4">
+        <div className="overflow-x-auto px-3 pt-2">
+          <Tabs items={SETTINGS_TABS} value={tab} onChange={setTab} />
         </div>
+      </Card>
 
-        <div className="space-y-4">
+      {tab === 'profile' && (
+        <div className="max-w-2xl">
+          <ProfileCard />
+        </div>
+      )}
+
+      {tab === 'operations' && (
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
           <DispatchCard />
-          <StoreSetupCard />
           <OperatingHoursCard />
-          <TrustCard />
-          <ReferralCard />
-          <SystemControlsCard />
-
-          <Card>
-            <CardHeader title="Notifications" subtitle="What you get alerted about" />
-            <CardContent className="divide-y divide-slate-50 pt-1">
-              <Toggle label="New orders" description="Ping on every incoming order" />
-              <Toggle label="Low stock alerts" description="When a product drops below its threshold" />
-              <Toggle label="Driver offline" description="When a rider goes offline mid-shift" defaultOn={false} />
-              <Toggle label="Daily summary" description="End-of-day performance email" />
-            </CardContent>
-          </Card>
         </div>
-      </div>
+      )}
+
+      {tab === 'billing' && (
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+          <StoreSetupCard />
+          <ReferralCard />
+        </div>
+      )}
+
+      {tab === 'customers' && (
+        <div className="max-w-2xl">
+          <TrustCard />
+        </div>
+      )}
+
+      {tab === 'system' && (
+        <div className="grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
+          <SystemControlsCard />
+          <NotificationsCard />
+        </div>
+      )}
     </>
   )
 }

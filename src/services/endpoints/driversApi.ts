@@ -62,28 +62,54 @@ export const driversApi = api.injectEndpoints({
       providesTags: ['Order'],
     }),
 
-    /** Per-rider fuel + COD reconciliation for a given day (defaults to today). */
-    getRiderFinance: build.query<RiderFinance[], string | void>({
-      async queryFn(date) {
+    /**
+     * Per-rider fuel + COD reconciliation for a date range (defaults to today).
+     * A single day (from === to) shows that day; a wider range accumulates every
+     * day in between so the finance totals reflect the whole period.
+     */
+    getRiderFinance: build.query<RiderFinance[], { from?: string; to?: string } | void>({
+      async queryFn(range) {
         await mockDelay(300)
         const today = new Date().toISOString().slice(0, 10)
-        // Demo only has live data for today; past dates get a stable derived snapshot.
-        const isPast = !!date && date !== today
-        const seed = isPast ? [...date!].reduce((s, c) => s + c.charCodeAt(0), 0) : 0
-        const factor = isPast ? 0.5 + (seed % 80) / 100 : 1
+        const from = range?.from || today
+        const to = range?.to || from
+        // Build the inclusive list of day strings (capped to keep the loop bounded).
+        const days: string[] = []
+        for (
+          let d = new Date(`${from}T00:00:00`);
+          d <= new Date(`${to}T00:00:00`) && days.length < 92;
+          d = new Date(d.getTime() + 86_400_000)
+        ) {
+          days.push(d.toISOString().slice(0, 10))
+        }
+        if (days.length === 0) days.push(today)
+        // Demo only has live data for today; past dates get a stable derived factor.
+        const factorFor = (date: string) => {
+          if (date === today) return 1
+          const seed = [...date].reduce((s, c) => s + c.charCodeAt(0), 0)
+          return 0.5 + (seed % 80) / 100
+        }
         const rows = drivers.map((d) => {
           const codOrders = orders.filter(
             (o) => o.driverId === d.id && o.paymentMethod === 'cod' && o.status === 'delivered',
           )
-          const km = Math.round(d.kmToday * factor)
-          const codExpected = Math.round(codOrders.reduce((s, o) => s + o.grandTotal, 0) * factor)
-          const codCollected = Math.round(
-            codOrders.filter((o) => o.codCollected).reduce((s, o) => s + o.grandTotal, 0) * factor,
-          )
+          const codBase = codOrders.reduce((s, o) => s + o.grandTotal, 0)
+          const codCollectedBase = codOrders.filter((o) => o.codCollected).reduce((s, o) => s + o.grandTotal, 0)
+          let km = 0
+          let codExpected = 0
+          let codCollected = 0
+          let deliveries = 0
+          for (const date of days) {
+            const factor = factorFor(date)
+            km += Math.round(d.kmToday * factor)
+            codExpected += Math.round(codBase * factor)
+            codCollected += Math.round(codCollectedBase * factor)
+            deliveries += Math.round(deliveredToday(d.id) * factor)
+          }
           return {
             driverId: d.id,
             name: d.name,
-            deliveriesToday: Math.round(deliveredToday(d.id) * factor),
+            deliveriesToday: deliveries,
             kmToday: km,
             fuel: km * opsConfig.fuelRatePerKm,
             codExpected,

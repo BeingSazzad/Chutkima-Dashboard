@@ -16,10 +16,12 @@ const net = (r: RiderFinance) => r.codCollected - r.fuel
 
 export default function RiderFinancePage() {
   const today = new Date().toISOString().slice(0, 10)
-  const [date, setDate] = useState(today)
-  const { data: rows = [], isLoading } = useGetRiderFinanceQuery(date)
+  const [from, setFrom] = useState(today)
+  const [to, setTo] = useState(today)
+  const { data: rows = [], isLoading } = useGetRiderFinanceQuery({ from, to })
   const { data: ops } = useGetOpsConfigQuery()
   const fuelRate = ops?.fuelRatePerKm ?? FUEL_RATE_PER_KM
+  const isRange = from !== today || to !== today
 
   const totalFuel = rows.reduce((s, r) => s + r.fuel, 0)
   const totalInHand = rows.reduce((s, r) => s + r.codCollected, 0)
@@ -72,18 +74,36 @@ export default function RiderFinancePage() {
         title="Rider Finance"
         description="Daily fuel allowance and cash-on-delivery reconciliation per rider."
         actions={
-          <input
-            type="date"
-            value={date}
-            max={today}
-            onChange={(e) => setDate(e.target.value || today)}
-            className="focus-ring h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700"
-          />
+          <div className="flex items-center gap-2">
+            <span className="hidden text-xs font-medium text-slate-500 sm:block">From</span>
+            <input
+              type="date"
+              value={from}
+              max={to || today}
+              onChange={(e) => {
+                const v = e.target.value || today
+                setFrom(v)
+                if (v > to) setTo(v)
+              }}
+              aria-label="From date"
+              className="focus-ring h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700"
+            />
+            <span className="text-slate-400">–</span>
+            <input
+              type="date"
+              value={to}
+              min={from}
+              max={today}
+              onChange={(e) => setTo(e.target.value || today)}
+              aria-label="To date"
+              className="focus-ring h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700"
+            />
+          </div>
         }
       />
-      {date !== today && (
+      {isRange && (
         <p className="mb-3 rounded-xl bg-amber-50 px-3 py-2 text-xs font-medium text-amber-700">
-          Showing the snapshot for {date}.
+          {from === to ? `Showing the snapshot for ${from}.` : `Accumulated totals from ${from} to ${to}.`}
         </p>
       )}
 

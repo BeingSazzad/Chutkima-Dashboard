@@ -38,6 +38,30 @@ export interface OrderAssignment {
   confirmed: boolean
 }
 
+/** One immutable admin note in an order's notes audit trail. */
+export interface OrderNote {
+  id: ID
+  content: string
+  adminName: string
+  adminId?: ID
+  at: string
+}
+
+/** Refund type — full or partial. */
+export type RefundType = 'full' | 'partial'
+
+/** One refund record against an order (audit trail). */
+export interface OrderRefund {
+  id: ID
+  type: RefundType
+  amount: number
+  reason: string
+  comments: string
+  adminName: string
+  at: string
+  status: 'processed'
+}
+
 export interface Order {
   id: ID
   reference: string
@@ -75,6 +99,10 @@ export interface Order {
   stageTimestamps: Partial<Record<OrderStatus, string>>
   /** Internal admin note for disputes / follow-ups (not shown to customer). */
   adminNote: string
+  /** Append-only audit trail of admin notes (multiple, never overwritten). */
+  notes: OrderNote[]
+  /** Refund records against this order (full / partial). */
+  refunds: OrderRefund[]
   /** Pre-booked delivery time (after-hours scheduled order); null = deliver now. */
   scheduledFor: string | null
 }
@@ -152,11 +180,36 @@ export interface Driver {
   onTimeRate: number
   /** Distance driven today (km) — drives the fuel calculation. */
   kmToday: number
+  /** Live GPS position — used to rank riders by distance to the dark store. */
+  lat?: number
+  lng?: number
 }
 
 /** Customer reliability badge (COD trust system). */
 export type TrustBadge = 'green' | 'gray' | 'red'
 export type CustomerTier = 'new' | 'loyal' | 'vip'
+
+/** Why a manual wallet credit was issued. */
+export type CreditType =
+  | 'refund'
+  | 'partial_refund'
+  | 'compensation'
+  | 'dispute'
+  | 'goodwill'
+  | 'other'
+
+/** One manual wallet credit (audit trail) — added by an admin. */
+export interface CustomerCredit {
+  id: ID
+  amount: number
+  type: CreditType
+  reason: string
+  /** Related order, where applicable. */
+  orderId?: string
+  note?: string
+  adminName: string
+  at: string
+}
 
 /** Packer staff — pick & pack orders; no app login. */
 export interface Packer {
@@ -193,6 +246,8 @@ export interface Customer {
   creditsEarned: number
   creditsRedeemed: number
   walletBalance: number
+  /** Manual admin wallet credits (refunds, compensation…) — audit trail. */
+  credits: CustomerCredit[]
 }
 
 /** Banner placement on the customer app. */
@@ -345,6 +400,9 @@ export interface DarkStore {
   whatsapp: string
   openTime: string
   closeTime: string
+  /** Store location — used to rank riders by distance for assignment. */
+  lat?: number
+  lng?: number
   active: boolean
   /** Temporarily stop taking orders at this store (customers see a closure message). */
   offline: boolean
@@ -390,6 +448,18 @@ export type ReportReason =
 
 export type ReportStatus = 'open' | 'reviewed' | 'dismissed'
 
+/** One immutable entry in a complaint's audit trail (never overwritten). */
+export interface ComplaintAction {
+  id: ID
+  /** What happened, e.g. "Complaint filed", "Marked reviewed", "Note added". */
+  action: string
+  /** Admin who took the action ("System" for the original filing). */
+  adminName: string
+  /** Optional free-text note attached to this action. */
+  note?: string
+  at: string
+}
+
 export interface DriverReport {
   id: ID
   driverId: ID
@@ -399,6 +469,8 @@ export interface DriverReport {
   details: string
   status: ReportStatus
   createdAt: string
+  /** Append-only history of every admin action on this complaint. */
+  actions: ComplaintAction[]
 }
 
 // ── Transactions ────────────────────────────────────────────────────────────
@@ -415,6 +487,37 @@ export interface Transaction {
   method: string
   status: TransactionStatus
   orderId: ID | null
+  createdAt: string
+}
+
+// ── Internal billing (staff purchases / damaged / near-expiry / clearance) ───
+export interface InternalOrderItem {
+  productId: ID
+  sku: string
+  name: string
+  quantity: number
+  /** Regular selling price. */
+  originalPrice: number
+  /** Price actually charged (may be below original). */
+  sellPrice: number
+}
+
+export interface InternalOrder {
+  id: ID
+  /** Separate series from customer orders, e.g. "INT-000001". */
+  reference: string
+  staffName: string
+  items: InternalOrderItem[]
+  /** Sum at original prices. */
+  originalTotal: number
+  /** Sum at the charged prices. */
+  sellTotal: number
+  /** originalTotal − sellTotal. */
+  discount: number
+  /** Mandatory when selling below the standard price. */
+  reason: string
+  comments: string
+  adminName: string
   createdAt: string
 }
 

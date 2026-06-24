@@ -8,6 +8,7 @@ import type {
   Packer,
   Coupon,
   Customer,
+  CustomerTier,
   DeliveryConfig,
   Driver,
   DriverReport,
@@ -15,6 +16,7 @@ import type {
   FaqItem,
   FaqSection,
   HomeSection,
+  InternalOrder,
   OnboardingSlide,
   Order,
   OrderStatus,
@@ -76,14 +78,14 @@ export const products: Product[] = [
 
 // ── Drivers ─────────────────────────────────────────────────────────────────
 export const drivers: Driver[] = [
-  { id: 'd1', name: 'Manoj Thapa', phone: '+977 9841000001', avatar: avatar('d1'), vehicle: 'Scooter · BA 24 PA 1290', status: 'on_delivery', zone: 'Traffic Chowk', rating: 4.9, activeOrderId: 'o1', deliveriesToday: 11, totalDeliveries: 1820, onTimeRate: 97, kmToday: 38 },
-  { id: 'd2', name: 'Suresh Gurung', phone: '+977 9841000002', avatar: avatar('d2'), vehicle: 'Bike · LU 1 CHA 4421', status: 'available', zone: 'Amarpath', rating: 4.8, activeOrderId: null, deliveriesToday: 8, totalDeliveries: 1340, onTimeRate: 95, kmToday: 26 },
-  { id: 'd3', name: 'Bikash Tamang', phone: '+977 9841000003', avatar: avatar('d3'), vehicle: 'Scooter · LU 2 PA 0098', status: 'available', zone: 'Milanchowk', rating: 4.7, activeOrderId: null, deliveriesToday: 6, totalDeliveries: 920, onTimeRate: 93, kmToday: 19 },
-  { id: 'd4', name: 'Ramesh Bhandari', phone: '+977 9841000004', avatar: avatar('d4'), vehicle: 'Bike · LU 5 CHA 7711', status: 'on_delivery', zone: 'Golpark', rating: 4.6, activeOrderId: 'o4', deliveriesToday: 9, totalDeliveries: 1110, onTimeRate: 91, kmToday: 31 },
-  { id: 'd5', name: 'Dipesh Shrestha', phone: '+977 9841000005', avatar: avatar('d5'), vehicle: 'Scooter · BA 31 PA 2200', status: 'available', zone: 'Traffic Chowk', rating: 4.9, activeOrderId: null, deliveriesToday: 12, totalDeliveries: 2050, onTimeRate: 98, kmToday: 44 },
-  { id: 'd6', name: 'Anil Karki', phone: '+977 9841000006', avatar: avatar('d6'), vehicle: 'Bike · LU 3 CHA 5532', status: 'offline', zone: 'Sukkhanagar', rating: 4.5, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 640, onTimeRate: 88, kmToday: 0 },
-  { id: 'd7', name: 'Kiran Magar', phone: '+977 9841000007', avatar: avatar('d7'), vehicle: 'Scooter · LU 1 PA 9087', status: 'available', zone: 'Buddhanagar', rating: 4.8, activeOrderId: null, deliveriesToday: 7, totalDeliveries: 1005, onTimeRate: 94, kmToday: 23 },
-  { id: 'd8', name: 'Sanjay Bk', phone: '+977 9841000008', avatar: avatar('d8'), vehicle: 'Bike · BA 12 PA 6543', status: 'offline', zone: 'Amarpath', rating: 4.4, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 480, onTimeRate: 86, kmToday: 0 },
+  { id: 'd1', name: 'Manoj Thapa', phone: '+977 9841000001', avatar: avatar('d1'), vehicle: 'Scooter · BA 24 PA 1290', status: 'on_delivery', zone: 'Traffic Chowk', rating: 4.9, activeOrderId: 'o1', deliveriesToday: 11, totalDeliveries: 1820, onTimeRate: 97, kmToday: 38, lat: 27.7010, lng: 83.4486 },
+  { id: 'd2', name: 'Suresh Gurung', phone: '+977 9841000002', avatar: avatar('d2'), vehicle: 'Bike · LU 1 CHA 4421', status: 'available', zone: 'Amarpath', rating: 4.8, activeOrderId: null, deliveriesToday: 8, totalDeliveries: 1340, onTimeRate: 95, kmToday: 26, lat: 27.6962, lng: 83.4521 },
+  { id: 'd3', name: 'Bikash Tamang', phone: '+977 9841000003', avatar: avatar('d3'), vehicle: 'Scooter · LU 2 PA 0098', status: 'available', zone: 'Milanchowk', rating: 4.7, activeOrderId: null, deliveriesToday: 6, totalDeliveries: 920, onTimeRate: 93, kmToday: 19, lat: 27.7052, lng: 83.4402 },
+  { id: 'd4', name: 'Ramesh Bhandari', phone: '+977 9841000004', avatar: avatar('d4'), vehicle: 'Bike · LU 5 CHA 7711', status: 'on_delivery', zone: 'Golpark', rating: 4.6, activeOrderId: 'o4', deliveriesToday: 9, totalDeliveries: 1110, onTimeRate: 91, kmToday: 31, lat: 27.6906, lng: 83.4617 },
+  { id: 'd5', name: 'Dipesh Shrestha', phone: '+977 9841000005', avatar: avatar('d5'), vehicle: 'Scooter · BA 31 PA 2200', status: 'available', zone: 'Traffic Chowk', rating: 4.9, activeOrderId: null, deliveriesToday: 12, totalDeliveries: 2050, onTimeRate: 98, kmToday: 44, lat: 27.7001, lng: 83.4472 },
+  { id: 'd6', name: 'Anil Karki', phone: '+977 9841000006', avatar: avatar('d6'), vehicle: 'Bike · LU 3 CHA 5532', status: 'offline', zone: 'Sukkhanagar', rating: 4.5, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 640, onTimeRate: 88, kmToday: 0, lat: 27.6852, lng: 83.4701 },
+  { id: 'd7', name: 'Kiran Magar', phone: '+977 9841000007', avatar: avatar('d7'), vehicle: 'Scooter · LU 1 PA 9087', status: 'available', zone: 'Buddhanagar', rating: 4.8, activeOrderId: null, deliveriesToday: 7, totalDeliveries: 1005, onTimeRate: 94, kmToday: 23, lat: 27.6981, lng: 83.4662 },
+  { id: 'd8', name: 'Sanjay Bk', phone: '+977 9841000008', avatar: avatar('d8'), vehicle: 'Bike · BA 12 PA 6543', status: 'offline', zone: 'Amarpath', rating: 4.4, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 480, onTimeRate: 86, kmToday: 0, lat: 27.6942, lng: 83.4556 },
 ]
 
 // ── Customers ───────────────────────────────────────────────────────────────
@@ -100,6 +102,7 @@ const cust = (
   trustOverride: 'auto',
   referralCode: ref, referredCount, creditsEarned: referredCount * 50,
   creditsRedeemed: Math.max(0, referredCount * 50 - walletBalance), walletBalance,
+  credits: [],
 })
 
 export const customers: Customer[] = [
@@ -112,6 +115,16 @@ export const customers: Customer[] = [
   cust('u7', 'Krishna Bhattarai', '+977 9844000007', 'Traffic Chowk-5, Butwal', 'Traffic Chowk', 12, 6740, 60, daysAgo(1), false, 2, 2, 'KRIS1208', 0, 0),
   cust('u8', 'Sarita Joshi', '+977 9844000008', 'Amarpath-8, Butwal', 'Amarpath', 38, 24310, 240, minsAgo(200), false, 1, 0, 'SARI8830', 4, 90),
 ]
+
+// Seed a demo wallet credit so the credit-history audit trail isn't empty.
+{
+  const u3 = customers.find((c) => c.id === 'u3')
+  if (u3) {
+    u3.credits = [
+      { id: 'cc-u3-1', amount: 100, type: 'compensation', reason: 'Late delivery', orderId: '#GF-48203-NP', note: 'Order took 40 min — goodwill compensation.', adminName: 'Kiran Chetri', at: daysAgo(4) },
+    ]
+  }
+}
 
 // ── Category groups ─────────────────────────────────────────────────────────
 export const categoryGroups: CategoryGroup[] = [
@@ -189,6 +202,8 @@ function makeOrder(
     codCollected: status === 'delivered' && payment === 'cod',
     stageTimestamps,
     adminNote: '',
+    notes: [],
+    refunds: [],
     scheduledFor,
   }
 }
@@ -212,6 +227,21 @@ export const orders: Order[] = [
   makeOrder('o13', '#GF-48214-NP', customers[2], [{ p: P('p7'), qty: 2 }, { p: P('p1'), qty: 1 }], 'placed', 'esewa', null, 30, 15, 'Pre-booked for tomorrow morning.', daysAhead(1)),
   makeOrder('o14', '#GF-48215-NP', customers[6], [{ p: P('p12'), qty: 1 }, { p: P('p5'), qty: 2 }], 'placed', 'cod', null, 45, 15, '', daysAhead(1)),
 ]
+
+// Seed a couple of demo admin notes + a refund so the audit trails aren't empty.
+{
+  const o5 = orders.find((o) => o.id === 'o5')
+  if (o5) {
+    o5.notes = [
+      { id: 'on5-1', content: 'Customer called — one item looked crushed on arrival.', adminName: 'Kiran Chetri', adminId: 'a1', at: minsAgo(50) },
+      { id: 'on5-2', content: 'Issued NPR 35 partial refund as goodwill. Customer happy.', adminName: 'Kiran Chetri', adminId: 'a1', at: minsAgo(44) },
+    ]
+    o5.adminNote = o5.notes[o5.notes.length - 1].content
+    o5.refunds = [
+      { id: 'rf5-1', type: 'partial', amount: 35, reason: 'Damaged item', comments: 'One pack of noodles crushed on arrival.', adminName: 'Kiran Chetri', at: minsAgo(44), status: 'processed' },
+    ]
+  }
+}
 
 // ── Analytics ───────────────────────────────────────────────────────────────
 export const revenueSeries = [
@@ -310,8 +340,8 @@ export const faqs: FaqItem[] = [
 
 // ── Dark stores (master admin manages many) ─────────────────────────────────
 export const darkStores: DarkStore[] = [
-  { id: 's1', name: 'Traffic Chowk Hub', address: 'Traffic Chowk, Butwal', phone: '+977 071 540001', whatsapp: '+977 9847000001', openTime: '7:00 AM', closeTime: '11:00 PM', active: true, offline: false, features: allStoreFeaturesOn(), createdAt: daysAgo(400) },
-  { id: 's2', name: 'Golpark Hub', address: 'Golpark, Butwal', phone: '+977 071 540002', whatsapp: '+977 9847000002', openTime: '7:00 AM', closeTime: '10:30 PM', active: true, offline: false, features: { ...allStoreFeaturesOn(), returns: false, promotions: false }, createdAt: daysAgo(120) },
+  { id: 's1', name: 'Traffic Chowk Hub', address: 'Traffic Chowk, Butwal', phone: '+977 071 540001', whatsapp: '+977 9847000001', openTime: '7:00 AM', closeTime: '11:00 PM', lat: 27.7006, lng: 83.4480, active: true, offline: false, features: allStoreFeaturesOn(), createdAt: daysAgo(400) },
+  { id: 's2', name: 'Golpark Hub', address: 'Golpark, Butwal', phone: '+977 071 540002', whatsapp: '+977 9847000002', openTime: '7:00 AM', closeTime: '10:30 PM', lat: 27.6900, lng: 83.4620, active: true, offline: false, features: { ...allStoreFeaturesOn(), returns: false, promotions: false }, createdAt: daysAgo(120) },
 ]
 
 // ── Admin / staff users ─────────────────────────────────────────────────────
@@ -368,6 +398,29 @@ export const storeSetup = {
   vatPercent: 13,
 }
 
+// ── Internal billing (staff purchases / damaged / clearance) ────────────────
+export const internalOrders: InternalOrder[] = [
+  {
+    id: 'int1',
+    reference: 'INT-000001',
+    staffName: 'Bimala Thapa',
+    items: [
+      { productId: 'p8', sku: 'TK-220', name: 'Tokla Premium Tea 200g', quantity: 2, originalPrice: 145, sellPrice: 100 },
+      { productId: 'p5', sku: 'HB-205', name: 'Heritage Select Digestive Biscuits 400g', quantity: 1, originalPrice: 185, sellPrice: 150 },
+    ],
+    originalTotal: 475,
+    sellTotal: 350,
+    discount: 125,
+    reason: 'Near-expiry clearance',
+    comments: 'Tea expires in 3 weeks — sold to staff at discount.',
+    adminName: 'Kiran Chetri',
+    createdAt: daysAgo(2),
+  },
+]
+
+/** Next internal-order number in the INT-###### series. */
+export const internalCounter = { next: internalOrders.length + 1 }
+
 // ── Packers (pick & pack staff) ─────────────────────────────────────────────
 export const packers: Packer[] = [
   { id: 'pk1', name: 'Bimala Thapa', phone: '+977 9845000001', active: true, packedToday: 14, createdAt: daysAgo(120) },
@@ -405,6 +458,10 @@ export const systemControls = {
   trainingMode: false,
   forceUpdate: false,
   minAppVersion: '1.0.0',
+  /** Notify admins on WhatsApp for every new order (feature 110). */
+  whatsappAdminAlert: true,
+  /** Master admin number that receives new-order alerts. */
+  adminWhatsappNumber: '+977 9800000001',
 }
 
 /** Referral programme config (feature 35) — all values admin-editable. */
@@ -438,8 +495,12 @@ export const deliveryConfig: DeliveryConfig = {
   ],
 }
 
-/** Delivery fee for a cart value, from the tiered config (highest match wins). */
-export function deliveryFeeFor(subtotal: number): number {
+/**
+ * Delivery fee for a cart value, from the tiered config (highest match wins).
+ * VIP customers always ship free (feature: VIP badge = 0 delivery fee).
+ */
+export function deliveryFeeFor(subtotal: number, tier?: CustomerTier): number {
+  if (tier === 'vip') return 0
   if (subtotal >= deliveryConfig.freeAbove) return 0
   return [...deliveryConfig.tiers].sort((a, b) => b.minOrder - a.minOrder).find((t) => subtotal >= t.minOrder)?.fee ?? 0
 }
@@ -457,10 +518,10 @@ export const driverReviews: DriverReview[] = [
 
 // ── Driver reports (customer → rider complaints) ────────────────────────────
 export const driverReports: DriverReport[] = [
-  { id: 'rp1', driverId: 'd4', customerName: 'Anita Rana', orderId: '#GF-48205-NP', reason: 'rude', details: 'Rider was rude when I asked to wait 2 minutes at the gate.', status: 'open', createdAt: minsAgo(90) },
-  { id: 'rp2', driverId: 'd2', customerName: 'Bishnu Pokharel', orderId: '#GF-48213-NP', reason: 'wrong_items', details: 'One pack of noodles was missing from the bag.', status: 'open', createdAt: daysAgo(1) },
-  { id: 'rp3', driverId: 'd6', customerName: 'Krishna Bhattarai', orderId: '#GF-48204-NP', reason: 'extra_charge', details: 'Asked for NPR 50 extra for "fuel". I paid COD already.', status: 'reviewed', createdAt: daysAgo(3) },
-  { id: 'rp4', driverId: 'd4', customerName: 'Sita Pandey', orderId: '#GF-48203-NP', reason: 'late', details: 'Delivery took 40 minutes instead of 15.', status: 'dismissed', createdAt: daysAgo(5) },
+  { id: 'rp1', driverId: 'd4', customerName: 'Anita Rana', orderId: '#GF-48205-NP', reason: 'rude', details: 'Rider was rude when I asked to wait 2 minutes at the gate.', status: 'open', createdAt: minsAgo(90), actions: [{ id: 'ra1-1', action: 'Complaint filed', adminName: 'System', at: minsAgo(90) }] },
+  { id: 'rp2', driverId: 'd2', customerName: 'Bishnu Pokharel', orderId: '#GF-48213-NP', reason: 'wrong_items', details: 'One pack of noodles was missing from the bag.', status: 'open', createdAt: daysAgo(1), actions: [{ id: 'ra2-1', action: 'Complaint filed', adminName: 'System', at: daysAgo(1) }] },
+  { id: 'rp3', driverId: 'd6', customerName: 'Krishna Bhattarai', orderId: '#GF-48204-NP', reason: 'extra_charge', details: 'Asked for NPR 50 extra for "fuel". I paid COD already.', status: 'reviewed', createdAt: daysAgo(3), actions: [{ id: 'ra3-1', action: 'Complaint filed', adminName: 'System', at: daysAgo(3) }, { id: 'ra3-2', action: 'Note added', adminName: 'Kiran Chetri', note: 'Called the rider — warned about extra charges.', at: daysAgo(2) }, { id: 'ra3-3', action: 'Marked reviewed', adminName: 'Kiran Chetri', at: daysAgo(2) }] },
+  { id: 'rp4', driverId: 'd4', customerName: 'Sita Pandey', orderId: '#GF-48203-NP', reason: 'late', details: 'Delivery took 40 minutes instead of 15.', status: 'dismissed', createdAt: daysAgo(5), actions: [{ id: 'ra4-1', action: 'Complaint filed', adminName: 'System', at: daysAgo(5) }, { id: 'ra4-2', action: 'Marked dismissed', adminName: 'Prakash Thapa', note: 'Heavy rain that evening — genuine delay.', at: daysAgo(4) }] },
 ]
 
 // ── Transactions ────────────────────────────────────────────────────────────

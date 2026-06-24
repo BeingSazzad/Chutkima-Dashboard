@@ -51,6 +51,7 @@ export const api = createApi({
     'SystemControls',
     'OperatingConfig',
     'Store',
+    'InternalOrder',
   ],
   endpoints: () => ({}),
 })

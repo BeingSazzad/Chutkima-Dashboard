@@ -27,6 +27,8 @@ export interface SystemControls {
   trainingMode: boolean
   forceUpdate: boolean
   minAppVersion: string
+  whatsappAdminAlert: boolean
+  adminWhatsappNumber: string
 }
 
 /** Referral programme config (feature 35). */

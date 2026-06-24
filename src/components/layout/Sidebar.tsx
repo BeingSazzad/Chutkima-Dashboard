@@ -5,12 +5,26 @@ import { BRAND } from '@/lib/constants'
 import { Logo } from '@/components/shared/Logo'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { setSidebar } from '@/store/uiSlice'
-import { NAV_SECTIONS } from './navConfig'
+import { useGetStoresQuery } from '@/services/endpoints/storesApi'
+import { NAV_SECTIONS, type NavSection } from './navConfig'
+
+/** Hide nav items whose module is disabled for the actively-managed store. */
+function useVisibleSections(): NavSection[] {
+  const activeStoreId = useAppSelector((s) => s.ui.activeStoreId)
+  const { data: stores = [] } = useGetStoresQuery()
+  const active = activeStoreId ? stores.find((s) => s.id === activeStoreId) : null
+  if (!active) return NAV_SECTIONS // master view → everything visible
+  return NAV_SECTIONS.map((section) => ({
+    ...section,
+    items: section.items.filter((item) => !item.feature || active.features[item.feature]),
+  })).filter((section) => section.items.length > 0)
+}
 
 function NavItems({ onNavigate }: { onNavigate?: () => void }) {
+  const sections = useVisibleSections()
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-4">
-      {NAV_SECTIONS.map((section) => (
+      {sections.map((section) => (
         <div key={section.title}>
           <p className="px-3 pb-2 text-[11px] font-bold uppercase tracking-wider text-slate-400">
             {section.title}

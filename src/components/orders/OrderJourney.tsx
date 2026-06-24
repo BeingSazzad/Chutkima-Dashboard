@@ -1,7 +1,8 @@
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ACTOR_META, ORDER_JOURNEY, ORDER_STAGE_ACTOR, ORDER_STATUS_META } from '@/lib/constants'
-import type { OrderStatus } from '@/types/common.types'
+import { stageTiming } from '@/lib/orderTiming'
+import type { Order, OrderStatus } from '@/types/common.types'
 
 const fmtTime = (iso?: string) =>
   iso ? new Date(iso).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''
@@ -10,9 +11,12 @@ const fmtTime = (iso?: string) =>
 export function OrderJourney({
   status,
   timestamps = {},
+  order,
 }: {
   status: OrderStatus
   timestamps?: Partial<Record<OrderStatus, string>>
+  /** When provided, each reached stage shows an on-time / delayed chip. */
+  order?: Order
 }) {
   if (status === 'cancelled') {
     return (
@@ -67,7 +71,26 @@ export function OrderJourney({
                   {ACTOR_META[ORDER_STAGE_ACTOR[step]].label}
                 </span>
               </div>
-              {timestamps[step] && <p className="text-xs text-slate-400">{fmtTime(timestamps[step])}</p>}
+              {timestamps[step] && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <p className="text-xs text-slate-400">{fmtTime(timestamps[step])}</p>
+                  {order && (() => {
+                    const t = stageTiming(order, step)
+                    return t ? (
+                      <span
+                        className={cn(
+                          'rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset',
+                          t.tone === 'green'
+                            ? 'bg-green-50 text-green-700 ring-green-600/15'
+                            : 'bg-red-50 text-red-700 ring-red-600/15',
+                        )}
+                      >
+                        {t.label}
+                      </span>
+                    ) : null
+                  })()}
+                </div>
+              )}
               {active && <p className="text-xs text-brand-600">In progress…</p>}
             </div>
           </li>

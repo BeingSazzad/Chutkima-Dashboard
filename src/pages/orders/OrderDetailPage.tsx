@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Banknote, Clock, MapPin, Phone, Printer, StickyNote } from 'lucide-react'
+import { ArrowLeft, Banknote, Clock, MapPin, MessageCircle, Phone, Printer, RotateCcw, StickyNote } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
+import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/shared/Avatar'
@@ -19,17 +21,20 @@ import { SubstituteModal } from '@/components/orders/SubstituteModal'
 import { ORDER_JOURNEY, ORDER_STAGE_ACTOR, ORDER_STATUS_META, PAYMENT_META } from '@/lib/constants'
 import { printOrderInvoice } from '@/lib/export'
 import { deliveryTiming } from '@/lib/orderTiming'
+import { buildAdminOrderAlert, openWhatsApp } from '@/lib/whatsapp'
 import { formatDateTime, formatNPR } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import {
   useGetOrderQuery,
   useMarkCodCollectedMutation,
-  useSetAdminNoteMutation,
+  useAddOrderNoteMutation,
+  useAddRefundMutation,
   useUpdateOrderStatusMutation,
 } from '@/services/endpoints/ordersApi'
 import { useGetDriverQuery } from '@/services/endpoints/driversApi'
-import { useGetOpsConfigQuery, useGetStoreSetupQuery } from '@/services/endpoints/settingsApi'
-import type { OrderItem, OrderStatus } from '@/types/common.types'
+import { useGetOpsConfigQuery, useGetStoreSetupQuery, useGetSystemControlsQuery } from '@/services/endpoints/settingsApi'
+import { useAuth } from '@/hooks/useAuth'
+import type { Order, OrderItem, OrderStatus, RefundType } from '@/types/common.types'
 
 export default function OrderDetailPage() {
   const { orderId = '' } = useParams()
@@ -38,6 +43,7 @@ export default function OrderDetailPage() {
   const { data: driver } = useGetDriverQuery(order?.driverId ?? '', { skip: !order?.driverId })
   const { data: ops } = useGetOpsConfigQuery()
   const { data: storeSetup } = useGetStoreSetupQuery()
+  const { data: sysControls } = useGetSystemControlsQuery()
   const [updateStatus, { isLoading: updating }] = useUpdateOrderStatusMutation()
   const [markCod, { isLoading: markingCod }] = useMarkCodCollectedMutation()
   const [assignOpen, setAssignOpen] = useState(false)
@@ -71,6 +77,15 @@ export default function OrderDetailPage() {
         breadcrumbs={[{ label: 'Orders', to: ROUTES.orders }, { label: order.reference }]}
         actions={
           <>
+            {sysControls?.whatsappAdminAlert && order.status === 'placed' && (
+              <Button
+                variant="outline"
+                leftIcon={<MessageCircle className="h-4 w-4" />}
+                onClick={() => openWhatsApp(sysControls.adminWhatsappNumber, buildAdminOrderAlert(order))}
+              >
+                Alert admin
+              </Button>
+            )}
             <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />} onClick={() => printOrderInvoice(order, driver?.name, storeSetup)}>
               Print invoice
             </Button>
@@ -220,11 +235,13 @@ export default function OrderDetailPage() {
               }
             />
             <CardContent className="pt-2">
-              <OrderJourney status={order.status} timestamps={order.stageTimestamps} />
+              <OrderJourney status={order.status} timestamps={order.stageTimestamps} order={order} />
             </CardContent>
           </Card>
 
-          <AdminNoteCard order={order} />
+          <RefundCard order={order} />
+
+          <OrderNotesCard order={order} />
 
           <Card>
             <CardHeader title="Customer" />
@@ -329,38 +346,154 @@ export default function OrderDetailPage() {
   )
 }
 
-/** Internal admin note for disputes / follow-ups. */
-function AdminNoteCard({ order }: { order: { id: string; adminNote: string } }) {
-  const [save, { isLoading }] = useSetAdminNoteMutation()
-  const [note, setNote] = useState(order.adminNote)
-  const [saved, setSaved] = useState(false)
-  const key = `${order.id}:${order.adminNote}`
-  const [lastKey, setLastKey] = useState(key)
-  if (key !== lastKey) {
-    setLastKey(key)
-    setNote(order.adminNote)
-  }
+/** Internal admin notes — append-only audit trail (multiple notes, never overwritten). */
+function OrderNotesCard({ order }: { order: Order }) {
+  const { user } = useAuth()
+  const [addNote, { isLoading }] = useAddOrderNoteMutation()
+  const [note, setNote] = useState('')
 
   const onSave = async () => {
-    await save({ orderId: order.id, note }).unwrap()
-    setSaved(true)
-    setTimeout(() => setSaved(false), 1800)
+    if (!note.trim()) return
+    await addNote({ orderId: order.id, content: note.trim(), adminName: user?.name ?? 'Admin', adminId: user?.id }).unwrap()
+    setNote('')
+  }
+
+  const history = [...order.notes].sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+
+  return (
+    <Card>
+      <CardHeader title="Admin notes" subtitle="Internal — disputes / follow-ups (not shown to customer)" />
+      <CardContent className="space-y-3 pt-2">
+        <div>
+          <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="e.g. Customer disputes missing item — follow up before refund." />
+          <div className="mt-2 flex justify-end">
+            <Button size="sm" onClick={onSave} loading={isLoading} disabled={!note.trim()} leftIcon={<StickyNote className="h-3.5 w-3.5" />}>Add note</Button>
+          </div>
+        </div>
+        {history.length > 0 && (
+          <ol className="space-y-2.5 border-t border-slate-100 pt-3">
+            {history.map((n) => (
+              <li key={n.id} className="flex gap-2.5">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-400" />
+                <div className="min-w-0">
+                  <p className="text-sm text-slate-700">{n.content}</p>
+                  <p className="text-xs text-slate-400">{n.adminName} · {formatDateTime(n.at)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/** Order refund management — full / partial refunds with history & remaining balance. */
+function RefundCard({ order }: { order: Order }) {
+  const { user } = useAuth()
+  const [addRefund, { isLoading }] = useAddRefundMutation()
+  const [open, setOpen] = useState(false)
+  const [type, setType] = useState<RefundType>('full')
+  const [amount, setAmount] = useState('')
+  const [reason, setReason] = useState('')
+  const [comments, setComments] = useState('')
+
+  const refunded = order.refunds.reduce((s, r) => s + r.amount, 0)
+  const remaining = Math.max(0, order.grandTotal - refunded)
+  const partialAmount = Number(amount) || 0
+  const valid = reason.trim() && comments.trim() && (type === 'full' || (partialAmount > 0 && partialAmount <= remaining))
+
+  const submit = async () => {
+    await addRefund({
+      orderId: order.id,
+      type,
+      amount: type === 'full' ? remaining : partialAmount,
+      reason: reason.trim(),
+      comments: comments.trim(),
+      adminName: user?.name ?? 'Admin',
+    }).unwrap()
+    setOpen(false)
+    setType('full')
+    setAmount('')
+    setReason('')
+    setComments('')
   }
 
   return (
     <Card>
-      <CardHeader title="Admin note" subtitle="Internal — disputes / follow-ups (not shown to customer)" />
-      <CardContent className="space-y-2 pt-2">
-        <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} placeholder="e.g. Customer disputes missing item — follow up before refund." />
-        <div className="flex items-center justify-end gap-2">
-          {saved && (
-            <span className="flex items-center gap-1 text-xs font-semibold text-success">
-              <StickyNote className="h-3.5 w-3.5" /> Saved
-            </span>
-          )}
-          <Button size="sm" onClick={onSave} loading={isLoading} disabled={note === order.adminNote}>Save note</Button>
+      <CardHeader
+        title="Refunds"
+        subtitle="Full or partial — with audit trail"
+        action={
+          remaining > 0 ? (
+            <Button size="sm" variant="outline" leftIcon={<RotateCcw className="h-3.5 w-3.5" />} onClick={() => setOpen(true)}>
+              Refund
+            </Button>
+          ) : (
+            <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15">Fully refunded</Badge>
+          )
+        }
+      />
+      <CardContent className="space-y-3 pt-2">
+        <div className="grid grid-cols-2 gap-2 text-sm">
+          <div className="rounded-xl border border-slate-100 px-3 py-2">
+            <p className="text-xs text-slate-400">Total refunded</p>
+            <p className="font-bold text-slate-800">{formatNPR(refunded)}</p>
+          </div>
+          <div className="rounded-xl border border-slate-100 px-3 py-2">
+            <p className="text-xs text-slate-400">Remaining refundable</p>
+            <p className="font-bold text-slate-800">{formatNPR(remaining)}</p>
+          </div>
         </div>
+        {order.refunds.length > 0 && (
+          <ol className="space-y-2.5 border-t border-slate-100 pt-3">
+            {[...order.refunds].sort((a, b) => Date.parse(b.at) - Date.parse(a.at)).map((r) => (
+              <li key={r.id} className="flex gap-2.5">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-amber-400" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-800 capitalize">{r.type} refund</p>
+                    <span className="text-sm font-bold text-amber-600">{formatNPR(r.amount)}</span>
+                  </div>
+                  <p className="text-xs text-slate-500">{r.reason} — {r.comments}</p>
+                  <p className="text-xs text-slate-400">{r.adminName} · {formatDateTime(r.at)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
       </CardContent>
+
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Process refund"
+        description={`${order.reference} · refundable ${formatNPR(remaining)}`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button variant="danger" loading={isLoading} disabled={!valid} onClick={submit}>Process refund</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Select
+            label="Refund type"
+            value={type}
+            onChange={(e) => setType(e.target.value as RefundType)}
+            options={[
+              { label: `Full refund (${formatNPR(remaining)})`, value: 'full' },
+              { label: 'Partial refund', value: 'partial' },
+            ]}
+          />
+          {type === 'partial' && (
+            <Input label={`Refund amount (max ${formatNPR(remaining)})`} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          )}
+          <Input label="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Damaged item / missing product" />
+          <Textarea label="Comments (required)" value={comments} onChange={(e) => setComments(e.target.value)} rows={2} placeholder="Internal notes for the audit trail" />
+        </div>
+      </Modal>
     </Card>
   )
 }

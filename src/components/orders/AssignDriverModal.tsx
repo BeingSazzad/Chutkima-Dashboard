@@ -1,11 +1,12 @@
 import { useState } from 'react'
-import { Bike, Check, Search, Star } from 'lucide-react'
+import { Bike, Check, MapPin, Search, Star } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
 import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/shared/Avatar'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
-import { cn } from '@/lib/utils'
+import { cn, distanceKm } from '@/lib/utils'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
+import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import { useAddRiderMutation, useAssignDriverMutation } from '@/services/endpoints/ordersApi'
 import type { Order } from '@/types/common.types'
 
@@ -22,19 +23,29 @@ interface Props {
 /** Pick an available rider and assign them to an order. */
 export function AssignDriverModal({ order, open, onClose, mode = 'primary', excludeIds = [] }: Props) {
   const { data: drivers = [], isLoading } = useGetDriversQuery()
+  const { data: stores = [] } = useGetStoresQuery()
   const [assignDriver, { isLoading: assigning }] = useAssignDriverMutation()
   const [addRider, { isLoading: adding }] = useAddRiderMutation()
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
+  // Distance of each rider from the dark store fulfilling this order.
+  const store = order ? stores.find((s) => s.id === order.storeId) : undefined
+  const distanceFor = (d: { lat?: number; lng?: number }) =>
+    store ? distanceKm(store, d) : null
+
   const available = drivers
     .filter((d) => d.status !== 'offline')
     .filter((d) => !excludeIds.includes(d.id))
     .filter((d) => d.name.toLowerCase().includes(search.toLowerCase()))
-    // Prefer drivers in the same zone as the order, then available ones.
+    // Nearest available rider first: sort by distance to the dark store
+    // (riders with no GPS fix sink to the bottom), then availability.
     .sort((a, b) => {
-      if (order && a.zone === order.zone && b.zone !== order.zone) return -1
-      if (order && b.zone === order.zone && a.zone !== order.zone) return 1
+      const da = distanceFor(a)
+      const db = distanceFor(b)
+      if (da != null && db != null && da !== db) return da - db
+      if (da != null && db == null) return -1
+      if (da == null && db != null) return 1
       return a.status === 'available' ? -1 : 1
     })
 
@@ -80,9 +91,10 @@ export function AssignDriverModal({ order, open, onClose, mode = 'primary', excl
         {isLoading ? (
           <p className="py-6 text-center text-sm text-slate-400">Loading riders…</p>
         ) : (
-          available.map((d) => {
+          available.map((d, idx) => {
             const isSelected = selected === d.id
             const sameZone = order && d.zone === order.zone
+            const dist = distanceFor(d)
             return (
               <button
                 key={d.id}
@@ -98,13 +110,24 @@ export function AssignDriverModal({ order, open, onClose, mode = 'primary', excl
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="truncate font-semibold text-slate-800">{d.name}</p>
+                    {idx === 0 && dist != null && (
+                      <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-bold text-white">
+                        Nearest
+                      </span>
+                    )}
                     {sameZone && (
                       <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-bold text-brand-700">
                         Same zone
                       </span>
                     )}
                   </div>
-                  <p className="truncate text-xs text-slate-400">
+                  <p className="flex items-center gap-1 truncate text-xs text-slate-400">
+                    {dist != null && (
+                      <span className="flex items-center gap-0.5 font-semibold text-slate-500">
+                        <MapPin className="h-3 w-3" /> {dist.toFixed(1)} km
+                      </span>
+                    )}
+                    {dist != null && <span>·</span>}
                     {d.zone} · {d.deliveriesToday} today
                   </p>
                 </div>

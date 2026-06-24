@@ -1,26 +1,34 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Ban, Calendar, MapPin, Phone, Receipt, ShieldCheck, Trash2, Wallet } from 'lucide-react'
+import { ArrowLeft, Ban, Calendar, HandCoins, MapPin, Phone, Plus, Receipt, ShieldCheck, Trash2, Wallet } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
+import { Modal } from '@/components/ui/Modal'
+import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
+import { Textarea } from '@/components/ui/Textarea'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
 import { ProductThumb } from '@/components/shared/ProductThumb'
 import { CustomerTrustBadge, OrderStatusBadge, PaymentBadge } from '@/components/shared/StatusBadge'
 import { COD_MODE_LABEL, deriveTrustBadge } from '@/lib/trust'
+import { CREDIT_TYPE_META } from '@/lib/constants'
 import { useGetTrustConfigQuery } from '@/services/endpoints/settingsApi'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { useAuth } from '@/hooks/useAuth'
 import { formatDateTime, formatNPR, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import {
+  useAddCustomerCreditMutation,
   useBanCustomerMutation,
   useDeleteCustomerMutation,
   useGetCustomerOrdersQuery,
   useGetCustomerQuery,
 } from '@/services/endpoints/customersApi'
+import type { CreditType, Customer, Order } from '@/types/common.types'
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
@@ -175,6 +183,8 @@ export default function CustomerDetailPage() {
               </div>
             </CardContent>
           </Card>
+
+          <CreditCard customer={customer} orders={orders} />
         </div>
 
         {/* Order history */}
@@ -227,5 +237,111 @@ export default function CustomerDetailPage() {
         confirmLabel="Remove customer"
       />
     </>
+  )
+}
+
+/** Customer Credit management — add wallet credit with reason + full audit trail. */
+function CreditCard({ customer, orders }: { customer: Customer; orders: Order[] }) {
+  const { user } = useAuth()
+  const [addCredit, { isLoading }] = useAddCustomerCreditMutation()
+  const [open, setOpen] = useState(false)
+  const [amount, setAmount] = useState('')
+  const [type, setType] = useState<CreditType>('compensation')
+  const [reason, setReason] = useState('')
+  const [orderId, setOrderId] = useState('')
+  const [note, setNote] = useState('')
+
+  const amt = Number(amount) || 0
+  const valid = amt > 0 && reason.trim()
+
+  const submit = async () => {
+    await addCredit({
+      customerId: customer.id,
+      amount: amt,
+      type,
+      reason: reason.trim(),
+      orderId: orderId || undefined,
+      note: note.trim() || undefined,
+      adminName: user?.name ?? 'Admin',
+    }).unwrap()
+    setOpen(false)
+    setAmount('')
+    setType('compensation')
+    setReason('')
+    setOrderId('')
+    setNote('')
+  }
+
+  const history = [...customer.credits].sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+
+  return (
+    <Card>
+      <CardHeader
+        title="Customer credit"
+        subtitle="Manual wallet credits"
+        action={
+          <Button size="sm" variant="outline" leftIcon={<Plus className="h-3.5 w-3.5" />} onClick={() => setOpen(true)}>
+            Add credit
+          </Button>
+        }
+      />
+      <CardContent className="pt-2">
+        {history.length === 0 ? (
+          <p className="flex items-center gap-2 text-sm text-slate-400">
+            <HandCoins className="h-4 w-4" /> No credits issued yet.
+          </p>
+        ) : (
+          <ol className="space-y-2.5">
+            {history.map((c) => (
+              <li key={c.id} className="flex gap-2.5">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-green-400" />
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="text-sm font-semibold text-slate-800">{CREDIT_TYPE_META[c.type]}</p>
+                    <span className="text-sm font-bold text-success">+{formatNPR(c.amount)}</span>
+                  </div>
+                  <p className="text-xs text-slate-500">{c.reason}{c.orderId ? ` · ${c.orderId}` : ''}</p>
+                  {c.note && <p className="text-xs text-slate-500">{c.note}</p>}
+                  <p className="text-xs text-slate-400">{c.adminName} · {formatDateTime(c.at)}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        )}
+      </CardContent>
+
+      <Modal
+        open={open}
+        onClose={() => setOpen(false)}
+        title="Add customer credit"
+        description={customer.name}
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
+            <Button onClick={submit} loading={isLoading} disabled={!valid}>Add credit</Button>
+          </>
+        }
+      >
+        <div className="space-y-3">
+          <Input label="Credit amount (NPR)" type="number" value={amount} onChange={(e) => setAmount(e.target.value)} autoFocus />
+          <Select
+            label="Credit type"
+            value={type}
+            onChange={(e) => setType(e.target.value as CreditType)}
+            options={(Object.keys(CREDIT_TYPE_META) as CreditType[]).map((k) => ({ label: CREDIT_TYPE_META[k], value: k }))}
+          />
+          <Input label="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Refund for damaged item" />
+          <Select
+            label="Related order (optional)"
+            value={orderId}
+            onChange={(e) => setOrderId(e.target.value)}
+            placeholder="None"
+            options={orders.map((o) => ({ label: `${o.reference} · ${formatNPR(o.grandTotal)}`, value: o.reference }))}
+          />
+          <Textarea label="Notes / comments (optional)" value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
+        </div>
+      </Modal>
+    </Card>
   )
 }

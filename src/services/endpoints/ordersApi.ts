@@ -1,6 +1,9 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { orders, drivers, products } from '@/services/mock/data'
-import type { Order, OrderStatus, PaymentMethod } from '@/types/common.types'
+import { orders, drivers, products, transactions } from '@/services/mock/data'
+import { PAYMENT_META } from '@/lib/constants'
+import type { Order, OrderStatus, PaymentMethod, RefundType } from '@/types/common.types'
+
+const uid = (prefix: string) => `${prefix}${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`
 
 interface OrderFilters {
   status?: OrderStatus | 'all'
@@ -217,6 +220,52 @@ export const ordersApi = api.injectEndpoints({
       invalidatesTags: ['Order'],
     }),
 
+    /** Append an admin note to the order's notes audit trail (never overwrites). */
+    addOrderNote: build.mutation<Order, { orderId: string; content: string; adminName: string; adminId?: string }>({
+      async queryFn({ orderId, content, adminName, adminId }) {
+        await mockDelay(200)
+        const order = orders.find((o) => o.id === orderId)
+        if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        order.notes.push({ id: uid('on'), content, adminName, adminId, at: new Date().toISOString() })
+        // Keep the legacy single-note field pointing at the latest note.
+        order.adminNote = content
+        return { data: clone(order) }
+      },
+      invalidatesTags: ['Order'],
+    }),
+
+    /** Process a full / partial refund, append to the order's refund history. */
+    addRefund: build.mutation<
+      Order,
+      { orderId: string; type: RefundType; amount: number; reason: string; comments: string; adminName: string }
+    >({
+      async queryFn({ orderId, type, amount, reason, comments, adminName }) {
+        await mockDelay(300)
+        const order = orders.find((o) => o.id === orderId)
+        if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        const alreadyRefunded = order.refunds.reduce((s, r) => s + r.amount, 0)
+        const refundAmount = type === 'full' ? order.grandTotal - alreadyRefunded : amount
+        const at = new Date().toISOString()
+        order.refunds.push({ id: uid('rf'), type, amount: refundAmount, reason, comments, adminName, at, status: 'processed' })
+        // Mark fully refunded when the whole grand total is covered.
+        if (alreadyRefunded + refundAmount >= order.grandTotal) order.paymentStatus = 'refunded'
+        // Mirror into the finance transaction ledger.
+        transactions.unshift({
+          id: uid('t'),
+          type: 'refund',
+          reference: order.reference,
+          party: order.customerName,
+          amount: refundAmount,
+          method: PAYMENT_META[order.paymentMethod].label,
+          status: 'success',
+          orderId: order.id,
+          createdAt: at,
+        })
+        return { data: clone(order) }
+      },
+      invalidatesTags: ['Order', 'Transaction'],
+    }),
+
     substituteItem: build.mutation<Order, { orderId: string; productId: string; newProductId: string }>({
       async queryFn({ orderId, productId, newProductId }) {
         await mockDelay(300)
@@ -254,5 +303,7 @@ export const {
   useAssignPackerMutation,
   useMarkPackedMutation,
   useSetAdminNoteMutation,
+  useAddOrderNoteMutation,
+  useAddRefundMutation,
   useSubstituteItemMutation,
 } = ordersApi

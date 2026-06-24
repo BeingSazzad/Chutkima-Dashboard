@@ -20,8 +20,9 @@ import { cn } from '@/lib/utils'
 import { BRAND } from '@/lib/constants'
 import { ROUTES } from '@/constants/routes'
 import { useAuth } from '@/hooks/useAuth'
-import { useAppDispatch } from '@/store/hooks'
-import { toggleSidebar } from '@/store/uiSlice'
+import { useAppDispatch, useAppSelector } from '@/store/hooks'
+import { toggleSidebar, setActiveStore } from '@/store/uiSlice'
+import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 
 interface Notification {
   id: string
@@ -40,6 +41,82 @@ const INITIAL_NOTIFS: Notification[] = [
   { id: 'n3', icon: Bike, iconClass: 'bg-violet-50 text-violet-600', title: 'Rider went offline', desc: 'Anil Karki ended his shift', time: '1h', unread: true, to: ROUTES.drivers },
   { id: 'n4', icon: CreditCard, iconClass: 'bg-green-50 text-green-600', title: 'Payment received', desc: 'eSewa · NPR 495', time: '2h', unread: false, to: ROUTES.orders },
 ]
+
+/** Pick which dark store you're managing; "All stores" = master view. */
+function StoreSwitcher() {
+  const dispatch = useAppDispatch()
+  const { data: stores = [] } = useGetStoresQuery()
+  const activeStoreId = useAppSelector((s) => s.ui.activeStoreId)
+  const [open, setOpen] = useState(false)
+  const active = stores.find((s) => s.id === activeStoreId)
+
+  return (
+    <div className="relative hidden sm:block">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className="focus-ring flex items-center gap-2 rounded-full bg-mint-100 px-3 py-1.5 hover:bg-mint-200"
+      >
+        <MapPin className="h-3.5 w-3.5 text-brand-600" />
+        <span className="text-xs font-semibold text-brand-700">
+          {BRAND.city} · {active ? active.name : 'All stores'}
+        </span>
+        {active ? (
+          active.offline ? (
+            <span className="text-xs font-medium text-danger">Closed</span>
+          ) : (
+            <span className="flex items-center gap-1 text-xs font-medium text-success">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> Open
+            </span>
+          )
+        ) : (
+          <span className="text-xs font-medium text-slate-400">Master</span>
+        )}
+        <ChevronDown className="h-3.5 w-3.5 text-brand-600" />
+      </button>
+
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 z-20 mt-2 w-60 origin-top-left animate-scale-in rounded-2xl border border-slate-100 bg-white p-1.5 shadow-card-hover">
+            <button
+              onClick={() => {
+                dispatch(setActiveStore(null))
+                setOpen(false)
+              }}
+              className={cn(
+                'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-50',
+                !activeStoreId ? 'text-brand-700' : 'text-slate-600',
+              )}
+            >
+              All stores (master)
+              {!activeStoreId && <CheckCheck className="h-4 w-4" />}
+            </button>
+            <div className="my-1 h-px bg-slate-100" />
+            {stores.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => {
+                  dispatch(setActiveStore(s.id))
+                  setOpen(false)
+                }}
+                className={cn(
+                  'flex w-full items-center justify-between rounded-lg px-3 py-2 text-sm font-medium hover:bg-slate-50',
+                  activeStoreId === s.id ? 'text-brand-700' : 'text-slate-600',
+                )}
+              >
+                <span className="truncate">{s.name}</span>
+                {activeStoreId === s.id && <CheckCheck className="h-4 w-4 shrink-0" />}
+              </button>
+            ))}
+            <p className="px-3 py-1.5 text-[11px] text-slate-400">
+              Selecting a store hides its disabled modules from the menu.
+            </p>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 export function Topbar() {
   const dispatch = useAppDispatch()
@@ -72,16 +149,8 @@ export function Topbar() {
         <Menu className="h-5 w-5" />
       </button>
 
-      {/* Store location pill */}
-      <div className="hidden items-center gap-2 rounded-full bg-mint-100 px-3 py-1.5 sm:flex">
-        <MapPin className="h-3.5 w-3.5 text-brand-600" />
-        <span className="text-xs font-semibold text-brand-700">
-          {BRAND.city} · Traffic Chowk Dark Store
-        </span>
-        <span className="flex items-center gap-1 text-xs font-medium text-success">
-          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-success" /> Open
-        </span>
-      </div>
+      {/* Active-store switcher — selecting a store hides its disabled modules */}
+      <StoreSwitcher />
 
       {/* Global search */}
       <GlobalSearch />

@@ -18,7 +18,8 @@ export default function TransactionsPage() {
   const [type, setType] = useState<TransactionType | 'all'>('all')
   const [method, setMethod] = useState<string>('all')
   const [status, setStatus] = useState<TransactionStatus | 'all'>('all')
-  const [date, setDate] = useState('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [search, setSearch] = useState('')
   const debounced = useDebounce(search, 300)
 
@@ -26,12 +27,15 @@ export default function TransactionsPage() {
   const { data: all = [] } = useGetTransactionsQuery()
 
   const methods = Array.from(new Set(all.map((t) => t.method)))
-  const txns = raw.filter(
-    (t) =>
+  const txns = raw.filter((t) => {
+    const day = t.createdAt.slice(0, 10)
+    return (
       (method === 'all' || t.method === method) &&
       (status === 'all' || t.status === status) &&
-      (!date || t.createdAt.slice(0, 10) === date),
-  )
+      (!from || day >= from) &&
+      (!to || day <= to)
+    )
+  })
 
   const moneyIn = all
     .filter((t) => t.status === 'success' && TXN_TYPE_META[t.type].sign === 1)
@@ -124,7 +128,7 @@ export default function TransactionsPage() {
               className="focus-ring h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <Select
               value={type}
               onChange={(e) => setType(e.target.value as TransactionType | 'all')}
@@ -146,12 +150,41 @@ export default function TransactionsPage() {
                 ...(Object.keys(TXN_STATUS_META) as TransactionStatus[]).map((s) => ({ label: TXN_STATUS_META[s].label, value: s })),
               ]}
             />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-xs font-medium text-slate-500">Date range</span>
             <input
               type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="focus-ring h-10 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700"
+              value={from}
+              max={to || undefined}
+              onChange={(e) => {
+                const v = e.target.value
+                setFrom(v)
+                if (v && to && v > to) setTo(v)
+              }}
+              aria-label="From date"
+              className="focus-ring h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700"
             />
+            <span className="text-slate-400">–</span>
+            <input
+              type="date"
+              value={to}
+              min={from || undefined}
+              onChange={(e) => setTo(e.target.value)}
+              aria-label="To date"
+              className="focus-ring h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700"
+            />
+            {(from || to) && (
+              <button
+                onClick={() => {
+                  setFrom('')
+                  setTo('')
+                }}
+                className="focus-ring rounded-lg px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50"
+              >
+                Clear
+              </button>
+            )}
           </div>
         </div>
 

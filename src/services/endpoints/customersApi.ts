@@ -1,7 +1,9 @@
 import { api, clone, mockDelay } from '@/services/api'
 import { customers, orders } from '@/services/mock/data'
 import { deriveTrustBadge } from '@/lib/trust'
-import type { Customer, Order } from '@/types/common.types'
+import type { Customer, CreditType, Order } from '@/types/common.types'
+
+const creditId = () => `cc${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`
 
 export const customersApi = api.injectEndpoints({
   endpoints: (build) => ({
@@ -74,6 +76,23 @@ export const customersApi = api.injectEndpoints({
       invalidatesTags: ['Customer'],
     }),
 
+    /** Manually credit a customer's wallet with a mandatory reason + audit trail. */
+    addCustomerCredit: build.mutation<
+      Customer,
+      { customerId: string; amount: number; type: CreditType; reason: string; orderId?: string; note?: string; adminName: string }
+    >({
+      async queryFn({ customerId, amount, type, reason, orderId, note, adminName }) {
+        await mockDelay(300)
+        const customer = customers.find((c) => c.id === customerId)
+        if (!customer) return { error: { status: 404, data: 'Not found' } as never }
+        customer.credits.push({ id: creditId(), amount, type, reason, orderId, note, adminName, at: new Date().toISOString() })
+        customer.walletBalance += amount
+        customer.creditsEarned += amount
+        return { data: clone(customer) }
+      },
+      invalidatesTags: ['Customer'],
+    }),
+
     /** Count recipients for a broadcast segment (live preview). */
     getSegmentCount: build.query<number, string>({
       async queryFn(segment) {
@@ -115,6 +134,7 @@ export const {
   useBanCustomerMutation,
   useSaveCustomerMutation,
   useDeleteCustomerMutation,
+  useAddCustomerCreditMutation,
   useGetSegmentCountQuery,
   useSendBroadcastMutation,
 } = customersApi

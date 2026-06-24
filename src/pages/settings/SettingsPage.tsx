@@ -328,6 +328,16 @@ function SystemControlsCard() {
         {data.forceUpdate && (
           <Input label="Minimum app version" defaultValue={data.minAppVersion} onBlur={(e) => set({ minAppVersion: e.target.value })} placeholder="e.g. 1.2.0" />
         )}
+        <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">WhatsApp admin alert</p>
+            <p className="text-xs text-slate-400">Notify admins on WhatsApp for every new order</p>
+          </div>
+          <Switch checked={data.whatsappAdminAlert} onChange={(v) => set({ whatsappAdminAlert: v })} aria-label="WhatsApp admin alert" />
+        </div>
+        {data.whatsappAdminAlert && (
+          <Input label="Admin WhatsApp number" defaultValue={data.adminWhatsappNumber} onBlur={(e) => set({ adminWhatsappNumber: e.target.value })} placeholder="+977 98XXXXXXXX" />
+        )}
       </CardContent>
     </Card>
   )

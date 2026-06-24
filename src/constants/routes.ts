@@ -22,6 +22,7 @@ export const ROUTES = {
   packers: '/packers',
   transactions: '/transactions',
   riderFinance: '/rider-finance',
+  internalBilling: '/internal-billing',
 
   customers: '/customers',
   customerDetail: (id = ':customerId') => `/customers/${id}`,

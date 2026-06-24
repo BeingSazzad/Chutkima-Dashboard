@@ -16,6 +16,7 @@ import ReportsPage from '@/pages/operations/ReportsPage'
 import PackersPage from '@/pages/operations/PackersPage'
 import TransactionsPage from '@/pages/finance/TransactionsPage'
 import RiderFinancePage from '@/pages/finance/RiderFinancePage'
+import InternalBillingPage from '@/pages/finance/InternalBillingPage'
 import CustomersPage from '@/pages/customers/CustomersPage'
 import CustomerDetailPage from '@/pages/customers/CustomerDetailPage'
 import BroadcastPage from '@/pages/customers/BroadcastPage'
@@ -53,6 +54,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.packers, element: <PackersPage /> },
           { path: ROUTES.transactions, element: <TransactionsPage /> },
           { path: ROUTES.riderFinance, element: <RiderFinancePage /> },
+          { path: ROUTES.internalBilling, element: <InternalBillingPage /> },
           { path: ROUTES.customers, element: <CustomersPage /> },
           { path: ROUTES.customerDetail(), element: <CustomerDetailPage /> },
           { path: ROUTES.broadcast, element: <BroadcastPage /> },

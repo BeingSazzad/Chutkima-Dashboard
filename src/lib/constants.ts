@@ -1,4 +1,5 @@
 import type {
+  CreditType,
   DriverStatus,
   OrderStatus,
   PaymentMethod,
@@ -163,6 +164,16 @@ export const TXN_STATUS_META: Record<TransactionStatus, { label: string; badge: 
 
 /** Rider fuel reimbursement rate (NPR per km) — configurable in production. */
 export const FUEL_RATE_PER_KM = 4
+
+/** Customer wallet-credit reasons (manual admin credits). */
+export const CREDIT_TYPE_META: Record<CreditType, string> = {
+  refund: 'Refund',
+  partial_refund: 'Partial refund',
+  compensation: 'Compensation',
+  dispute: 'Dispute resolution',
+  goodwill: 'Goodwill credit',
+  other: 'Other adjustment',
+}
 
 /** Configurable modules per dark store (feature toggles). */
 export const STORE_FEATURES: { key: StoreFeatureKey; label: string }[] = [

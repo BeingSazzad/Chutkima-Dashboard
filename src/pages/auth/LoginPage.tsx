@@ -1,12 +1,12 @@
 import { useState, type FormEvent } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
-import { Lock, Mail, ShieldCheck, Zap } from 'lucide-react'
+import { ArrowLeft, KeyRound, Phone, ShieldCheck, Zap } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Logo } from '@/components/shared/Logo'
 import { BRAND } from '@/lib/constants'
 import { ROUTES } from '@/constants/routes'
-import { DEMO_EMAIL, DEMO_PASSWORD, useLoginMutation } from '@/services/endpoints/authApi'
+import { DEMO_OTP, DEMO_PHONE, useRequestOtpMutation, useVerifyOtpMutation } from '@/services/endpoints/authApi'
 import { useAppDispatch } from '@/store/hooks'
 import { setCredentials } from '@/store/authSlice'
 
@@ -18,19 +18,35 @@ export default function LoginPage() {
   const dispatch = useAppDispatch()
   const navigate = useNavigate()
   const location = useLocation()
-  const [login, { isLoading }] = useLoginMutation()
+  const [requestOtp, { isLoading: sending }] = useRequestOtpMutation()
+  const [verifyOtp, { isLoading: verifying }] = useVerifyOtpMutation()
 
-  const [email, setEmail] = useState(DEMO_EMAIL)
-  const [password, setPassword] = useState('')
+  const [step, setStep] = useState<'phone' | 'otp'>('phone')
+  const [phone, setPhone] = useState(DEMO_PHONE)
+  const [otp, setOtp] = useState('')
+  const [devOtp, setDevOtp] = useState('')
   const [error, setError] = useState('')
 
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname || ROUTES.dashboard
 
-  const submit = async (e: FormEvent) => {
+  const sendCode = async (e: FormEvent) => {
     e.preventDefault()
     setError('')
     try {
-      const res = await login({ email, password }).unwrap()
+      const res = await requestOtp({ phone }).unwrap()
+      setDevOtp(res.devOtp)
+      setOtp('')
+      setStep('otp')
+    } catch (err) {
+      setError((err as { data?: string })?.data ?? 'Could not send the code.')
+    }
+  }
+
+  const verify = async (e: FormEvent) => {
+    e.preventDefault()
+    setError('')
+    try {
+      const res = await verifyOtp({ phone, otp }).unwrap()
       dispatch(setCredentials(res))
       navigate(from, { replace: true })
     } catch (err) {
@@ -53,7 +69,7 @@ export default function LoginPage() {
           <div className="mt-10 space-y-4">
             {[
               { icon: Zap, text: 'Real-time order & dispatch board' },
-              { icon: ShieldCheck, text: 'Secure email & password sign-in' },
+              { icon: ShieldCheck, text: 'Secure OTP sign-in — no passwords' },
             ].map(({ icon: Icon, text }) => (
               <div key={text} className="flex items-center gap-3">
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/15">
@@ -72,36 +88,61 @@ export default function LoginPage() {
         <div className="w-full max-w-sm">
           <div className="mb-8 lg:hidden"><Logo /></div>
 
-          <h2 className="text-2xl font-extrabold text-slate-800">Sign in</h2>
-          <p className="mt-1 text-sm text-slate-500">Use your admin email and password to continue.</p>
+          {step === 'phone' ? (
+            <>
+              <h2 className="text-2xl font-extrabold text-slate-800">Sign in</h2>
+              <p className="mt-1 text-sm text-slate-500">Enter your admin phone number — we'll text you a one-time code.</p>
 
-          <form onSubmit={submit} className="mt-8 space-y-4">
-            <Input
-              label="Email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              leftIcon={<Mail className="h-4 w-4" />}
-              placeholder="you@chutkima.com"
-              autoComplete="email"
-              autoFocus
-            />
-            <Input
-              label="Password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              leftIcon={<Lock className="h-4 w-4" />}
-              placeholder="••••••••"
-              autoComplete="current-password"
-              error={error}
-            />
-            <Button type="submit" size="lg" loading={isLoading} className="w-full">Sign in</Button>
-          </form>
+              <form onSubmit={sendCode} className="mt-8 space-y-4">
+                <Input
+                  label="Phone number"
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  leftIcon={<Phone className="h-4 w-4" />}
+                  placeholder="+977 98XXXXXXXX"
+                  autoComplete="tel"
+                  autoFocus
+                  error={error}
+                />
+                <Button type="submit" size="lg" loading={sending} className="w-full">Send OTP</Button>
+              </form>
 
-          <p className="mt-6 rounded-xl bg-mint-50 px-4 py-3 text-center text-xs text-slate-500">
-            Demo mode — <span className="font-semibold text-brand-700">{DEMO_EMAIL}</span> / <span className="font-semibold text-brand-700">{DEMO_PASSWORD}</span>
-          </p>
+              <p className="mt-6 rounded-xl bg-mint-50 px-4 py-3 text-center text-xs text-slate-500">
+                Demo mode — use <span className="font-semibold text-brand-700">{DEMO_PHONE}</span>
+              </p>
+            </>
+          ) : (
+            <>
+              <button onClick={() => { setStep('phone'); setError('') }} className="focus-ring -ml-1 mb-3 flex items-center gap-1 rounded-lg px-1 py-0.5 text-sm font-medium text-slate-500 hover:text-brand-600">
+                <ArrowLeft className="h-4 w-4" /> Change number
+              </button>
+              <h2 className="text-2xl font-extrabold text-slate-800">Enter code</h2>
+              <p className="mt-1 text-sm text-slate-500">We sent a 6-digit code to <span className="font-semibold text-slate-700">{phone}</span>.</p>
+
+              <form onSubmit={verify} className="mt-8 space-y-4">
+                <Input
+                  label="One-time code"
+                  inputMode="numeric"
+                  value={otp}
+                  onChange={(e) => setOtp(e.target.value.replace(/[^0-9]/g, '').slice(0, 6))}
+                  leftIcon={<KeyRound className="h-4 w-4" />}
+                  placeholder="123456"
+                  autoComplete="one-time-code"
+                  autoFocus
+                  error={error}
+                />
+                <Button type="submit" size="lg" loading={verifying} disabled={otp.length < 6} className="w-full">Verify &amp; sign in</Button>
+                <button type="button" onClick={sendCode} className="focus-ring block w-full rounded-lg py-1 text-center text-xs font-semibold text-brand-600 hover:text-brand-700">
+                  Resend code
+                </button>
+              </form>
+
+              <p className="mt-6 rounded-xl bg-mint-50 px-4 py-3 text-center text-xs text-slate-500">
+                Demo OTP — <span className="font-semibold text-brand-700">{devOtp || DEMO_OTP}</span>
+              </p>
+            </>
+          )}
         </div>
       </div>
     </div>

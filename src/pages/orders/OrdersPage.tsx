@@ -120,21 +120,24 @@ export default function OrdersPage() {
       header: 'Order',
       className: 'whitespace-nowrap',
       cell: (o) => (
-        <div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                openInNewTab(ROUTES.orderDetail(o.id))
-              }}
-              className="focus-ring rounded font-semibold text-brand-700 hover:underline"
-              title="Open order details"
-            >
-              {o.reference}
-            </button>
-            {o.scheduledFor && <Badge tone="bg-violet-50 text-violet-700 ring-violet-600/15">Scheduled</Badge>}
-          </div>
-          <p className="text-xs text-slate-400">{o.scheduledFor ? `For ${fmtSchedule(o.scheduledFor)}` : timeAgo(o.placedAt)}</p>
+        <div className="leading-tight">
+          <button
+            onClick={(e) => {
+              e.stopPropagation()
+              openInNewTab(ROUTES.orderDetail(o.id))
+            }}
+            className="focus-ring rounded font-semibold text-brand-700 hover:underline"
+            title="Open order details"
+          >
+            {o.reference}
+          </button>
+          {o.scheduledFor ? (
+            <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-violet-600">
+              <Clock3 className="h-3 w-3" /> {fmtSchedule(o.scheduledFor)}
+            </p>
+          ) : (
+            <p className="mt-0.5 text-xs text-slate-400">{timeAgo(o.placedAt)}</p>
+          )}
         </div>
       ),
     },
@@ -156,7 +159,7 @@ export default function OrdersPage() {
       key: 'items',
       header: 'Items',
       className: 'whitespace-nowrap',
-      cell: (o) => <span className="text-slate-600">{o.items.reduce((s, i) => s + i.quantity, 0)} items</span>,
+      cell: (o) => <span className="text-slate-600">{o.items.reduce((s, i) => s + i.quantity, 0)}</span>,
     },
     {
       key: 'total',
@@ -215,18 +218,18 @@ export default function OrdersPage() {
       headerClassName: 'text-right',
       className: 'whitespace-nowrap text-right',
       cell: (o) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            leftIcon={<Eye className="h-3.5 w-3.5" />}
+        <div className="flex items-center justify-end gap-1">
+          <button
             onClick={(e) => {
               e.stopPropagation()
               openInNewTab(ROUTES.orderDetail(o.id))
             }}
+            className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600"
+            aria-label="View order details"
+            title="View order details"
           >
-            View
-          </Button>
+            <Eye className="h-4 w-4" />
+          </button>
           {!['delivered', 'cancelled'].includes(o.status) && (
             <Button
               variant={o.driverId ? 'outline' : 'secondary'}

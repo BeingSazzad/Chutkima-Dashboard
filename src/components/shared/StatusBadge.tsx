@@ -60,14 +60,16 @@ export function PaymentBadge({
   method: PaymentMethod
   status: PaymentStatus
 }) {
+  // Compact: COD shows just "COD" (amber = collect, green = collected); prepaid
+  // shows the wallet name (eSewa / Khalti / ConnectIPS) — no "Paid" prefix.
   if (method === 'cod') {
     return status === 'paid' ? (
       <Badge tone="bg-green-50 text-green-700 ring-green-600/15">
-        <Banknote className="h-3 w-3" /> Paid · COD (cash)
+        <Banknote className="h-3 w-3" /> COD
       </Badge>
     ) : (
       <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15">
-        <Banknote className="h-3 w-3" /> COD · Collect cash
+        <Banknote className="h-3 w-3" /> COD
       </Badge>
     )
   }
@@ -76,7 +78,7 @@ export function PaymentBadge({
   }
   return (
     <Badge tone="bg-green-50 text-green-700 ring-green-600/15">
-      <CreditCard className="h-3 w-3" /> Paid · {PAYMENT_META[method].label}
+      <CreditCard className="h-3 w-3" /> {PAYMENT_META[method].label}
     </Badge>
   )
 }

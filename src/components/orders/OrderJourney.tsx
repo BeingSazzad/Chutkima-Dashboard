@@ -1,4 +1,4 @@
-import { Check } from 'lucide-react'
+import { Check, XCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ACTOR_META, ORDER_JOURNEY, ORDER_STAGE_ACTOR, ORDER_STATUS_META } from '@/lib/constants'
 import { stageTiming } from '@/lib/orderTiming'
@@ -20,82 +20,99 @@ export function OrderJourney({
 }) {
   if (status === 'cancelled') {
     return (
-      <div className="rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
-        This order was cancelled.
+      <div className="flex items-center gap-2 rounded-xl bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+        <XCircle className="h-4 w-4 shrink-0" /> This order was cancelled.
       </div>
     )
   }
 
+  const total = ORDER_JOURNEY.length
   const currentIndex = ORDER_JOURNEY.indexOf(status)
+  const isDelivered = status === 'delivered'
+  // Progress along the track: 0% at "placed", 100% at "delivered".
+  const pct = Math.round((currentIndex / (total - 1)) * 100)
 
   return (
-    <ol className="relative space-y-5">
-      {ORDER_JOURNEY.map((step, i) => {
-        const done = i < currentIndex
-        const active = i === currentIndex
-        const meta = ORDER_STATUS_META[step]
-        return (
-          <li key={step} className="relative flex items-start gap-3">
-            {i < ORDER_JOURNEY.length - 1 && (
+    <div className="space-y-4">
+      {/* Progress summary — quick read of where the order is right now. */}
+      <div>
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-semibold text-slate-700">{ORDER_STATUS_META[status].label}</span>
+          <span className="text-slate-400">{isDelivered ? 'Completed' : `Step ${currentIndex + 1} of ${total}`}</span>
+        </div>
+        <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
+          <div className="h-full rounded-full bg-brand-500 transition-all duration-500" style={{ width: `${pct}%` }} />
+        </div>
+      </div>
+
+      <ol className="relative space-y-1">
+        {ORDER_JOURNEY.map((step, i) => {
+          const done = i < currentIndex || (isDelivered && i === currentIndex)
+          const active = i === currentIndex && !isDelivered
+          const isNext = i === currentIndex + 1 && !isDelivered
+          const meta = ORDER_STATUS_META[step]
+          const t = order && timestamps[step] ? stageTiming(order, step) : null
+          return (
+            <li key={step} className="relative flex items-start gap-3">
+              {i < total - 1 && (
+                <span
+                  className={cn(
+                    'absolute left-[15px] top-7 h-[calc(100%-12px)] w-0.5',
+                    done ? 'bg-brand-500' : 'bg-slate-200',
+                  )}
+                />
+              )}
               <span
                 className={cn(
-                  'absolute left-[11px] top-6 h-[calc(100%+4px)] w-0.5',
-                  done ? 'bg-brand-500' : 'bg-slate-200',
+                  'relative z-10 mt-1 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ring-4 ring-white transition-colors',
+                  done ? 'bg-brand-500 text-white' : active ? 'bg-brand-600 text-white' : 'bg-slate-100 text-slate-400',
                 )}
-              />
-            )}
-            <span
-              className={cn(
-                'relative z-10 flex h-6 w-6 shrink-0 items-center justify-center rounded-full ring-4 ring-white',
-                done
-                  ? 'bg-brand-500 text-white'
-                  : active
-                    ? 'bg-brand-600 text-white'
-                    : 'bg-slate-200 text-slate-400',
-              )}
-            >
-              {done ? (
-                <Check className="h-3.5 w-3.5" />
-              ) : active ? (
-                <span className="h-2 w-2 animate-pulse rounded-full bg-white" />
-              ) : (
-                <span className="h-1.5 w-1.5 rounded-full bg-white" />
-              )}
-            </span>
-            <div className="pt-0.5">
-              <div className="flex items-center gap-2">
-                <p className={cn('text-sm font-semibold', done || active ? 'text-slate-800' : 'text-slate-400')}>
-                  {meta.label}
-                </p>
-                <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset', ACTOR_META[ORDER_STAGE_ACTOR[step]].badge)}>
-                  {ACTOR_META[ORDER_STAGE_ACTOR[step]].label}
-                </span>
-              </div>
-              {timestamps[step] && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  <p className="text-xs text-slate-400">{fmtTime(timestamps[step])}</p>
-                  {order && (() => {
-                    const t = stageTiming(order, step)
-                    return t ? (
-                      <span
-                        className={cn(
-                          'rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset',
-                          t.tone === 'green'
-                            ? 'bg-green-50 text-green-700 ring-green-600/15'
-                            : 'bg-red-50 text-red-700 ring-red-600/15',
-                        )}
-                      >
-                        {t.label}
-                      </span>
-                    ) : null
-                  })()}
+              >
+                {done ? (
+                  <Check className="h-4 w-4" />
+                ) : active ? (
+                  <span className="flex h-2.5 w-2.5">
+                    <span className="absolute inline-flex h-2.5 w-2.5 animate-ping rounded-full bg-white opacity-75" />
+                    <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-white" />
+                  </span>
+                ) : (
+                  <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                )}
+              </span>
+
+              <div className={cn('min-w-0 flex-1 rounded-xl px-3 py-2 transition-colors', active && 'bg-brand-50')}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <p className={cn('text-sm font-semibold', done || active ? 'text-slate-800' : 'text-slate-400')}>
+                    {meta.label}
+                  </p>
+                  <span className={cn('rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset', ACTOR_META[ORDER_STAGE_ACTOR[step]].badge)}>
+                    {ACTOR_META[ORDER_STAGE_ACTOR[step]].label}
+                  </span>
+                  {active && (
+                    <span className="rounded-full bg-brand-600 px-1.5 py-0.5 text-[10px] font-bold text-white">In progress</span>
+                  )}
+                  {isNext && (
+                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] font-semibold text-slate-500">Up next</span>
+                  )}
+                  {t && (
+                    <span
+                      className={cn(
+                        'rounded-full px-1.5 py-0.5 text-[10px] font-semibold ring-1 ring-inset',
+                        t.tone === 'green' ? 'bg-green-50 text-green-700 ring-green-600/15' : 'bg-red-50 text-red-700 ring-red-600/15',
+                      )}
+                    >
+                      {t.label}
+                    </span>
+                  )}
                 </div>
-              )}
-              {active && <p className="text-xs text-brand-600">In progress…</p>}
-            </div>
-          </li>
-        )
-      })}
-    </ol>
+                <p className="mt-0.5 text-xs text-slate-400">
+                  {timestamps[step] ? fmtTime(timestamps[step]) : active ? 'Happening now…' : 'Pending'}
+                </p>
+              </div>
+            </li>
+          )
+        })}
+      </ol>
+    </div>
   )
 }

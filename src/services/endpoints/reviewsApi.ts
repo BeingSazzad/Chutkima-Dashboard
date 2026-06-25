@@ -1,6 +1,6 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { driverReports, driverReviews } from '@/services/mock/data'
-import type { DriverReport, DriverReview, ReportStatus } from '@/types/common.types'
+import { driverReports, driverReviews, driverWarnings } from '@/services/mock/data'
+import type { DriverReport, DriverReview, DriverWarning, ReportStatus, WarningSeverity } from '@/types/common.types'
 
 const STATUS_ACTION: Record<ReportStatus, string> = {
   open: 'Reopened',
@@ -72,6 +72,59 @@ export const reviewsApi = api.injectEndpoints({
       },
       invalidatesTags: ['Report'],
     }),
+
+    /** Warnings issued to a rider (newest first), optionally for one driver. */
+    getWarnings: build.query<DriverWarning[], { driverId?: string } | void>({
+      async queryFn(filters) {
+        await mockDelay(200)
+        let result = [...driverWarnings].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+        if (filters?.driverId) result = result.filter((w) => w.driverId === filters.driverId)
+        return { data: clone(result) }
+      },
+      providesTags: ['Warning'],
+    }),
+
+    /**
+     * Issue a warning to a rider. When raised from a complaint (`reportId`),
+     * the warning is also logged in that report's audit trail and the report is
+     * marked reviewed.
+     */
+    issueWarning: build.mutation<
+      DriverWarning,
+      { driverId: string; severity: WarningSeverity; message: string; reportId?: string; issuedBy: string }
+    >({
+      async queryFn({ driverId, severity, message, reportId, issuedBy }) {
+        await mockDelay(300)
+        const warning: DriverWarning = {
+          id: `dw${Date.now()}`,
+          driverId,
+          severity,
+          message: message.trim(),
+          reportId,
+          issuedBy,
+          createdAt: new Date().toISOString(),
+        }
+        driverWarnings.unshift(warning)
+        // Tie the warning back to the originating complaint.
+        if (reportId) {
+          const report = driverReports.find((r) => r.id === reportId)
+          if (report) {
+            report.actions.push({
+              id: actionId(),
+              action: 'Warning issued',
+              adminName: issuedBy,
+              note: warning.message,
+              at: warning.createdAt,
+            })
+            if (report.status === 'open') report.status = 'reviewed'
+          }
+        }
+        return { data: clone(warning) }
+      },
+      invalidatesTags: ['Warning', 'Report'],
+    }),
   }),
 })
 
@@ -80,4 +133,6 @@ export const {
   useGetReportsQuery,
   useUpdateReportStatusMutation,
   useAddReportNoteMutation,
+  useGetWarningsQuery,
+  useIssueWarningMutation,
 } = reviewsApi

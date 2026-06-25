@@ -473,8 +473,23 @@ export interface DriverReport {
   actions: ComplaintAction[]
 }
 
+/** Escalation level of a warning issued to a rider. */
+export type WarningSeverity = 'notice' | 'warning' | 'final'
+
+/** A formal warning an admin issues to a rider (often after a complaint). */
+export interface DriverWarning {
+  id: ID
+  driverId: ID
+  severity: WarningSeverity
+  message: string
+  /** The complaint that triggered this warning, if any. */
+  reportId?: ID
+  issuedBy: string
+  createdAt: string
+}
+
 // ── Transactions ────────────────────────────────────────────────────────────
-export type TransactionType = 'order_payment' | 'refund' | 'cod_collection' | 'payout'
+export type TransactionType = 'order_payment' | 'refund' | 'cod_collection' | 'payout' | 'rider_deposit'
 export type TransactionStatus = 'success' | 'pending' | 'failed'
 
 export interface Transaction {
@@ -487,6 +502,18 @@ export interface Transaction {
   method: string
   status: TransactionStatus
   orderId: ID | null
+  createdAt: string
+}
+
+/** A rider handing their collected COD cash (minus fuel) over to the store/admin. */
+export interface RiderDeposit {
+  id: ID
+  driverId: ID
+  driverName: string
+  amount: number
+  note: string
+  /** Admin who received the cash. */
+  collectedBy: string
   createdAt: string
 }
 

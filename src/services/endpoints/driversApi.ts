@@ -1,6 +1,6 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { drivers, opsConfig, orders } from '@/services/mock/data'
-import type { Driver, DriverStatus, Order } from '@/types/common.types'
+import { drivers, opsConfig, orders, riderDeposits } from '@/services/mock/data'
+import type { Driver, DriverStatus, Order, RiderDeposit } from '@/types/common.types'
 
 export interface RiderFinance {
   driverId: string
@@ -11,6 +11,14 @@ export interface RiderFinance {
   codExpected: number
   codCollected: number
   discrepancy: number
+  /** Cash the rider has already handed to the store within the selected range. */
+  deposited: number
+}
+
+/** Whether a deposit's day falls inside an inclusive [from, to] date-string range. */
+const inRange = (createdAt: string, from?: string, to?: string) => {
+  const day = createdAt.slice(0, 10)
+  return (!from || day >= from) && (!to || day <= to)
 }
 
 /** Today's delivered count for a rider, derived from real orders. */
@@ -106,6 +114,9 @@ export const driversApi = api.injectEndpoints({
             codCollected += Math.round(codCollectedBase * factor)
             deliveries += Math.round(deliveredToday(d.id) * factor)
           }
+          const deposited = riderDeposits
+            .filter((dep) => dep.driverId === d.id && inRange(dep.createdAt, from, to))
+            .reduce((s, dep) => s + dep.amount, 0)
           return {
             driverId: d.id,
             name: d.name,
@@ -115,11 +126,50 @@ export const driversApi = api.injectEndpoints({
             codExpected,
             codCollected,
             discrepancy: codExpected - codCollected,
+            deposited,
           }
         })
         return { data: clone(rows) }
       },
-      providesTags: ['Driver', 'Order'],
+      providesTags: ['Driver', 'Order', 'Transaction'],
+    }),
+
+    /** Cash-deposit history (rider → store), newest first, optionally by range/rider. */
+    getRiderDeposits: build.query<RiderDeposit[], { from?: string; to?: string; driverId?: string } | void>({
+      async queryFn(range) {
+        await mockDelay(200)
+        const result = riderDeposits
+          .filter(
+            (dep) =>
+              (!range?.driverId || dep.driverId === range.driverId) &&
+              inRange(dep.createdAt, range?.from, range?.to),
+          )
+          .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        return { data: clone(result) }
+      },
+      providesTags: ['Transaction'],
+    }),
+
+    /** Record a rider handing collected COD cash to the store/admin. */
+    collectRiderCash: build.mutation<RiderDeposit, { driverId: string; amount: number; note?: string; collectedBy: string }>({
+      async queryFn({ driverId, amount, note, collectedBy }) {
+        await mockDelay(300)
+        const driver = drivers.find((d) => d.id === driverId)
+        if (!driver) return { error: { status: 404, data: 'Driver not found' } as never }
+        const deposit: RiderDeposit = {
+          id: `dep${Date.now()}`,
+          driverId,
+          driverName: driver.name,
+          amount,
+          note: note?.trim() || '',
+          collectedBy,
+          createdAt: new Date().toISOString(),
+        }
+        riderDeposits.unshift(deposit)
+        return { data: clone(deposit) }
+      },
+      // Refresh finance totals + the transactions ledger (deposits show there too).
+      invalidatesTags: ['Driver', 'Order', 'Transaction', 'Kpi'],
     }),
 
     setDriverStatus: build.mutation<Driver, { id: string; status: DriverStatus }>({
@@ -185,6 +235,8 @@ export const {
   useGetDriverQuery,
   useGetDriverDeliveriesQuery,
   useGetRiderFinanceQuery,
+  useGetRiderDepositsQuery,
+  useCollectRiderCashMutation,
   useSetDriverStatusMutation,
   useSaveDriverMutation,
   useDeleteDriverMutation,

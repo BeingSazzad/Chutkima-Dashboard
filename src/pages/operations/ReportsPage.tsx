@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Bike, Check, History, X } from 'lucide-react'
+import { Bike, Check, History, ShieldAlert, X } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
 import { Avatar } from '@/components/shared/Avatar'
 import { Stars } from '@/components/shared/Stars'
+import { WarnRiderModal } from '@/components/drivers/WarnRiderModal'
 import { REPORT_REASON_META, REPORT_STATUS_META } from '@/lib/constants'
 import { formatDateTime, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
@@ -73,6 +74,7 @@ function ReportsTable() {
   const { data: drivers = [] } = useGetDriversQuery()
   const [update, { isLoading: updating }] = useUpdateReportStatusMutation()
   const [auditFor, setAuditFor] = useState<DriverReport | null>(null)
+  const [warnFor, setWarnFor] = useState<DriverReport | null>(null)
   const driver = (id: string) => drivers.find((d) => d.id === id)
   const adminName = user?.name ?? 'Admin'
   // Keep the open audit modal in sync with refetched data.
@@ -122,6 +124,9 @@ function ReportsTable() {
           ) : (
             <Badge tone={REPORT_STATUS_META[r.status].badge}>{REPORT_STATUS_META[r.status].label}</Badge>
           )}
+          <Button size="sm" variant="ghost" leftIcon={<ShieldAlert className="h-3.5 w-3.5" />} onClick={() => setWarnFor(r)}>
+            Warn
+          </Button>
           <Button size="sm" variant="ghost" leftIcon={<History className="h-3.5 w-3.5" />} onClick={() => setAuditFor(r)}>
             Audit
           </Button>
@@ -141,6 +146,14 @@ function ReportsTable() {
         emptyDescription="No rider complaints filed by customers."
       />
       <ComplaintAuditModal report={auditReport} adminName={adminName} onClose={() => setAuditFor(null)} />
+      <WarnRiderModal
+        open={!!warnFor}
+        onClose={() => setWarnFor(null)}
+        driverId={warnFor?.driverId ?? ''}
+        driverName={warnFor ? driver(warnFor.driverId)?.name ?? 'Rider' : ''}
+        reportId={warnFor?.id}
+        reportReason={warnFor ? REPORT_REASON_META[warnFor.reason] : undefined}
+      />
     </>
   )
 }

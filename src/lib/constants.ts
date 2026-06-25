@@ -9,6 +9,7 @@ import type {
   StoreFeatureKey,
   TransactionStatus,
   TransactionType,
+  WarningSeverity,
 } from '@/types/common.types'
 
 /** Brand metadata. */
@@ -145,6 +146,13 @@ export const REPORT_STATUS_META: Record<ReportStatus, { label: string; badge: st
   dismissed: { label: 'Dismissed', badge: 'bg-slate-100 text-slate-600 ring-slate-500/15' },
 }
 
+/** Rider warning escalation levels + badge styling. */
+export const WARNING_SEVERITY_META: Record<WarningSeverity, { label: string; badge: string }> = {
+  notice: { label: 'Notice', badge: 'bg-blue-50 text-blue-700 ring-blue-600/15' },
+  warning: { label: 'Warning', badge: 'bg-amber-50 text-amber-700 ring-amber-600/15' },
+  final: { label: 'Final warning', badge: 'bg-red-50 text-red-700 ring-red-600/15' },
+}
+
 /** Transaction type/status styling. `sign` shows money in (+) vs out (−). */
 export const TXN_TYPE_META: Record<
   TransactionType,
@@ -152,6 +160,7 @@ export const TXN_TYPE_META: Record<
 > = {
   order_payment: { label: 'Order payment', sign: 1, badge: 'bg-green-50 text-green-700 ring-green-600/15' },
   cod_collection: { label: 'COD collection', sign: 1, badge: 'bg-brand-50 text-brand-700 ring-brand-600/15' },
+  rider_deposit: { label: 'Rider deposit', sign: 1, badge: 'bg-teal-50 text-teal-700 ring-teal-600/15' },
   refund: { label: 'Refund', sign: -1, badge: 'bg-amber-50 text-amber-700 ring-amber-600/15' },
   payout: { label: 'Rider payout', sign: -1, badge: 'bg-violet-50 text-violet-700 ring-violet-600/15' },
 }

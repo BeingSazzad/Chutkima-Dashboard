@@ -13,6 +13,7 @@ import type {
   Driver,
   DriverReport,
   DriverReview,
+  DriverWarning,
   FaqItem,
   FaqSection,
   HomeSection,
@@ -21,6 +22,7 @@ import type {
   Order,
   OrderStatus,
   Product,
+  RiderDeposit,
   SearchKeyword,
   Transaction,
   Zone,
@@ -524,6 +526,11 @@ export const driverReports: DriverReport[] = [
   { id: 'rp4', driverId: 'd4', customerName: 'Sita Pandey', orderId: '#GF-48203-NP', reason: 'late', details: 'Delivery took 40 minutes instead of 15.', status: 'dismissed', createdAt: daysAgo(5), actions: [{ id: 'ra4-1', action: 'Complaint filed', adminName: 'System', at: daysAgo(5) }, { id: 'ra4-2', action: 'Marked dismissed', adminName: 'Prakash Thapa', note: 'Heavy rain that evening — genuine delay.', at: daysAgo(4) }] },
 ]
 
+// ── Driver warnings (admin → rider, often after a complaint) ─────────────────
+export const driverWarnings: DriverWarning[] = [
+  { id: 'dw1', driverId: 'd6', severity: 'warning', message: 'Do not ask customers for extra cash. Any fuel allowance is settled by the company, not the customer.', reportId: 'rp3', issuedBy: 'Kiran Chetri', createdAt: daysAgo(2) },
+]
+
 // ── Transactions ────────────────────────────────────────────────────────────
 export const transactions: Transaction[] = [
   { id: 't1', type: 'order_payment', reference: '#GF-48202-NP', party: 'Gita Khadka', amount: 145, method: 'eSewa', status: 'success', orderId: 'o1', createdAt: minsAgo(9) },
@@ -538,6 +545,11 @@ export const transactions: Transaction[] = [
   { id: 't10', type: 'order_payment', reference: '#GF-48210-NP', party: 'Ram Sharma', amount: 1085, method: 'ConnectIPS', status: 'success', orderId: 'o10', createdAt: minsAgo(12) },
   { id: 't11', type: 'order_payment', reference: '#GF-48209-NP', party: 'Bishnu Pokharel', amount: 210, method: 'eSewa', status: 'success', orderId: 'o8', createdAt: minsAgo(3) },
   { id: 't12', type: 'refund', reference: '#GF-48209-NP', party: 'Bishnu Pokharel', amount: 70, method: 'eSewa', status: 'pending', orderId: 'o8', createdAt: minsAgo(40) },
+]
+
+// ── Rider cash deposits (rider hands collected COD cash to the store/admin) ───
+export const riderDeposits: RiderDeposit[] = [
+  { id: 'dep1', driverId: 'd1', driverName: 'Manoj Thapa', amount: 1200, note: 'Morning shift COD handover', collectedBy: 'Kiran Chetri', createdAt: daysAgo(1) },
 ]
 
 // ── Search analytics (what customers searched) ──────────────────────────────

@@ -42,6 +42,7 @@ export const api = createApi({
     'Search',
     'Review',
     'Report',
+    'Warning',
     'Transaction',
     'Packer',
     'OpsConfig',

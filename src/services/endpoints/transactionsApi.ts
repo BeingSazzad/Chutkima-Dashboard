@@ -1,5 +1,5 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { orders, transactions } from '@/services/mock/data'
+import { orders, riderDeposits, transactions } from '@/services/mock/data'
 import { PAYMENT_META } from '@/lib/constants'
 import type { Transaction, TransactionType } from '@/types/common.types'
 
@@ -29,7 +29,19 @@ function buildTransactions(): Transaction[] {
   })
   // Keep rider payouts (not order-derived).
   const payouts = transactions.filter((t) => t.type === 'payout')
-  return [...fromOrders, ...payouts]
+  // Rider cash deposits (rider hands collected COD to the store/admin).
+  const deposits: Transaction[] = riderDeposits.map((d) => ({
+    id: `tx-${d.id}`,
+    type: 'rider_deposit',
+    reference: d.id.toUpperCase(),
+    party: d.driverName,
+    amount: d.amount,
+    method: 'Cash',
+    status: 'success',
+    orderId: null,
+    createdAt: d.createdAt,
+  }))
+  return [...fromOrders, ...payouts, ...deposits]
 }
 
 export const transactionsApi = api.injectEndpoints({

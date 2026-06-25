@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Bike, Fuel, IdCard, MapPin, MessageSquare, Phone, ShieldAlert, Star } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
@@ -9,15 +10,16 @@ import { EmptyState } from '@/components/ui/EmptyState'
 import { Avatar } from '@/components/shared/Avatar'
 import { Stars } from '@/components/shared/Stars'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
-import { REPORT_REASON_META, REPORT_STATUS_META } from '@/lib/constants'
-import { timeAgo } from '@/lib/utils'
+import { WarnRiderModal } from '@/components/drivers/WarnRiderModal'
+import { REPORT_REASON_META, REPORT_STATUS_META, WARNING_SEVERITY_META } from '@/lib/constants'
+import { formatDateTime, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import {
   useGetDriverDeliveriesQuery,
   useGetDriverQuery,
   useSetDriverStatusMutation,
 } from '@/services/endpoints/driversApi'
-import { useGetReportsQuery, useGetReviewsQuery } from '@/services/endpoints/reviewsApi'
+import { useGetReportsQuery, useGetReviewsQuery, useGetWarningsQuery } from '@/services/endpoints/reviewsApi'
 import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
 import { FUEL_RATE_PER_KM } from '@/lib/constants'
 import { formatNPR } from '@/lib/utils'
@@ -28,9 +30,11 @@ export default function DriverDetailPage() {
   const { data: driver, isLoading } = useGetDriverQuery(driverId)
   const { data: reviews = [] } = useGetReviewsQuery({ driverId })
   const { data: reports = [] } = useGetReportsQuery({ driverId })
+  const { data: warnings = [] } = useGetWarningsQuery({ driverId })
   const { data: deliveries = [] } = useGetDriverDeliveriesQuery(driverId)
   const { data: ops } = useGetOpsConfigQuery()
   const [setStatus] = useSetDriverStatusMutation()
+  const [warnFor, setWarnFor] = useState<{ reportId?: string; reportReason?: string } | null>(null)
 
   if (isLoading) return <Spinner label="Loading rider…" className="py-24" />
   if (!driver)
@@ -52,9 +56,14 @@ export default function DriverDetailPage() {
         title={driver.name}
         breadcrumbs={[{ label: 'Drivers', to: ROUTES.drivers }, { label: driver.name }]}
         actions={
-          <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate(ROUTES.drivers)}>
-            Back
-          </Button>
+          <>
+            <Button variant="danger" leftIcon={<ShieldAlert className="h-4 w-4" />} onClick={() => setWarnFor({})}>
+              Warn rider
+            </Button>
+            <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate(ROUTES.drivers)}>
+              Back
+            </Button>
+          </>
         }
       />
 
@@ -172,7 +181,49 @@ export default function DriverDetailPage() {
                         <Badge tone={REPORT_STATUS_META[r.status].badge}>{REPORT_STATUS_META[r.status].label}</Badge>
                       </div>
                       <p className="mt-1 text-sm text-slate-600">{r.details}</p>
-                      <p className="mt-1.5 text-xs text-slate-400">By {r.customerName} · {r.orderId} · {timeAgo(r.createdAt)}</p>
+                      <div className="mt-1.5 flex items-center justify-between gap-2">
+                        <p className="text-xs text-slate-400">By {r.customerName} · {r.orderId} · {timeAgo(r.createdAt)}</p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          leftIcon={<ShieldAlert className="h-3.5 w-3.5" />}
+                          onClick={() => setWarnFor({ reportId: r.id, reportReason: REPORT_REASON_META[r.reason] })}
+                        >
+                          Warn
+                        </Button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title="Warnings"
+              subtitle={`${warnings.length} issued by admin`}
+              action={
+                <Button size="sm" variant="outline" leftIcon={<ShieldAlert className="h-3.5 w-3.5" />} onClick={() => setWarnFor({})}>
+                  Send warning
+                </Button>
+              }
+            />
+            <CardContent className="pt-2">
+              {warnings.length === 0 ? (
+                <EmptyState title="No warnings" description="This rider has not been warned." icon={<ShieldAlert className="h-6 w-6" />} />
+              ) : (
+                <div className="space-y-2">
+                  {warnings.map((w) => (
+                    <div key={w.id} className="rounded-xl border border-slate-100 p-3.5">
+                      <div className="flex items-center justify-between gap-2">
+                        <Badge tone={WARNING_SEVERITY_META[w.severity].badge}>{WARNING_SEVERITY_META[w.severity].label}</Badge>
+                        <span className="text-xs text-slate-400">{formatDateTime(w.createdAt)}</span>
+                      </div>
+                      <p className="mt-1.5 text-sm text-slate-600">{w.message}</p>
+                      <p className="mt-1.5 text-xs text-slate-400">
+                        By {w.issuedBy}{w.reportId ? ' · from a complaint' : ''}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -203,6 +254,15 @@ export default function DriverDetailPage() {
           </Card>
         </div>
       </div>
+
+      <WarnRiderModal
+        open={!!warnFor}
+        onClose={() => setWarnFor(null)}
+        driverId={driver.id}
+        driverName={driver.name}
+        reportId={warnFor?.reportId}
+        reportReason={warnFor?.reportReason}
+      />
     </>
   )
 }

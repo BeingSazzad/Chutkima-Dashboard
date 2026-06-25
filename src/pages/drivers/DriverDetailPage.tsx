@@ -1,40 +1,57 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Bike, Fuel, IdCard, MapPin, MessageSquare, Phone, ShieldAlert, Star } from 'lucide-react'
+import { ArrowLeft, Ban, Bike, Fuel, IdCard, MapPin, MessageSquare, Phone, ShieldAlert, ShieldCheck, Star, UserX } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Spinner } from '@/components/ui/Spinner'
 import { Badge } from '@/components/ui/Badge'
+import { Modal } from '@/components/ui/Modal'
+import { Textarea } from '@/components/ui/Textarea'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Avatar } from '@/components/shared/Avatar'
 import { Stars } from '@/components/shared/Stars'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
 import { WarnRiderModal } from '@/components/drivers/WarnRiderModal'
-import { REPORT_REASON_META, REPORT_STATUS_META, WARNING_SEVERITY_META } from '@/lib/constants'
+import { DRIVER_ACCOUNT_META, REPORT_REASON_META, REPORT_STATUS_META, WARNING_SEVERITY_META } from '@/lib/constants'
 import { formatDateTime, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
+import { useAuth } from '@/hooks/useAuth'
 import {
+  useGetDriverAccountEventsQuery,
   useGetDriverDeliveriesQuery,
   useGetDriverQuery,
+  useSetDriverAccountMutation,
   useSetDriverStatusMutation,
 } from '@/services/endpoints/driversApi'
 import { useGetReportsQuery, useGetReviewsQuery, useGetWarningsQuery } from '@/services/endpoints/reviewsApi'
 import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
 import { FUEL_RATE_PER_KM } from '@/lib/constants'
 import { formatNPR } from '@/lib/utils'
+import type { DriverAccountAction } from '@/types/common.types'
+
+const ACCOUNT_ACTION_LABEL: Record<DriverAccountAction, string> = {
+  suspended: 'Suspended',
+  terminated: 'Terminated',
+  reinstated: 'Reinstated',
+}
 
 export default function DriverDetailPage() {
   const { driverId = '' } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
   const { data: driver, isLoading } = useGetDriverQuery(driverId)
   const { data: reviews = [] } = useGetReviewsQuery({ driverId })
   const { data: reports = [] } = useGetReportsQuery({ driverId })
   const { data: warnings = [] } = useGetWarningsQuery({ driverId })
+  const { data: accountEvents = [] } = useGetDriverAccountEventsQuery(driverId)
   const { data: deliveries = [] } = useGetDriverDeliveriesQuery(driverId)
   const { data: ops } = useGetOpsConfigQuery()
   const [setStatus] = useSetDriverStatusMutation()
+  const [setAccount, { isLoading: savingAccount }] = useSetDriverAccountMutation()
   const [warnFor, setWarnFor] = useState<{ reportId?: string; reportReason?: string } | null>(null)
+  const [acctAction, setAcctAction] = useState<DriverAccountAction | null>(null)
+  const [acctReason, setAcctReason] = useState('')
 
   if (isLoading) return <Spinner label="Loading rider…" className="py-24" />
   if (!driver)
@@ -49,6 +66,15 @@ export default function DriverDetailPage() {
 
   const openReports = reports.filter((r) => r.status === 'open').length
   const avgRating = reviews.length ? reviews.reduce((s, r) => s + r.rating, 0) / reviews.length : driver.rating
+  const accountStatus = driver.accountStatus ?? 'active'
+  const acctMeta = DRIVER_ACCOUNT_META[accountStatus]
+
+  const submitAccount = async () => {
+    if (!acctAction || !acctReason.trim()) return
+    await setAccount({ driverId: driver.id, action: acctAction, reason: acctReason.trim(), by: user?.name ?? 'Admin' }).unwrap()
+    setAcctAction(null)
+    setAcctReason('')
+  }
 
   return (
     <>
@@ -60,6 +86,20 @@ export default function DriverDetailPage() {
             <Button variant="danger" leftIcon={<ShieldAlert className="h-4 w-4" />} onClick={() => setWarnFor({})}>
               Warn rider
             </Button>
+            {accountStatus === 'active' ? (
+              <>
+                <Button variant="outline" leftIcon={<Ban className="h-4 w-4" />} onClick={() => setAcctAction('suspended')}>
+                  Suspend
+                </Button>
+                <Button variant="outline" leftIcon={<UserX className="h-4 w-4" />} onClick={() => setAcctAction('terminated')}>
+                  Terminate
+                </Button>
+              </>
+            ) : (
+              <Button variant="secondary" leftIcon={<ShieldCheck className="h-4 w-4" />} onClick={() => setAcctAction('reinstated')}>
+                Reinstate
+              </Button>
+            )}
             <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate(ROUTES.drivers)}>
               Back
             </Button>
@@ -76,7 +116,10 @@ export default function DriverDetailPage() {
                 <Avatar name={driver.name} src={driver.avatar} size="lg" />
                 <div className="min-w-0">
                   <p className="font-bold text-slate-800">{driver.name}</p>
-                  <div className="mt-0.5"><DriverStatusBadge status={driver.status} /></div>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
+                    <DriverStatusBadge status={driver.status} />
+                    {accountStatus !== 'active' && <Badge tone={acctMeta.badge}>{acctMeta.label}</Badge>}
+                  </div>
                 </div>
               </div>
               <div className="mt-4 space-y-2.5 text-sm">
@@ -232,6 +275,28 @@ export default function DriverDetailPage() {
           </Card>
 
           <Card>
+            <CardHeader title="Account actions" subtitle="Suspension / termination / reinstatement records" />
+            <CardContent className="pt-2">
+              {accountEvents.length === 0 ? (
+                <EmptyState title="No account actions" description="No suspensions or terminations on record." icon={<ShieldCheck className="h-6 w-6" />} />
+              ) : (
+                <ol className="space-y-2.5">
+                  {accountEvents.map((e) => (
+                    <li key={e.id} className="flex gap-2.5">
+                      <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${e.action === 'reinstated' ? 'bg-success' : e.action === 'terminated' ? 'bg-danger' : 'bg-amber-400'}`} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-semibold text-slate-800">{ACCOUNT_ACTION_LABEL[e.action]}</p>
+                        <p className="text-sm text-slate-600">{e.reason}</p>
+                        <p className="text-xs text-slate-400">{e.by} · {formatDateTime(e.at)}</p>
+                      </div>
+                    </li>
+                  ))}
+                </ol>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
             <CardHeader title="Reviews" subtitle={`${reviews.length} customer ratings`} />
             <CardContent className="pt-2">
               {reviews.length === 0 ? (
@@ -263,6 +328,44 @@ export default function DriverDetailPage() {
         reportId={warnFor?.reportId}
         reportReason={warnFor?.reportReason}
       />
+
+      <Modal
+        open={!!acctAction}
+        onClose={() => {
+          setAcctAction(null)
+          setAcctReason('')
+        }}
+        title={acctAction ? `${ACCOUNT_ACTION_LABEL[acctAction]} rider` : undefined}
+        description={driver.name}
+        size="sm"
+        footer={
+          <>
+            <Button variant="outline" onClick={() => { setAcctAction(null); setAcctReason('') }}>
+              Cancel
+            </Button>
+            <Button
+              variant={acctAction === 'reinstated' ? 'primary' : 'danger'}
+              loading={savingAccount}
+              disabled={!acctReason.trim()}
+              onClick={submitAccount}
+            >
+              {acctAction ? ACCOUNT_ACTION_LABEL[acctAction] : 'Confirm'}
+            </Button>
+          </>
+        }
+      >
+        <Textarea
+          label="Reason (required)"
+          value={acctReason}
+          onChange={(e) => setAcctReason(e.target.value)}
+          rows={3}
+          placeholder={acctAction === 'reinstated' ? 'e.g. Issue resolved — rider reinstated.' : 'e.g. Repeated extra-charge complaints from customers.'}
+          autoFocus
+        />
+        {acctAction !== 'reinstated' && (
+          <p className="mt-2 text-xs text-slate-400">The rider will be taken offline and cannot be assigned new orders.</p>
+        )}
+      </Modal>
     </>
   )
 }

@@ -1,5 +1,6 @@
 import type {
   CreditType,
+  DriverAccountStatus,
   DriverStatus,
   OrderStatus,
   PaymentMethod,
@@ -144,6 +145,13 @@ export const REPORT_STATUS_META: Record<ReportStatus, { label: string; badge: st
   open: { label: 'Open', badge: 'bg-red-50 text-red-700 ring-red-600/15' },
   reviewed: { label: 'Reviewed', badge: 'bg-green-50 text-green-700 ring-green-600/15' },
   dismissed: { label: 'Dismissed', badge: 'bg-slate-100 text-slate-600 ring-slate-500/15' },
+}
+
+/** Rider employment/account standing + badge styling. */
+export const DRIVER_ACCOUNT_META: Record<DriverAccountStatus, { label: string; badge: string }> = {
+  active: { label: 'Active', badge: 'bg-green-50 text-green-700 ring-green-600/15' },
+  suspended: { label: 'Suspended', badge: 'bg-amber-50 text-amber-700 ring-amber-600/15' },
+  terminated: { label: 'Terminated', badge: 'bg-red-50 text-red-700 ring-red-600/15' },
 }
 
 /** Rider warning escalation levels + badge styling. */

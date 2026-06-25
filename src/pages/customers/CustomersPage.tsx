@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Ban, Download, Pencil, Phone, Search, ShieldCheck, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -15,7 +14,7 @@ import { CustomerTrustBadge } from '@/components/shared/StatusBadge'
 import { downloadCSV } from '@/lib/export'
 import { deriveTrustBadge } from '@/lib/trust'
 import { useGetTrustConfigQuery } from '@/services/endpoints/settingsApi'
-import { formatDateTime, formatNPR, timeAgo } from '@/lib/utils'
+import { formatDateTime, formatNPR, openInNewTab, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { ZONES } from '@/lib/constants'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -34,7 +33,6 @@ const TIER_BADGE: Record<Customer['tier'], { label: string; tone?: string }> = {
 }
 
 export default function CustomersPage() {
-  const navigate = useNavigate()
   const [search, setSearch] = useState('')
   const debounced = useDebounce(search, 300)
   const { data: customers = [], isLoading } = useGetCustomersQuery({ search: debounced || undefined })
@@ -165,7 +163,7 @@ export default function CustomersPage() {
           columns={columns}
           data={customers}
           rowKey={(c) => c.id}
-          onRowClick={(c) => navigate(ROUTES.customerDetail(c.id))}
+          onRowClick={(c) => openInNewTab(ROUTES.customerDetail(c.id))}
           loading={isLoading}
           emptyTitle="No customers found"
           pageSize={6}

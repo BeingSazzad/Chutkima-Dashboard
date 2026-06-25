@@ -1,10 +1,10 @@
 import { useState } from 'react'
-import { PackageCheck, MessageCircle } from 'lucide-react'
+import { PackageCheck, MessageCircle, UserPlus } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
-import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
-import { useAssignPackerMutation, useMarkPackedMutation } from '@/services/endpoints/ordersApi'
+import { AssignPackerModal } from '@/components/orders/AssignPackerModal'
+import { useMarkPackedMutation } from '@/services/endpoints/ordersApi'
 import { useGetPackersQuery } from '@/services/endpoints/packersApi'
 import { useGetProductsQuery } from '@/services/endpoints/productsApi'
 import { buildPackerMessage, openWhatsApp } from '@/lib/whatsapp'
@@ -14,11 +14,9 @@ import type { Order } from '@/types/common.types'
 export function PackingCard({ order }: { order: Order }) {
   const { data: packers = [] } = useGetPackersQuery()
   const { data: products = [] } = useGetProductsQuery()
-  const [assign, { isLoading: assigning }] = useAssignPackerMutation()
   const [markPacked, { isLoading: marking }] = useMarkPackedMutation()
-  const [pick, setPick] = useState('')
+  const [assignOpen, setAssignOpen] = useState(false)
 
-  const activePackers = packers.filter((p) => p.active)
   const assigned = packers.find((p) => p.id === order.packerId)
   const closed = order.status === 'delivered' || order.status === 'cancelled'
 
@@ -51,27 +49,14 @@ export function PackingCard({ order }: { order: Order }) {
         )}
 
         {!closed && (
-          <div className="flex gap-2">
-            <div className="flex-1">
-              <Select
-                value={pick}
-                onChange={(e) => setPick(e.target.value)}
-                placeholder={activePackers.length ? 'Select a packer' : 'No active packers'}
-                options={activePackers.map((p) => ({ label: p.name, value: p.id }))}
-              />
-            </div>
-            <Button
-              size="md"
-              loading={assigning}
-              disabled={!pick}
-              onClick={async () => {
-                await assign({ orderId: order.id, packerId: pick }).unwrap()
-                setPick('')
-              }}
-            >
-              {order.packerId ? 'Reassign' : 'Assign'}
-            </Button>
-          </div>
+          <Button
+            variant={order.packerId ? 'outline' : 'secondary'}
+            className="w-full"
+            leftIcon={<UserPlus className="h-4 w-4" />}
+            onClick={() => setAssignOpen(true)}
+          >
+            {order.packerId ? 'Reassign packer' : 'Assign packer'}
+          </Button>
         )}
 
         {!closed && order.packerId && !order.packed && (
@@ -80,6 +65,8 @@ export function PackingCard({ order }: { order: Order }) {
           </Button>
         )}
       </CardContent>
+
+      <AssignPackerModal order={order} open={assignOpen} onClose={() => setAssignOpen(false)} />
     </Card>
   )
 }

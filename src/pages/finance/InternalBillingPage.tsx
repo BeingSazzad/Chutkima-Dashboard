@@ -8,8 +8,10 @@ import { Input } from '@/components/ui/Input'
 import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
 import { Badge } from '@/components/ui/Badge'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { StatCard } from '@/components/shared/StatCard'
 import { ProductThumb } from '@/components/shared/ProductThumb'
+import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { downloadCSV } from '@/lib/export'
 import { formatDateTime, formatNPR } from '@/lib/utils'
 import { useAuth } from '@/hooks/useAuth'
@@ -17,16 +19,38 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useGetProductsQuery } from '@/services/endpoints/productsApi'
 import {
   useCreateInternalOrderMutation,
+  useDeleteInternalOrderMutation,
   useGetInternalOrdersQuery,
 } from '@/services/endpoints/internalBillingApi'
 import type { InternalOrder, InternalOrderItem } from '@/types/common.types'
 
 export default function InternalBillingPage() {
-  const { data: orders = [], isLoading } = useGetInternalOrdersQuery()
+  const { data: allOrders = [], isLoading } = useGetInternalOrdersQuery()
   const [createOpen, setCreateOpen] = useState(false)
+  const [deleteFor, setDeleteFor] = useState<InternalOrder | null>(null)
+  const [del, { isLoading: deleting }] = useDeleteInternalOrderMutation()
+  const [search, setSearch] = useState('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
+  const debounced = useDebounce(search, 250).toLowerCase()
+
+  const orders = allOrders.filter((o) => {
+    const day = o.createdAt.slice(0, 10)
+    return (
+      (!debounced || o.reference.toLowerCase().includes(debounced) || o.staffName.toLowerCase().includes(debounced)) &&
+      (!from || day >= from) &&
+      (!to || day <= to)
+    )
+  })
 
   const totalDiscount = orders.reduce((s, o) => s + o.discount, 0)
   const totalSell = orders.reduce((s, o) => s + o.sellTotal, 0)
+
+  const confirmDelete = async () => {
+    if (!deleteFor) return
+    await del(deleteFor.id).unwrap()
+    setDeleteFor(null)
+  }
 
   const exportCsv = () => {
     downloadCSV(
@@ -85,6 +109,17 @@ export default function InternalBillingPage() {
     },
     { key: 'reason', header: 'Reason', className: 'max-w-[14rem] whitespace-normal text-slate-600', cell: (o) => o.reason || '—' },
     { key: 'admin', header: 'By', cell: (o) => <span className="text-slate-500">{o.adminName}</span> },
+    {
+      key: 'actions',
+      header: '',
+      headerClassName: 'text-right',
+      className: 'text-right',
+      cell: (o) => (
+        <button onClick={() => setDeleteFor(o)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger" aria-label="Delete" title="Delete internal order">
+          <Trash2 className="h-4 w-4" />
+        </button>
+      ),
+    },
   ]
 
   return (
@@ -111,6 +146,18 @@ export default function InternalBillingPage() {
       </div>
 
       <Card className="mt-4">
+        <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="relative w-full sm:max-w-xs">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search by INT-# or staff…"
+              className="focus-ring h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm"
+            />
+          </div>
+          <DateRangeFilter from={from} to={to} onChange={(r) => { setFrom(r.from); setTo(r.to) }} />
+        </div>
         <DataTable
           columns={columns}
           data={orders}
@@ -122,6 +169,16 @@ export default function InternalBillingPage() {
       </Card>
 
       <CreateInternalOrderModal open={createOpen} onClose={() => setCreateOpen(false)} />
+
+      <ConfirmDialog
+        open={!!deleteFor}
+        onClose={() => setDeleteFor(null)}
+        onConfirm={confirmDelete}
+        loading={deleting}
+        title="Delete internal order?"
+        description={deleteFor ? `"${deleteFor.reference}" will be permanently removed.` : undefined}
+        confirmLabel="Delete"
+      />
     </>
   )
 }

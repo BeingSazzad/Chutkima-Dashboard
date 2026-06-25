@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { ExternalLink, Image as ImageIcon, Pencil, Plus, Trash2 } from 'lucide-react'
+import { ExternalLink, Image as ImageIcon, Pencil, Play, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -19,25 +19,37 @@ import {
   useSaveBannerMutation,
   useToggleBannerMutation,
 } from '@/services/endpoints/bannersApi'
-import type { Banner, BannerPlacement } from '@/types/common.types'
+import type { Banner, BannerMedia, BannerPlacement } from '@/types/common.types'
+
+const MEDIA_OPTIONS = [
+  { label: 'Image', value: 'image' },
+  { label: 'Video', value: 'video' },
+]
 
 const PLACEMENTS: { key: BannerPlacement; label: string; hint: string; wide: boolean }[] = [
   { key: 'hero', label: 'Hero — big horizontal banner', hint: 'Large carousel at the top of Home', wide: true },
   { key: 'grid_small', label: 'Small grid banners', hint: 'Compact promo tiles lower on Home', wide: false },
   { key: 'category_strip', label: 'Category strip', hint: 'Inline strip between category rows', wide: true },
+  { key: 'vertical', label: 'Vertical banners', hint: 'Tall portrait banners (story / side rail)', wide: false },
 ]
 
 const PLACEMENT_LABEL: Record<BannerPlacement, string> = {
   hero: 'Hero',
   grid_small: 'Small grid',
   category_strip: 'Category strip',
+  vertical: 'Vertical',
 }
 
 const SIZE_HINT: Record<BannerPlacement, string> = {
   hero: 'Wide 21:9 · recommended 1200 × 515 px',
   grid_small: 'Recommended 600 × 400 px (3:2)',
   category_strip: 'Wide strip · recommended 1000 × 360 px',
+  vertical: 'Portrait 3:4 · recommended 720 × 960 px',
 }
+
+/** Preview aspect ratio per placement. */
+const aspectFor = (p: BannerPlacement) =>
+  p === 'vertical' ? 'aspect-[3/4]' : p === 'grid_small' ? 'aspect-[16/9]' : 'aspect-[21/9]'
 
 export default function BannersPage() {
   const { data: banners = [], isLoading } = useGetBannersQuery()
@@ -91,18 +103,32 @@ export default function BannersPage() {
                     <p className="text-center text-sm text-slate-400">No banners in this slot yet.</p>
                   </Card>
                 ) : (
-                  <div className={cn('grid gap-4', wide ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3')}>
+                  <div
+                    className={cn(
+                      'grid gap-4',
+                      key === 'vertical'
+                        ? 'grid-cols-2 sm:grid-cols-3 lg:grid-cols-5'
+                        : wide
+                          ? 'grid-cols-1 lg:grid-cols-2'
+                          : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3',
+                    )}
+                  >
                     {items.map((b) => (
                       <Card key={b.id} className={cn('overflow-hidden', !b.active && 'opacity-60')}>
-                        <div className={cn('relative w-full overflow-hidden bg-mint-100', wide ? 'aspect-[21/9]' : 'aspect-[16/9]')}>
+                        <div className={cn('relative w-full overflow-hidden bg-mint-100', aspectFor(b.placement))}>
                           {b.image ? (
                             <img src={b.image} alt={b.title} className="h-full w-full object-cover" />
                           ) : (
                             <div className="flex h-full items-center justify-center text-brand-300">
-                              <ImageIcon className="h-8 w-8" />
+                              {b.mediaType === 'video' ? <Play className="h-8 w-8" /> : <ImageIcon className="h-8 w-8" />}
                             </div>
                           )}
                           <div className="absolute inset-0 bg-gradient-to-t from-black/55 to-transparent" />
+                          {b.mediaType === 'video' && (
+                            <span className="absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/60 px-2 py-0.5 text-[10px] font-bold text-white">
+                              <Play className="h-3 w-3" /> Video
+                            </span>
+                          )}
                           <div className="absolute bottom-0 left-0 p-3 text-white">
                             <p className="text-sm font-bold drop-shadow">{b.title}</p>
                             <p className="line-clamp-1 text-xs text-white/80 drop-shadow">{b.subtitle}</p>
@@ -198,13 +224,17 @@ function BannerFormModal({ banner, onClose }: { banner: Banner | 'new' | null; o
   const isEdit = banner && banner !== 'new'
   const b = isEdit ? (banner as Banner) : null
 
-  const empty = { title: '', subtitle: '', image: '', placement: 'hero' as BannerPlacement, ctaLabel: 'Shop now', ctaLink: '/' }
+  const empty = { title: '', subtitle: '', image: '', mediaType: 'image' as BannerMedia, video: '', placement: 'hero' as BannerPlacement, ctaLabel: 'Shop now', ctaLink: '/' }
   const [form, setForm] = useState(empty)
   const key = banner === 'new' ? 'new' : b?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
   if (key !== lastKey && banner) {
     setLastKey(key)
-    setForm(b ? { title: b.title, subtitle: b.subtitle, image: b.image, placement: b.placement, ctaLabel: b.ctaLabel, ctaLink: b.ctaLink } : empty)
+    setForm(
+      b
+        ? { title: b.title, subtitle: b.subtitle, image: b.image, mediaType: b.mediaType ?? 'image', video: b.video ?? '', placement: b.placement, ctaLabel: b.ctaLabel, ctaLink: b.ctaLink }
+        : empty,
+    )
   }
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -230,9 +260,8 @@ function BannerFormModal({ banner, onClose }: { banner: Banner | 'new' | null; o
       }
     >
       <div className="space-y-3">
-        <ImageUpload label="Banner image" value={form.image} onChange={(v) => set('image', v)} aspectClassName="aspect-[21/9]" hint={SIZE_HINT[form.placement]} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Input label="Title" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="e.g. Mother's Pride" autoFocus />
+          <Select label="Media type" value={form.mediaType} onChange={(e) => set('mediaType', e.target.value)} options={MEDIA_OPTIONS} />
           <Select
             label="Placement"
             value={form.placement}
@@ -240,6 +269,15 @@ function BannerFormModal({ banner, onClose }: { banner: Banner | 'new' | null; o
             options={PLACEMENTS.map((p) => ({ label: PLACEMENT_LABEL[p.key], value: p.key }))}
           />
         </div>
+        {form.mediaType === 'video' ? (
+          <>
+            <Input label="Video URL" value={form.video} onChange={(e) => set('video', e.target.value)} placeholder="https://…/banner.mp4" />
+            <ImageUpload label="Poster image (optional)" value={form.image} onChange={(v) => set('image', v)} aspectClassName={aspectFor(form.placement)} hint="Shown before the video plays" />
+          </>
+        ) : (
+          <ImageUpload label="Banner image" value={form.image} onChange={(v) => set('image', v)} aspectClassName={aspectFor(form.placement)} hint={SIZE_HINT[form.placement]} />
+        )}
+        <Input label="Title" value={form.title} onChange={(e) => set('title', e.target.value)} placeholder="e.g. Mother's Pride" autoFocus />
         <Textarea label="Subtitle" value={form.subtitle} onChange={(e) => set('subtitle', e.target.value)} rows={2} placeholder="Short supporting line" />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Input label="Button label" value={form.ctaLabel} onChange={(e) => set('ctaLabel', e.target.value)} placeholder="Shop now" />

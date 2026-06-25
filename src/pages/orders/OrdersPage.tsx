@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Bike, Search, UserPlus } from 'lucide-react'
+import { AlertTriangle, Bike, Clock3, Search, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -9,11 +9,13 @@ import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
+import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
 import { PaymentBadge } from '@/components/shared/StatusBadge'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
 import { OrderStatusSelect } from '@/components/orders/OrderStatusSelect'
-import { PAYMENT_META, ZONES } from '@/lib/constants'
+import { ORDER_STATUS_META, PAYMENT_META, ZONES } from '@/lib/constants'
+import { adminOrderStage, awaitingRiderAcceptance } from '@/lib/orderStage'
 import { formatNPR, openInNewTab, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -46,21 +48,29 @@ export default function OrdersPage() {
   const [assignFor, setAssignFor] = useState<Order | null>(null)
   const [cancelFor, setCancelFor] = useState<Order | null>(null)
   const [cancelReason, setCancelReason] = useState('')
+  const [confirmStatus, setConfirmStatus] = useState<{ order: Order; status: OrderStatus } | null>(null)
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [updateStatus, { isLoading: cancelling }] = useUpdateOrderStatusMutation()
   const { data: stores = [] } = useGetStoresQuery()
 
-  /** Quick inline status change. Cancelling needs a reason, so route it to the modal. */
-  const changeStatus = async (order: Order, status: OrderStatus) => {
+  /** Quick inline status change. Cancelling needs a reason; every other change asks for confirmation. */
+  const changeStatus = (order: Order, status: OrderStatus) => {
     if (status === 'cancelled') {
       setCancelFor(order)
       return
     }
+    setConfirmStatus({ order, status })
+  }
+
+  const confirmChangeStatus = async () => {
+    if (!confirmStatus) return
+    const { order, status } = confirmStatus
     setPendingId(order.id)
     try {
       await updateStatus({ orderId: order.id, status }).unwrap()
     } finally {
       setPendingId(null)
+      setConfirmStatus(null)
     }
   }
 
@@ -84,6 +94,9 @@ export default function OrdersPage() {
 
   // Scheduled tab shows pre-booked (after-hours) orders.
   const shown = tab === 'scheduled' ? orders.filter((o) => o.scheduledFor) : orders
+
+  // Orders where a rider was assigned but hasn't accepted yet — admin should reassign.
+  const awaitingAccept = allOrders.filter(awaitingRiderAcceptance)
 
   const driverName = (id: string | null) => drivers.find((d) => d.id === id)?.name
 
@@ -148,16 +161,31 @@ export default function OrdersPage() {
       header: 'Rider',
       cell: (o) =>
         o.driverId ? (
-          <span className="flex items-center gap-1.5 text-sm font-medium text-slate-700">
-            <Bike className="h-4 w-4 text-brand-500" />
-            {driverName(o.driverId)}
-            {o.assignments.length > 1 && (
-              <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">+{o.assignments.length - 1}</span>
+          <div className="text-sm font-medium text-slate-700">
+            <span className="flex items-center gap-1.5">
+              <Bike className="h-4 w-4 text-brand-500" />
+              {driverName(o.driverId)}
+              {o.assignments.length > 1 && (
+                <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">+{o.assignments.length - 1}</span>
+              )}
+            </span>
+            {awaitingRiderAcceptance(o) && (
+              <span className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-amber-600">
+                <Clock3 className="h-3 w-3" /> Awaiting accept
+              </span>
             )}
-          </span>
+          </div>
         ) : (
           <span className="text-xs font-medium text-amber-600">Unassigned</span>
         ),
+    },
+    {
+      key: 'stage',
+      header: 'Fulfilment',
+      cell: (o) => {
+        const stage = adminOrderStage(o)
+        return <Badge tone={stage.badge}>{stage.label}</Badge>
+      },
     },
     {
       key: 'status',
@@ -203,6 +231,13 @@ export default function OrdersPage() {
         title="Orders"
         description="Track and dispatch every order across Butwal zones."
       />
+
+      {awaitingAccept.length > 0 && (
+        <div className="mb-3 flex items-center gap-2 rounded-xl bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700">
+          <AlertTriangle className="h-4 w-4 shrink-0" />
+          {awaitingAccept.length} order{awaitingAccept.length > 1 ? 's' : ''} waiting for a rider to accept — reassign if needed.
+        </div>
+      )}
 
       <Card>
         <div className="px-3 pt-2">
@@ -309,6 +344,20 @@ export default function OrdersPage() {
           </p>
         )}
       </Modal>
+
+      <ConfirmDialog
+        open={!!confirmStatus}
+        onClose={() => setConfirmStatus(null)}
+        onConfirm={confirmChangeStatus}
+        loading={pendingId === confirmStatus?.order.id}
+        title="Change order status?"
+        description={
+          confirmStatus
+            ? `Move ${confirmStatus.order.reference} to "${ORDER_STATUS_META[confirmStatus.status].label}".`
+            : undefined
+        }
+        confirmLabel="Change status"
+      />
     </>
   )
 }

@@ -15,12 +15,14 @@ import {
 } from 'recharts'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
-import { Select } from '@/components/ui/Select'
 import { Badge } from '@/components/ui/Badge'
+import { Button } from '@/components/ui/Button'
+import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { StatCard } from '@/components/shared/StatCard'
 import { ProductThumb } from '@/components/shared/ProductThumb'
-import { Banknote, CheckCircle2, MapPinned, Receipt, TrendingUp, Users } from 'lucide-react'
+import { Banknote, CheckCircle2, Download, MapPinned, Receipt, TrendingUp, Users } from 'lucide-react'
 import { formatCompact, formatNPR } from '@/lib/utils'
+import { downloadCSV } from '@/lib/export'
 import {
   useGetFulfillmentQuery,
   useGetHourlyOrdersQuery,
@@ -40,11 +42,18 @@ const PERIOD_LABEL: Record<StatsPeriod, string> = {
   month: 'This month',
   year: 'This year',
 }
-const YEARS = [2026, 2025, 2024]
+
+const todayStr = () => new Date().toISOString().slice(0, 10)
+const daysAgoStr = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString().slice(0, 10)
 
 export default function AnalyticsPage() {
-  const [period, setPeriod] = useState<StatsPeriod>('week')
-  const [year, setYear] = useState(2026)
+  const [from, setFrom] = useState(daysAgoStr(6))
+  const [to, setTo] = useState(todayStr())
+
+  // Derive chart granularity + year from the chosen range (mock series are per-period).
+  const spanDays = Math.max(1, Math.round((Date.parse(to) - Date.parse(from)) / 86_400_000) + 1)
+  const period: StatsPeriod = spanDays <= 14 ? 'week' : spanDays <= 92 ? 'month' : 'year'
+  const year = Number(to.slice(0, 4)) || new Date().getFullYear()
 
   const { data: revenue = [] } = useGetRevenueSeriesQuery({ period, year })
   const { data: hourly = [] } = useGetHourlyOrdersQuery()
@@ -59,7 +68,19 @@ export default function AnalyticsPage() {
   const totalOrders = revenue.reduce((s, r) => s + r.orders, 0)
   const avgOrderValue = totalOrders ? Math.round(totalRevenue / totalOrders) : 0
   const peak = hourly.reduce((max, h) => (h.orders > max.orders ? h : max), hourly[0] ?? { label: '—', orders: 0 })
-  const suffix = `${PERIOD_LABEL[period].toLowerCase()} · ${year}`
+  const suffix = `${from} → ${to}`
+
+  const exportCsv = () => {
+    downloadCSV(
+      `chutkima-analytics-${from}_to_${to}.csv`,
+      revenue.map((r) => ({ period: r.label, revenue: r.revenue.toString(), orders: r.orders.toString() })),
+      [
+        { key: 'period', label: 'Period' },
+        { key: 'revenue', label: 'Revenue (NPR)' },
+        { key: 'orders', label: 'Orders' },
+      ],
+    )
+  }
 
   return (
     <>
@@ -68,25 +89,11 @@ export default function AnalyticsPage() {
         description="Revenue & order performance for your dark store."
         breadcrumbs={[{ label: 'Dashboard', to: '/' }, { label: 'Analytics' }]}
         actions={
-          <div className="flex items-center gap-2">
-            <div className="w-36">
-              <Select
-                value={period}
-                onChange={(e) => setPeriod(e.target.value as StatsPeriod)}
-                options={[
-                  { label: 'This week', value: 'week' },
-                  { label: 'This month', value: 'month' },
-                  { label: 'This year', value: 'year' },
-                ]}
-              />
-            </div>
-            <div className="w-28">
-              <Select
-                value={String(year)}
-                onChange={(e) => setYear(Number(e.target.value))}
-                options={YEARS.map((y) => ({ label: String(y), value: String(y) }))}
-              />
-            </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <DateRangeFilter from={from} to={to} max={todayStr()} clearable={false} onChange={(r) => { setFrom(r.from || from); setTo(r.to || to) }} />
+            <Button variant="outline" leftIcon={<Download className="h-4 w-4" />} onClick={exportCsv} disabled={revenue.length === 0}>
+              Export CSV
+            </Button>
           </div>
         }
       />

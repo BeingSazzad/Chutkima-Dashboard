@@ -27,6 +27,8 @@ export const bannersApi = api.injectEndpoints({
           title: payload.title ?? 'New Banner',
           subtitle: payload.subtitle ?? '',
           image: payload.image ?? '',
+          mediaType: payload.mediaType ?? 'image',
+          video: payload.video ?? '',
           placement,
           position: banners.filter((b) => b.placement === placement).length + 1,
           ctaLabel: payload.ctaLabel ?? 'Shop now',

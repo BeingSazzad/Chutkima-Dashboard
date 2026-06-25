@@ -30,6 +30,7 @@ function buildTransactions(): Transaction[] {
   // Keep rider payouts (not order-derived).
   const payouts = transactions.filter((t) => t.type === 'payout')
   // Rider cash deposits (rider hands collected COD to the store/admin).
+  // Pending until the rider confirms the handover (two-party sign-off).
   const deposits: Transaction[] = riderDeposits.map((d) => ({
     id: `tx-${d.id}`,
     type: 'rider_deposit',
@@ -37,7 +38,7 @@ function buildTransactions(): Transaction[] {
     party: d.driverName,
     amount: d.amount,
     method: 'Cash',
-    status: 'success',
+    status: d.confirmedByRider ? 'success' : 'pending',
     orderId: null,
     createdAt: d.createdAt,
   }))

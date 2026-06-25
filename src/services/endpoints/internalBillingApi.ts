@@ -49,7 +49,22 @@ export const internalBillingApi = api.injectEndpoints({
       },
       invalidatesTags: ['InternalOrder'],
     }),
+
+    deleteInternalOrder: build.mutation<{ id: string }, string>({
+      async queryFn(id) {
+        await mockDelay(250)
+        const idx = internalOrders.findIndex((o) => o.id === id)
+        if (idx === -1) return { error: { status: 404, data: 'Not found' } as never }
+        internalOrders.splice(idx, 1)
+        return { data: { id } }
+      },
+      invalidatesTags: ['InternalOrder'],
+    }),
   }),
 })
 
-export const { useGetInternalOrdersQuery, useCreateInternalOrderMutation } = internalBillingApi
+export const {
+  useGetInternalOrdersQuery,
+  useCreateInternalOrderMutation,
+  useDeleteInternalOrderMutation,
+} = internalBillingApi

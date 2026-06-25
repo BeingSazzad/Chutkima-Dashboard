@@ -45,7 +45,11 @@ export function ZoneMapEditor({ value, onChange }: { value: Pt[]; onChange: (pts
       <div className="h-80 w-full overflow-hidden rounded-xl border border-slate-200">
         <MapContainer center={center} zoom={14} scrollWheelZoom style={{ height: '100%', width: '100%' }}>
           <FixSize />
-          <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+          {/* Clean, light "Positron" base map — brand-neutral so the teal-green geo-fences pop. */}
+          <TileLayer
+            attribution="&copy; OpenStreetMap contributors &copy; CARTO"
+            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+          />
           <Clicker onAdd={(p) => onChange([...value, p])} />
           {value.length >= 3 && (
             <Polygon positions={value} pathOptions={{ color: '#0c7d60', fillColor: '#0c7d60', fillOpacity: 0.25, weight: 2 }} />

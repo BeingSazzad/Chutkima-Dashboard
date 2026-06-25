@@ -1,6 +1,6 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { drivers, opsConfig, orders, riderDeposits } from '@/services/mock/data'
-import type { Driver, DriverStatus, Order, RiderDeposit } from '@/types/common.types'
+import { driverAccountEvents, drivers, opsConfig, orders, riderDeposits } from '@/services/mock/data'
+import type { Driver, DriverAccountAction, DriverAccountEvent, DriverStatus, Order, RiderDeposit } from '@/types/common.types'
 
 export interface RiderFinance {
   driverId: string
@@ -150,9 +150,9 @@ export const driversApi = api.injectEndpoints({
       providesTags: ['Transaction'],
     }),
 
-    /** Record a rider handing collected COD cash to the store/admin. */
-    collectRiderCash: build.mutation<RiderDeposit, { driverId: string; amount: number; note?: string; collectedBy: string }>({
-      async queryFn({ driverId, amount, note, collectedBy }) {
+    /** Record a rider handing collected COD cash to the store/admin (awaits rider confirmation). */
+    collectRiderCash: build.mutation<RiderDeposit, { driverId: string; amount: number; amountDue: number; note?: string; collectedBy: string }>({
+      async queryFn({ driverId, amount, amountDue, note, collectedBy }) {
         await mockDelay(300)
         const driver = drivers.find((d) => d.id === driverId)
         if (!driver) return { error: { status: 404, data: 'Driver not found' } as never }
@@ -160,9 +160,11 @@ export const driversApi = api.injectEndpoints({
           id: `dep${Date.now()}`,
           driverId,
           driverName: driver.name,
+          amountDue,
           amount,
           note: note?.trim() || '',
           collectedBy,
+          confirmedByRider: false,
           createdAt: new Date().toISOString(),
         }
         riderDeposits.unshift(deposit)
@@ -170,6 +172,56 @@ export const driversApi = api.injectEndpoints({
       },
       // Refresh finance totals + the transactions ledger (deposits show there too).
       invalidatesTags: ['Driver', 'Order', 'Transaction', 'Kpi'],
+    }),
+
+    /** The rider confirms a recorded cash handover (two-party sign-off). */
+    confirmRiderDeposit: build.mutation<RiderDeposit, string>({
+      async queryFn(depositId) {
+        await mockDelay(200)
+        const deposit = riderDeposits.find((d) => d.id === depositId)
+        if (!deposit) return { error: { status: 404, data: 'Deposit not found' } as never }
+        deposit.confirmedByRider = true
+        deposit.confirmedAt = new Date().toISOString()
+        return { data: clone(deposit) }
+      },
+      invalidatesTags: ['Transaction'],
+    }),
+
+    /** Suspension / termination / reinstatement history for a rider (newest first). */
+    getDriverAccountEvents: build.query<DriverAccountEvent[], string>({
+      async queryFn(driverId) {
+        await mockDelay(200)
+        const result = driverAccountEvents
+          .filter((e) => e.driverId === driverId)
+          .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+        return { data: clone(result) }
+      },
+      providesTags: ['Driver'],
+    }),
+
+    /** Suspend, terminate or reinstate a rider — records an audit event. */
+    setDriverAccount: build.mutation<Driver, { driverId: string; action: DriverAccountAction; reason: string; by: string }>({
+      async queryFn({ driverId, action, reason, by }) {
+        await mockDelay(300)
+        const driver = drivers.find((d) => d.id === driverId)
+        if (!driver) return { error: { status: 404, data: 'Driver not found' } as never }
+        driver.accountStatus = action === 'reinstated' ? 'active' : action
+        // A suspended / terminated rider is taken off the road.
+        if (action !== 'reinstated') {
+          driver.status = 'offline'
+          driver.activeOrderId = null
+        }
+        driverAccountEvents.unshift({
+          id: `dae${Date.now()}`,
+          driverId,
+          action,
+          reason: reason.trim(),
+          by,
+          at: new Date().toISOString(),
+        })
+        return { data: clone(driver) }
+      },
+      invalidatesTags: ['Driver'],
     }),
 
     setDriverStatus: build.mutation<Driver, { id: string; status: DriverStatus }>({
@@ -237,6 +289,9 @@ export const {
   useGetRiderFinanceQuery,
   useGetRiderDepositsQuery,
   useCollectRiderCashMutation,
+  useConfirmRiderDepositMutation,
+  useGetDriverAccountEventsQuery,
+  useSetDriverAccountMutation,
   useSetDriverStatusMutation,
   useSaveDriverMutation,
   useDeleteDriverMutation,

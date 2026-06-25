@@ -30,7 +30,9 @@ import {
   useAddOrderNoteMutation,
   useAddRefundMutation,
   useUpdateOrderStatusMutation,
+  useAcceptRiderMutation,
 } from '@/services/endpoints/ordersApi'
+import { adminOrderStage, awaitingRiderAcceptance } from '@/lib/orderStage'
 import { useGetDriverQuery } from '@/services/endpoints/driversApi'
 import { useGetOpsConfigQuery, useGetStoreSetupQuery, useGetSystemControlsQuery } from '@/services/endpoints/settingsApi'
 import { useAuth } from '@/hooks/useAuth'
@@ -45,6 +47,7 @@ export default function OrderDetailPage() {
   const { data: storeSetup } = useGetStoreSetupQuery()
   const { data: sysControls } = useGetSystemControlsQuery()
   const [updateStatus, { isLoading: updating }] = useUpdateOrderStatusMutation()
+  const [acceptRider, { isLoading: accepting }] = useAcceptRiderMutation()
   const [markCod, { isLoading: markingCod }] = useMarkCodCollectedMutation()
   const [assignOpen, setAssignOpen] = useState(false)
   const [cancelOpen, setCancelOpen] = useState(false)
@@ -103,7 +106,12 @@ export default function OrderDetailPage() {
             <CardHeader
               title="Order items"
               subtitle={`${order.items.length} products · placed ${formatDateTime(order.placedAt)}`}
-              action={<OrderStatusBadge status={order.status} />}
+              action={
+                <div className="flex items-center gap-2">
+                  <Badge tone={adminOrderStage(order).badge}>{adminOrderStage(order).label}</Badge>
+                  <OrderStatusBadge status={order.status} />
+                </div>
+              }
             />
             <CardContent className="space-y-3 pt-2">
               {order.scheduledFor && (
@@ -173,6 +181,21 @@ export default function OrderDetailPage() {
                 )
               ) : (
                 <>
+                  {/* Rider assigned but not yet accepted — admin can mark accepted or reassign. */}
+                  {awaitingRiderAcceptance(order) && (
+                    <div className="rounded-xl bg-amber-50 px-3 py-3">
+                      <p className="text-sm font-medium text-amber-700">Rider assigned — waiting for them to accept.</p>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        <Button size="sm" loading={accepting} onClick={() => acceptRider({ orderId: order.id })}>
+                          Mark rider accepted
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => setAssignOpen(true)}>
+                          Reassign
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Rider-controlled step (full-width info box) */}
                   {nextStatus && nextActor === 'rider' && (
                     needsRider ? (

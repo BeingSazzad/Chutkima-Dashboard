@@ -11,11 +11,13 @@ import { Textarea } from '@/components/ui/Textarea'
 import { StatCard } from '@/components/shared/StatCard'
 import { Avatar } from '@/components/shared/Avatar'
 import { FUEL_RATE_PER_KM } from '@/lib/constants'
-import { cn, formatNPR } from '@/lib/utils'
+import { cn, formatDateTime, formatNPR } from '@/lib/utils'
 import { downloadCSV } from '@/lib/export'
 import { useAuth } from '@/hooks/useAuth'
 import {
   useCollectRiderCashMutation,
+  useConfirmRiderDepositMutation,
+  useGetRiderDepositsQuery,
   useGetRiderFinanceQuery,
   type RiderFinance,
 } from '@/services/endpoints/driversApi'
@@ -32,8 +34,10 @@ export default function RiderFinancePage() {
   const [from, setFrom] = useState(today)
   const [to, setTo] = useState(today)
   const { data: rows = [], isLoading } = useGetRiderFinanceQuery({ from, to })
+  const { data: deposits = [] } = useGetRiderDepositsQuery({ from, to })
   const { data: ops } = useGetOpsConfigQuery()
   const [collectCash, { isLoading: collecting }] = useCollectRiderCashMutation()
+  const [confirmDeposit] = useConfirmRiderDepositMutation()
   const fuelRate = ops?.fuelRatePerKm ?? FUEL_RATE_PER_KM
   const isRange = from !== today || to !== today
 
@@ -65,6 +69,7 @@ export default function RiderFinancePage() {
     await collectCash({
       driverId: collectFor.driverId,
       amount: amountNum,
+      amountDue: outstanding(collectFor),
       note,
       collectedBy: user?.name ?? 'Admin',
     }).unwrap()
@@ -219,8 +224,42 @@ export default function RiderFinancePage() {
         <DataTable columns={columns} data={rows} rowKey={(r) => r.driverId} loading={isLoading} emptyTitle="No rider data" />
       </Card>
 
+      {/* Cash deposit audit trail — rider → store handovers with two-party confirmation. */}
+      <Card className="mt-4">
+        <div className="border-b border-slate-100 px-4 py-3">
+          <p className="font-semibold text-slate-800">Cash deposits</p>
+          <p className="text-xs text-slate-400">Rider → store handovers · amount due, collected, by whom & when · rider sign-off</p>
+        </div>
+        {deposits.length === 0 ? (
+          <p className="px-4 py-6 text-center text-sm text-slate-400">No deposits recorded in this range.</p>
+        ) : (
+          <div className="divide-y divide-slate-50">
+            {deposits.map((d) => (
+              <div key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+                <Avatar name={d.driverName} size="sm" />
+                <div className="min-w-0 flex-1">
+                  <p className="text-sm font-semibold text-slate-800">{d.driverName}</p>
+                  <p className="text-xs text-slate-400">
+                    Due {formatNPR(d.amountDue)} · collected by {d.collectedBy} · {formatDateTime(d.createdAt)}
+                    {d.note ? ` · ${d.note}` : ''}
+                  </p>
+                </div>
+                <span className="text-sm font-bold text-slate-800">{formatNPR(d.amount)}</span>
+                {d.confirmedByRider ? (
+                  <Badge tone="bg-green-50 text-green-700 ring-green-600/15" dot="bg-success">Rider confirmed</Badge>
+                ) : (
+                  <Button size="sm" variant="outline" onClick={() => confirmDeposit(d.id)}>
+                    Mark rider-confirmed
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+
       <p className="mt-3 px-1 text-xs text-slate-400">
-        Net to deposit = COD cash in hand − fuel allowance. Riders keep their fuel and deposit the rest; use “Collect” to record each cash handover.
+        Net to deposit = COD cash in hand − fuel allowance. Riders keep their fuel and deposit the rest; use “Collect” to record each handover, then the rider confirms it.
       </p>
 
       <Modal

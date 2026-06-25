@@ -75,12 +75,27 @@ export const ordersApi = api.injectEndpoints({
         }
         order.driverId = driverId
         order.assignments = [{ driverId, note: '', confirmed: false }]
+        // Newly assigned → status becomes "Rider Assigned" until the rider accepts.
+        order.riderAccepted = false
         // Assigning ≠ picked up. The rider marks "Picked Up" (or admin overrides).
         driver.status = 'on_delivery'
         driver.activeOrderId = orderId
         return { data: clone(order) }
       },
       invalidatesTags: ['Order', 'Driver'],
+    }),
+
+    /** The assigned rider accepts the job → status moves to "Rider Accepted". */
+    acceptRider: build.mutation<Order, { orderId: string }>({
+      async queryFn({ orderId }) {
+        await mockDelay(200)
+        const order = orders.find((o) => o.id === orderId)
+        if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        if (!order.driverId) return { error: { status: 400, data: 'No rider assigned' } as never }
+        order.riderAccepted = true
+        return { data: clone(order) }
+      },
+      invalidatesTags: ['Order'],
     }),
 
     addRider: build.mutation<Order, { orderId: string; driverId: string; note?: string }>({
@@ -294,6 +309,7 @@ export const {
   useGetOrdersQuery,
   useGetOrderQuery,
   useAssignDriverMutation,
+  useAcceptRiderMutation,
   useAddRiderMutation,
   useRemoveRiderMutation,
   useSetRiderNoteMutation,

@@ -11,6 +11,7 @@ import type {
   CustomerTier,
   DeliveryConfig,
   Driver,
+  DriverAccountEvent,
   DriverReport,
   DriverReview,
   DriverWarning,
@@ -197,6 +198,8 @@ function makeOrder(
     storeId: ['Golpark', 'Sukkhanagar', 'Buddhanagar'].includes(cust.zone) ? 's2' : 's1',
     packerId: null,
     packed: ['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
+    // A rider on an in-transit order has already accepted; freshly-assigned ones await acceptance.
+    riderAccepted: driverId != null && ['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
     etaMinutes,
     placedAt: placedAtIso,
     note,
@@ -531,6 +534,9 @@ export const driverWarnings: DriverWarning[] = [
   { id: 'dw1', driverId: 'd6', severity: 'warning', message: 'Do not ask customers for extra cash. Any fuel allowance is settled by the company, not the customer.', reportId: 'rp3', issuedBy: 'Kiran Chetri', createdAt: daysAgo(2) },
 ]
 
+// ── Driver account events (suspension / termination / reinstatement records) ──
+export const driverAccountEvents: DriverAccountEvent[] = []
+
 // ── Transactions ────────────────────────────────────────────────────────────
 export const transactions: Transaction[] = [
   { id: 't1', type: 'order_payment', reference: '#GF-48202-NP', party: 'Gita Khadka', amount: 145, method: 'eSewa', status: 'success', orderId: 'o1', createdAt: minsAgo(9) },
@@ -549,7 +555,7 @@ export const transactions: Transaction[] = [
 
 // ── Rider cash deposits (rider hands collected COD cash to the store/admin) ───
 export const riderDeposits: RiderDeposit[] = [
-  { id: 'dep1', driverId: 'd1', driverName: 'Manoj Thapa', amount: 1200, note: 'Morning shift COD handover', collectedBy: 'Kiran Chetri', createdAt: daysAgo(1) },
+  { id: 'dep1', driverId: 'd1', driverName: 'Manoj Thapa', amountDue: 1200, amount: 1200, note: 'Morning shift COD handover', collectedBy: 'Kiran Chetri', confirmedByRider: true, confirmedAt: daysAgo(1), createdAt: daysAgo(1) },
 ]
 
 // ── Search analytics (what customers searched) ──────────────────────────────

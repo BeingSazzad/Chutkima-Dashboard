@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Bike, Check, History, ShieldAlert, X } from 'lucide-react'
+import { Bike, Check, Download, History, ShieldAlert, X } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -11,9 +10,11 @@ import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
 import { Avatar } from '@/components/shared/Avatar'
 import { Stars } from '@/components/shared/Stars'
+import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { WarnRiderModal } from '@/components/drivers/WarnRiderModal'
 import { REPORT_REASON_META, REPORT_STATUS_META } from '@/lib/constants'
-import { formatDateTime, timeAgo } from '@/lib/utils'
+import { downloadCSV } from '@/lib/export'
+import { formatDateTime, openInNewTab, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { useAuth } from '@/hooks/useAuth'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
@@ -68,23 +69,53 @@ function RiderCell({ driver, onOpen }: { driver?: Driver; onOpen: () => void }) 
 }
 
 function ReportsTable() {
-  const navigate = useNavigate()
   const { user } = useAuth()
   const { data: reports = [], isLoading } = useGetReportsQuery()
   const { data: drivers = [] } = useGetDriversQuery()
   const [update, { isLoading: updating }] = useUpdateReportStatusMutation()
   const [auditFor, setAuditFor] = useState<DriverReport | null>(null)
   const [warnFor, setWarnFor] = useState<DriverReport | null>(null)
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const driver = (id: string) => drivers.find((d) => d.id === id)
   const adminName = user?.name ?? 'Admin'
   // Keep the open audit modal in sync with refetched data.
   const auditReport = auditFor ? reports.find((r) => r.id === auditFor.id) ?? auditFor : null
 
+  const filtered = reports.filter((r) => {
+    const day = r.createdAt.slice(0, 10)
+    return (!from || day >= from) && (!to || day <= to)
+  })
+
+  const exportCsv = () => {
+    downloadCSV(
+      'chutkima-rider-reports.csv',
+      filtered.map((r) => ({
+        rider: driver(r.driverId)?.name ?? r.driverId,
+        reason: REPORT_REASON_META[r.reason],
+        details: r.details,
+        reportedBy: r.customerName,
+        orderId: r.orderId,
+        status: REPORT_STATUS_META[r.status].label,
+        date: formatDateTime(r.createdAt),
+      })),
+      [
+        { key: 'rider', label: 'Rider' },
+        { key: 'reason', label: 'Reason' },
+        { key: 'details', label: 'What happened' },
+        { key: 'reportedBy', label: 'Reported by' },
+        { key: 'orderId', label: 'Order' },
+        { key: 'status', label: 'Status' },
+        { key: 'date', label: 'Date' },
+      ],
+    )
+  }
+
   const columns: Column<DriverReport>[] = [
     {
       key: 'rider',
       header: 'Rider reported',
-      cell: (r) => <RiderCell driver={driver(r.driverId)} onOpen={() => navigate(ROUTES.driverDetail(r.driverId))} />,
+      cell: (r) => <RiderCell driver={driver(r.driverId)} onOpen={() => openInNewTab(ROUTES.driverDetail(r.driverId))} />,
     },
     { key: 'reason', header: 'Reason', cell: (r) => <Badge tone="bg-red-50 text-red-700 ring-red-600/15">{REPORT_REASON_META[r.reason]}</Badge> },
     {
@@ -137,9 +168,15 @@ function ReportsTable() {
 
   return (
     <>
+      <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
+        <DateRangeFilter from={from} to={to} onChange={(r) => { setFrom(r.from); setTo(r.to) }} />
+        <Button variant="outline" size="sm" leftIcon={<Download className="h-4 w-4" />} onClick={exportCsv} disabled={filtered.length === 0}>
+          Export CSV
+        </Button>
+      </div>
       <DataTable
         columns={columns}
-        data={reports}
+        data={filtered}
         rowKey={(r) => r.id}
         loading={isLoading}
         emptyTitle="No reports"
@@ -230,7 +267,6 @@ function ComplaintAuditModal({ report, adminName, onClose }: { report: DriverRep
 }
 
 function ReviewsTable() {
-  const navigate = useNavigate()
   const { data: reviews = [], isLoading } = useGetReviewsQuery()
   const { data: drivers = [] } = useGetDriversQuery()
   const driver = (id: string) => drivers.find((d) => d.id === id)
@@ -239,7 +275,7 @@ function ReviewsTable() {
     {
       key: 'rider',
       header: 'Rider',
-      cell: (rv) => <RiderCell driver={driver(rv.driverId)} onOpen={() => navigate(ROUTES.driverDetail(rv.driverId))} />,
+      cell: (rv) => <RiderCell driver={driver(rv.driverId)} onOpen={() => openInNewTab(ROUTES.driverDetail(rv.driverId))} />,
     },
     {
       key: 'rating',

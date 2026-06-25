@@ -85,8 +85,10 @@ export interface Order {
   storeId: ID
   /** Optional packer assigned to pick & pack this order. */
   packerId: ID | null
-  /** Admin has confirmed packing is complete. */
+  /** Admin has confirmed packing is complete (order is "Ready to Collect"). */
   packed: boolean
+  /** The assigned rider has accepted the job (false right after assignment). */
+  riderAccepted: boolean
   etaMinutes: number
   placedAt: string
   /** Customer delivery instructions / note from checkout. */
@@ -172,6 +174,8 @@ export interface Driver {
   vehicleRegDoc?: string
   vehicle: string
   status: DriverStatus
+  /** Employment standing — defaults to active when unset. */
+  accountStatus?: DriverAccountStatus
   zone: string
   rating: number
   activeOrderId: ID | null
@@ -251,13 +255,20 @@ export interface Customer {
 }
 
 /** Banner placement on the customer app. */
-export type BannerPlacement = 'hero' | 'grid_small' | 'category_strip'
+export type BannerPlacement = 'hero' | 'grid_small' | 'category_strip' | 'vertical'
+
+/** Banner media — a still image or a short video. */
+export type BannerMedia = 'image' | 'video'
 
 export interface Banner {
   id: ID
   title: string
   subtitle: string
   image: string
+  /** Whether this banner shows an image or a video (defaults to image). */
+  mediaType?: BannerMedia
+  /** Video source URL (used when mediaType === 'video'). */
+  video?: string
   placement: BannerPlacement
   /** Sort order within its placement (lower = first). */
   position: number
@@ -473,6 +484,20 @@ export interface DriverReport {
   actions: ComplaintAction[]
 }
 
+/** A rider's employment/account standing (separate from on-shift availability). */
+export type DriverAccountStatus = 'active' | 'suspended' | 'terminated'
+export type DriverAccountAction = 'suspended' | 'terminated' | 'reinstated'
+
+/** A suspension / termination / reinstatement record for a rider (audit trail). */
+export interface DriverAccountEvent {
+  id: ID
+  driverId: ID
+  action: DriverAccountAction
+  reason: string
+  by: string
+  at: string
+}
+
 /** Escalation level of a warning issued to a rider. */
 export type WarningSeverity = 'notice' | 'warning' | 'final'
 
@@ -510,10 +535,16 @@ export interface RiderDeposit {
   id: ID
   driverId: ID
   driverName: string
+  /** Cash that was owed (net to deposit) at the time of collection. */
+  amountDue: number
+  /** Cash actually handed over / collected. */
   amount: number
   note: string
   /** Admin who received the cash. */
   collectedBy: string
+  /** The rider has confirmed this handover (two-party sign-off). */
+  confirmedByRider: boolean
+  confirmedAt?: string
   createdAt: string
 }
 

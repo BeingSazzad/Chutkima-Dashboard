@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Bike, CheckCircle2, Eye, Pencil, Phone, Plus, PowerOff, Search, Star, Trash2, Truck } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -28,7 +27,6 @@ import { ZONES } from '@/lib/constants'
 import type { Driver, DriverStatus } from '@/types/common.types'
 
 export default function DriversPage() {
-  const navigate = useNavigate()
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
   const debounced = useDebounce(search, 300)
@@ -119,7 +117,7 @@ export default function DriversPage() {
           ) : d.status === 'available' ? (
             <Button size="sm" variant="outline" onClick={() => setDriverStatus({ id: d.id, status: 'offline' })}>Set offline</Button>
           ) : null}
-          <button onClick={() => navigate(ROUTES.driverDetail(d.id))} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="View info">
+          <button onClick={() => openInNewTab(ROUTES.driverDetail(d.id))} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="View info">
             <Eye className="h-4 w-4" />
           </button>
           <button onClick={() => setFormFor(d)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit">
@@ -182,7 +180,7 @@ export default function DriversPage() {
           columns={columns}
           data={drivers}
           rowKey={(d) => d.id}
-          onRowClick={(d) => navigate(ROUTES.driverDetail(d.id))}
+          onRowClick={(d) => openInNewTab(ROUTES.driverDetail(d.id))}
           loading={isLoading}
           emptyTitle="No riders found"
         />

@@ -56,11 +56,21 @@ export default function DriversPage() {
     {
       key: 'rider',
       header: 'Rider',
+      className: 'whitespace-nowrap',
       cell: (d) => (
         <div className="flex items-center gap-3">
           <Avatar name={d.name} src={d.avatar} />
           <div className="min-w-0">
-            <p className="font-semibold text-slate-800">{d.name}</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                openInNewTab(ROUTES.driverDetail(d.id))
+              }}
+              className="focus-ring rounded font-semibold text-slate-800 hover:text-brand-700 hover:underline"
+              title="Open rider details"
+            >
+              {d.name}
+            </button>
             <p className="flex items-center gap-1 text-xs text-slate-400">
               <Phone className="h-3 w-3" /> {d.phone}
             </p>

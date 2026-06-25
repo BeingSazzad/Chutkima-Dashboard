@@ -45,12 +45,22 @@ export default function CustomersPage() {
     {
       key: 'name',
       header: 'Customer',
+      className: 'whitespace-nowrap',
       cell: (c) => (
         <div className="flex items-center gap-3">
           <Avatar name={c.name} />
           <div>
             <div className="flex items-center gap-2">
-              <p className="font-semibold text-slate-800">{c.name}</p>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation()
+                  openInNewTab(ROUTES.customerDetail(c.id))
+                }}
+                className="focus-ring rounded font-semibold text-slate-800 hover:text-brand-700 hover:underline"
+                title="Open customer details"
+              >
+                {c.name}
+              </button>
               {c.banned && <Badge tone="bg-red-50 text-red-700 ring-red-600/15">Banned</Badge>}
             </div>
             <p className="flex items-center gap-1 text-xs text-slate-400">

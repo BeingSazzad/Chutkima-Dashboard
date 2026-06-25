@@ -38,7 +38,7 @@ export function PageHeader({ title, description, breadcrumbs, actions }: PageHea
         <h1 className="text-2xl font-extrabold tracking-tight text-slate-800">{title}</h1>
         {description && <p className="mt-1 text-sm text-slate-500">{description}</p>}
       </div>
-      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      {actions && <div className="flex flex-wrap items-center gap-2 sm:justify-end">{actions}</div>}
     </div>
   )
 }

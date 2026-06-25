@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, Bike, Clock3, Search, UserPlus } from 'lucide-react'
+import { AlertTriangle, Bike, Clock3, Eye, Search, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -118,10 +118,20 @@ export default function OrdersPage() {
     {
       key: 'ref',
       header: 'Order',
+      className: 'whitespace-nowrap',
       cell: (o) => (
         <div>
           <div className="flex items-center gap-2">
-            <p className="font-semibold text-slate-800">{o.reference}</p>
+            <button
+              onClick={(e) => {
+                e.stopPropagation()
+                openInNewTab(ROUTES.orderDetail(o.id))
+              }}
+              className="focus-ring rounded font-semibold text-brand-700 hover:underline"
+              title="Open order details"
+            >
+              {o.reference}
+            </button>
             {o.scheduledFor && <Badge tone="bg-violet-50 text-violet-700 ring-violet-600/15">Scheduled</Badge>}
           </div>
           <p className="text-xs text-slate-400">{o.scheduledFor ? `For ${fmtSchedule(o.scheduledFor)}` : timeAgo(o.placedAt)}</p>
@@ -131,6 +141,7 @@ export default function OrdersPage() {
     {
       key: 'customer',
       header: 'Customer',
+      className: 'whitespace-nowrap',
       cell: (o) => (
         <div className="flex items-center gap-2.5">
           <Avatar name={o.customerName} size="sm" />
@@ -144,21 +155,25 @@ export default function OrdersPage() {
     {
       key: 'items',
       header: 'Items',
+      className: 'whitespace-nowrap',
       cell: (o) => <span className="text-slate-600">{o.items.reduce((s, i) => s + i.quantity, 0)} items</span>,
     },
     {
       key: 'total',
       header: 'Total',
+      className: 'whitespace-nowrap',
       cell: (o) => <p className="font-bold text-slate-800">{formatNPR(o.grandTotal)}</p>,
     },
     {
       key: 'payment',
       header: 'Payment',
+      className: 'whitespace-nowrap',
       cell: (o) => <PaymentBadge method={o.paymentMethod} status={o.paymentStatus} />,
     },
     {
       key: 'driver',
       header: 'Rider',
+      className: 'whitespace-nowrap',
       cell: (o) =>
         o.driverId ? (
           <div className="text-sm font-medium text-slate-700">
@@ -182,6 +197,7 @@ export default function OrdersPage() {
     {
       key: 'stage',
       header: 'Fulfilment',
+      className: 'whitespace-nowrap',
       cell: (o) => {
         const stage = adminOrderStage(o)
         return <Badge tone={stage.badge}>{stage.label}</Badge>
@@ -190,18 +206,20 @@ export default function OrdersPage() {
     {
       key: 'status',
       header: 'Status',
+      className: 'whitespace-nowrap',
       cell: (o) => <OrderStatusSelect status={o.status} loading={pendingId === o.id} onChange={(status) => changeStatus(o, status)} />,
     },
     {
       key: 'action',
       header: '',
       headerClassName: 'text-right',
-      className: 'text-right',
-      cell: (o) =>
-        ['delivered', 'cancelled'].includes(o.status) ? (
+      className: 'whitespace-nowrap text-right',
+      cell: (o) => (
+        <div className="flex items-center justify-end gap-1.5">
           <Button
             variant="ghost"
             size="sm"
+            leftIcon={<Eye className="h-3.5 w-3.5" />}
             onClick={(e) => {
               e.stopPropagation()
               openInNewTab(ROUTES.orderDetail(o.id))
@@ -209,19 +227,21 @@ export default function OrdersPage() {
           >
             View
           </Button>
-        ) : (
-          <Button
-            variant={o.driverId ? 'outline' : 'secondary'}
-            size="sm"
-            leftIcon={<UserPlus className="h-3.5 w-3.5" />}
-            onClick={(e) => {
-              e.stopPropagation()
-              setAssignFor(o)
-            }}
-          >
-            {o.driverId ? 'Reassign' : 'Assign'}
-          </Button>
-        ),
+          {!['delivered', 'cancelled'].includes(o.status) && (
+            <Button
+              variant={o.driverId ? 'outline' : 'secondary'}
+              size="sm"
+              leftIcon={<UserPlus className="h-3.5 w-3.5" />}
+              onClick={(e) => {
+                e.stopPropagation()
+                setAssignFor(o)
+              }}
+            >
+              {o.driverId ? 'Reassign' : 'Assign'}
+            </Button>
+          )}
+        </div>
+      ),
     },
   ]
 

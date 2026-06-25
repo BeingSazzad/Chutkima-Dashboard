@@ -63,6 +63,11 @@ export function maskPhone(phone: string): string {
   return `${digits.slice(0, 6)}••••••${digits.slice(-2)}`
 }
 
+/** Open an in-app path in a new browser tab (without granting it opener access). */
+export function openInNewTab(path: string): void {
+  window.open(path, '_blank', 'noopener,noreferrer')
+}
+
 /** Percentage change with sign, e.g. +12.4%. */
 export function pctChange(value: number): string {
   const sign = value > 0 ? '+' : ''

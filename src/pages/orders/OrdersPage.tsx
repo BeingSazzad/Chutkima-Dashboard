@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { Bike, Search, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -8,14 +7,17 @@ import { Tabs, type TabItem } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
+import { Modal } from '@/components/ui/Modal'
+import { Textarea } from '@/components/ui/Textarea'
 import { Avatar } from '@/components/shared/Avatar'
-import { OrderStatusBadge, PaymentBadge } from '@/components/shared/StatusBadge'
+import { PaymentBadge } from '@/components/shared/StatusBadge'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
-import { ZONES } from '@/lib/constants'
-import { formatNPR, timeAgo } from '@/lib/utils'
+import { OrderStatusSelect } from '@/components/orders/OrderStatusSelect'
+import { PAYMENT_META, ZONES } from '@/lib/constants'
+import { formatNPR, openInNewTab, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { useDebounce } from '@/hooks/useDebounce'
-import { useGetOrdersQuery } from '@/services/endpoints/ordersApi'
+import { useGetOrdersQuery, useUpdateOrderStatusMutation } from '@/services/endpoints/ordersApi'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import type { Order, OrderStatus, PaymentMethod } from '@/types/common.types'
@@ -34,7 +36,6 @@ const fmtSchedule = (iso: string) =>
   new Date(iso).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 export default function OrdersPage() {
-  const navigate = useNavigate()
   const [tab, setTab] = useState<string>('all')
   const [zone, setZone] = useState('')
   const [payment, setPayment] = useState('')
@@ -43,7 +44,32 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [assignFor, setAssignFor] = useState<Order | null>(null)
+  const [cancelFor, setCancelFor] = useState<Order | null>(null)
+  const [cancelReason, setCancelReason] = useState('')
+  const [pendingId, setPendingId] = useState<string | null>(null)
+  const [updateStatus, { isLoading: cancelling }] = useUpdateOrderStatusMutation()
   const { data: stores = [] } = useGetStoresQuery()
+
+  /** Quick inline status change. Cancelling needs a reason, so route it to the modal. */
+  const changeStatus = async (order: Order, status: OrderStatus) => {
+    if (status === 'cancelled') {
+      setCancelFor(order)
+      return
+    }
+    setPendingId(order.id)
+    try {
+      await updateStatus({ orderId: order.id, status }).unwrap()
+    } finally {
+      setPendingId(null)
+    }
+  }
+
+  const confirmCancel = async () => {
+    if (!cancelFor || !cancelReason.trim()) return
+    await updateStatus({ orderId: cancelFor.id, status: 'cancelled', reason: cancelReason.trim() }).unwrap()
+    setCancelFor(null)
+    setCancelReason('')
+  }
 
   const { data: orders = [], isLoading } = useGetOrdersQuery({
     status: (tab === 'scheduled' ? 'all' : tab) as OrderStatus | 'all',
@@ -133,7 +159,11 @@ export default function OrdersPage() {
           <span className="text-xs font-medium text-amber-600">Unassigned</span>
         ),
     },
-    { key: 'status', header: 'Status', cell: (o) => <OrderStatusBadge status={o.status} /> },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (o) => <OrderStatusSelect status={o.status} loading={pendingId === o.id} onChange={(status) => changeStatus(o, status)} />,
+    },
     {
       key: 'action',
       header: '',
@@ -141,7 +171,14 @@ export default function OrdersPage() {
       className: 'text-right',
       cell: (o) =>
         ['delivered', 'cancelled'].includes(o.status) ? (
-          <Button variant="ghost" size="sm" onClick={() => navigate(ROUTES.orderDetail(o.id))}>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={(e) => {
+              e.stopPropagation()
+              openInNewTab(ROUTES.orderDetail(o.id))
+            }}
+          >
             View
           </Button>
         ) : (
@@ -223,7 +260,7 @@ export default function OrdersPage() {
           columns={columns}
           data={shown}
           rowKey={(o) => o.id}
-          onRowClick={(o) => navigate(ROUTES.orderDetail(o.id))}
+          onRowClick={(o) => openInNewTab(ROUTES.orderDetail(o.id))}
           loading={isLoading}
           emptyTitle="No orders found"
           emptyDescription="Try a different filter or search term."
@@ -231,6 +268,47 @@ export default function OrdersPage() {
       </Card>
 
       <AssignDriverModal order={assignFor} open={!!assignFor} onClose={() => setAssignFor(null)} />
+
+      <Modal
+        open={!!cancelFor}
+        onClose={() => {
+          setCancelFor(null)
+          setCancelReason('')
+        }}
+        title="Cancel order"
+        description={cancelFor ? `Order ${cancelFor.reference}` : undefined}
+        size="sm"
+        footer={
+          <>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setCancelFor(null)
+                setCancelReason('')
+              }}
+            >
+              Keep order
+            </Button>
+            <Button variant="danger" loading={cancelling} disabled={!cancelReason.trim()} onClick={confirmCancel}>
+              Cancel order
+            </Button>
+          </>
+        }
+      >
+        <Textarea
+          label="Reason for cancellation (required)"
+          value={cancelReason}
+          onChange={(e) => setCancelReason(e.target.value)}
+          rows={3}
+          placeholder="e.g. Customer not reachable / item unavailable"
+          autoFocus
+        />
+        {cancelFor && cancelFor.paymentMethod !== 'cod' && (
+          <p className="mt-2 text-xs text-slate-400">
+            A prepaid order will be auto-refunded to {PAYMENT_META[cancelFor.paymentMethod].label}.
+          </p>
+        )}
+      </Modal>
     </>
   )
 }

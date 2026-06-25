@@ -19,7 +19,7 @@ import { CREDIT_TYPE_META } from '@/lib/constants'
 import { useGetTrustConfigQuery } from '@/services/endpoints/settingsApi'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { useAuth } from '@/hooks/useAuth'
-import { formatDateTime, formatNPR, timeAgo } from '@/lib/utils'
+import { formatDateTime, formatNPR, openInNewTab, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import {
   useAddCustomerCreditMutation,
@@ -200,7 +200,7 @@ export default function CustomerDetailPage() {
                 {orders.map((o) => (
                   <button
                     key={o.id}
-                    onClick={() => navigate(ROUTES.orderDetail(o.id))}
+                    onClick={() => openInNewTab(ROUTES.orderDetail(o.id))}
                     className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-mint-50"
                   >
                     <div className="flex -space-x-3">

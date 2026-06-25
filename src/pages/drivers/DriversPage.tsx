@@ -14,6 +14,7 @@ import { ImageUpload } from '@/components/ui/ImageUpload'
 import { Avatar } from '@/components/shared/Avatar'
 import { StatCard } from '@/components/shared/StatCard'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
+import { openInNewTab } from '@/lib/utils'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
   useDeleteDriverMutation,
@@ -84,7 +85,7 @@ export default function DriversPage() {
       header: 'Active order',
       cell: (d) =>
         d.activeOrderId ? (
-          <button onClick={(e) => { e.stopPropagation(); navigate(ROUTES.orderDetail(d.activeOrderId!)) }} className="text-sm font-semibold text-brand-600 hover:underline">
+          <button onClick={(e) => { e.stopPropagation(); openInNewTab(ROUTES.orderDetail(d.activeOrderId!)) }} className="text-sm font-semibold text-brand-600 hover:underline">
             {orderRef(d.activeOrderId) ?? 'On order'}
           </button>
         ) : (

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { CalendarDays } from 'lucide-react'
 import { Select } from '@/components/ui/Select'
 import { cn } from '@/lib/utils'
 
@@ -99,8 +100,9 @@ export function DateRangeFilter({ from, to, onChange, max, clearable = true, cla
 
   return (
     <div className={cn('flex flex-wrap items-center gap-2', className)}>
-      <div className="w-36">
-        <Select value={preset} onChange={(e) => choose(e.target.value as Preset)} options={options} />
+      <div className="relative w-44">
+        <CalendarDays className="pointer-events-none absolute left-3 top-1/2 z-10 h-4 w-4 -translate-y-1/2 text-slate-400" />
+        <Select value={preset} onChange={(e) => choose(e.target.value as Preset)} options={options} className="pl-9" />
       </div>
 
       {preset === 'day' && (

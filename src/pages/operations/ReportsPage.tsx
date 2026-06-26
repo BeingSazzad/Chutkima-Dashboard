@@ -137,7 +137,7 @@ function ReportsTable() {
       ),
     },
     { key: 'status', header: 'Status', cell: (r) => <Badge tone={REPORT_STATUS_META[r.status].badge}>{REPORT_STATUS_META[r.status].label}</Badge> },
-    { key: 'date', header: 'When', cell: (r) => <span className="text-slate-500">{timeAgo(r.createdAt)}</span> },
+    { key: 'date', header: 'When', className: 'whitespace-nowrap', cell: (r) => <span className="text-slate-500">{timeAgo(r.createdAt)}</span> },
     {
       key: 'actions',
       header: 'Actions',
@@ -301,7 +301,7 @@ function ReviewsTable() {
         </div>
       ),
     },
-    { key: 'date', header: 'When', cell: (rv) => <span className="text-slate-500">{timeAgo(rv.createdAt)}</span> },
+    { key: 'date', header: 'When', className: 'whitespace-nowrap', cell: (rv) => <span className="text-slate-500">{timeAgo(rv.createdAt)}</span> },
   ]
 
   return (

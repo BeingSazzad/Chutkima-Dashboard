@@ -184,7 +184,7 @@ export default function OrderDetailPage() {
                   {order.status === 'pending' && (
                     <div className="rounded-xl bg-blue-50 px-3 py-3">
                       <p className="text-sm font-medium text-blue-700">New order — confirm to dispatch to packer &amp; rider.</p>
-                      <Button className="mt-2" size="sm" loading={updating} onClick={() => updateStatus({ orderId: order.id, status: 'confirmed' })}>
+                      <Button className="mt-2" loading={updating} onClick={() => updateStatus({ orderId: order.id, status: 'confirmed' })}>
                         Confirm order
                       </Button>
                     </div>
@@ -210,7 +210,7 @@ export default function OrderDetailPage() {
                     needsRider ? (
                       <div className="rounded-xl bg-amber-50 px-3 py-3">
                         <p className="text-sm font-medium text-amber-700">Assign a rider to begin delivery.</p>
-                        <Button className="mt-2" size="sm" onClick={() => setAssignOpen(true)}>
+                        <Button className="mt-2" size="sm" variant="secondary" onClick={() => setAssignOpen(true)}>
                           Assign rider
                         </Button>
                       </div>
@@ -237,11 +237,13 @@ export default function OrderDetailPage() {
                     </p>
                   )}
 
-                  {/* Cancel — allowed only before the rider picks up. */}
+                  {/* Cancel — destructive, separated and de-emphasised, only pre-pickup. */}
                   {['pending', 'confirmed', 'packing', 'packed'].includes(order.status) && (
-                    <Button variant="danger" onClick={() => setCancelOpen(true)}>
-                      Cancel order
-                    </Button>
+                    <div className="border-t border-slate-100 pt-3">
+                      <Button variant="danger" size="sm" onClick={() => setCancelOpen(true)}>
+                        Cancel order
+                      </Button>
+                    </div>
                   )}
                 </>
               )}

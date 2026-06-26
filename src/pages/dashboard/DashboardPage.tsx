@@ -21,7 +21,7 @@ import { Spinner } from '@/components/ui/Spinner'
 import { ProductThumb } from '@/components/shared/ProductThumb'
 import { Avatar } from '@/components/shared/Avatar'
 import { OrderStatusBadge } from '@/components/shared/StatusBadge'
-import { formatCompact, formatNPR, openInNewTab, timeAgo } from '@/lib/utils'
+import { formatCompact, formatNPR, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { useGetOrdersQuery } from '@/services/endpoints/ordersApi'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
@@ -180,7 +180,7 @@ export default function DashboardPage() {
                 {recentOrders.map((o) => (
                   <button
                     key={o.id}
-                    onClick={() => openInNewTab(ROUTES.orderDetail(o.id))}
+                    onClick={() => navigate(ROUTES.orderDetail(o.id))}
                     className="flex w-full items-center gap-3 py-3 text-left transition-colors hover:bg-mint-50"
                   >
                     <div className="flex -space-x-3">

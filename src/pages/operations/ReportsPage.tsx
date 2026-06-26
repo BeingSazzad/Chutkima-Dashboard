@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Bike, Check, Download, History, ShieldAlert, X } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -14,7 +15,7 @@ import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { WarnRiderModal } from '@/components/drivers/WarnRiderModal'
 import { REPORT_REASON_META, REPORT_STATUS_META } from '@/lib/constants'
 import { downloadCSV } from '@/lib/export'
-import { formatDateTime, openInNewTab, timeAgo } from '@/lib/utils'
+import { formatDateTime, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { useAuth } from '@/hooks/useAuth'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
@@ -69,6 +70,7 @@ function RiderCell({ driver, onOpen }: { driver?: Driver; onOpen: () => void }) 
 }
 
 function ReportsTable() {
+  const navigate = useNavigate()
   const { user } = useAuth()
   const { data: reports = [], isLoading } = useGetReportsQuery()
   const { data: drivers = [] } = useGetDriversQuery()
@@ -115,7 +117,7 @@ function ReportsTable() {
     {
       key: 'rider',
       header: 'Rider reported',
-      cell: (r) => <RiderCell driver={driver(r.driverId)} onOpen={() => openInNewTab(ROUTES.driverDetail(r.driverId))} />,
+      cell: (r) => <RiderCell driver={driver(r.driverId)} onOpen={() => navigate(ROUTES.driverDetail(r.driverId))} />,
     },
     { key: 'reason', header: 'Reason', cell: (r) => <Badge tone="bg-red-50 text-red-700 ring-red-600/15">{REPORT_REASON_META[r.reason]}</Badge> },
     {
@@ -267,6 +269,7 @@ function ComplaintAuditModal({ report, adminName, onClose }: { report: DriverRep
 }
 
 function ReviewsTable() {
+  const navigate = useNavigate()
   const { data: reviews = [], isLoading } = useGetReviewsQuery()
   const { data: drivers = [] } = useGetDriversQuery()
   const driver = (id: string) => drivers.find((d) => d.id === id)
@@ -275,7 +278,7 @@ function ReviewsTable() {
     {
       key: 'rider',
       header: 'Rider',
-      cell: (rv) => <RiderCell driver={driver(rv.driverId)} onOpen={() => openInNewTab(ROUTES.driverDetail(rv.driverId))} />,
+      cell: (rv) => <RiderCell driver={driver(rv.driverId)} onOpen={() => navigate(ROUTES.driverDetail(rv.driverId))} />,
     },
     {
       key: 'rating',

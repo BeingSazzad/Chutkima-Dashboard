@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Bike, CheckCircle2, Download, Eye, Pencil, Phone, Plus, PowerOff, Search, Star, Trash2, Truck } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -29,6 +30,7 @@ import { ZONES } from '@/lib/constants'
 import type { Driver, DriverStatus } from '@/types/common.types'
 
 export default function DriversPage() {
+  const navigate = useNavigate()
   const [status, setStatus] = useState('')
   const [search, setSearch] = useState('')
   const debounced = useDebounce(search, 300)
@@ -98,7 +100,7 @@ export default function DriversPage() {
             <button
               onClick={(e) => {
                 e.stopPropagation()
-                openInNewTab(ROUTES.driverDetail(d.id))
+                navigate(ROUTES.driverDetail(d.id))
               }}
               className="focus-ring rounded font-semibold text-slate-800 hover:text-brand-700 hover:underline"
               title="Open rider details"
@@ -127,7 +129,7 @@ export default function DriversPage() {
       header: 'Active order',
       cell: (d) =>
         d.activeOrderId ? (
-          <button onClick={(e) => { e.stopPropagation(); openInNewTab(ROUTES.orderDetail(d.activeOrderId!)) }} className="text-sm font-semibold text-brand-600 hover:underline">
+          <button onClick={(e) => { e.stopPropagation(); navigate(ROUTES.orderDetail(d.activeOrderId!)) }} className="text-sm font-semibold text-brand-600 hover:underline">
             {orderRef(d.activeOrderId) ?? 'On order'}
           </button>
         ) : (
@@ -229,7 +231,7 @@ export default function DriversPage() {
           columns={columns}
           data={drivers}
           rowKey={(d) => d.id}
-          onRowClick={(d) => openInNewTab(ROUTES.driverDetail(d.id))}
+          onRowClick={(d) => navigate(ROUTES.driverDetail(d.id))}
           loading={isLoading}
           emptyTitle="No riders found"
         />

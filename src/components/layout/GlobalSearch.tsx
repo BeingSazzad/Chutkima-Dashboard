@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { Search, ShoppingBag, User } from 'lucide-react'
 import { Avatar } from '@/components/shared/Avatar'
 import { ProductThumb } from '@/components/shared/ProductThumb'
-import { formatNPR, openInNewTab } from '@/lib/utils'
+import { formatNPR } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useGetProductsQuery } from '@/services/endpoints/productsApi'
@@ -55,11 +55,7 @@ export function GlobalSearch() {
                 {orders.slice(0, 4).map((o) => (
                   <button
                     key={o.id}
-                    onClick={() => {
-                      setOpen(false)
-                      setQuery('')
-                      openInNewTab(ROUTES.orderDetail(o.id))
-                    }}
+                    onClick={() => go(ROUTES.orderDetail(o.id))}
                     className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-mint-50"
                   >
                     <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-brand-50 text-brand-600"><ShoppingBag className="h-4 w-4" /></span>
@@ -92,11 +88,7 @@ export function GlobalSearch() {
                 {customers.slice(0, 4).map((c) => (
                   <button
                     key={c.id}
-                    onClick={() => {
-                      setOpen(false)
-                      setQuery('')
-                      openInNewTab(ROUTES.customerDetail(c.id))
-                    }}
+                    onClick={() => go(ROUTES.customerDetail(c.id))}
                     className="flex w-full items-center gap-3 rounded-lg px-2 py-2 text-left hover:bg-mint-50"
                   >
                     <Avatar name={c.name} size="sm" />

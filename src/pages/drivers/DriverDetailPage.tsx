@@ -83,9 +83,6 @@ export default function DriverDetailPage() {
         breadcrumbs={[{ label: 'Drivers', to: ROUTES.drivers }, { label: driver.name }]}
         actions={
           <>
-            <Button variant="danger" leftIcon={<ShieldAlert className="h-4 w-4" />} onClick={() => setWarnFor({})}>
-              Warn rider
-            </Button>
             {accountStatus === 'active' ? (
               <>
                 <Button variant="outline" leftIcon={<Ban className="h-4 w-4" />} onClick={() => setAcctAction('suspended')}>
@@ -100,6 +97,9 @@ export default function DriverDetailPage() {
                 Reinstate
               </Button>
             )}
+            <Button variant="danger" leftIcon={<ShieldAlert className="h-4 w-4" />} onClick={() => setWarnFor({})}>
+              Warn rider
+            </Button>
             <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate(ROUTES.drivers)}>
               Back
             </Button>

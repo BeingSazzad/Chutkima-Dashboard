@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/shared/Avatar'
 import { AssignDriverModal } from './AssignDriverModal'
-import { cn } from '@/lib/utils'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
 import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
 import {
@@ -81,12 +80,14 @@ export function RiderCard({ order, onAssignPrimary }: { order: Order; onAssignPr
                       className="focus-ring h-8 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-2.5 text-xs"
                     />
                     {!closed && (
-                      <button
+                      <Button
+                        size="sm"
+                        variant={a.confirmed ? 'secondary' : 'outline'}
+                        className="h-8 px-2.5 text-xs"
                         onClick={() => confirmRider({ orderId: order.id, driverId: a.driverId })}
-                        className={cn('rounded-lg px-2 py-1 text-xs font-semibold', a.confirmed ? 'bg-green-50 text-green-700' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')}
                       >
                         {a.confirmed ? 'Confirmed' : 'Mark confirmed'}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 )}

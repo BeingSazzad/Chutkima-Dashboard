@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Bike, Check, Clock3, Download, Eye, Search, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -44,6 +45,7 @@ const fmtSchedule = (iso: string) =>
   new Date(iso).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 export default function OrdersPage() {
+  const navigate = useNavigate()
   const [tab, setTab] = useState<string>('all')
   const [zone, setZone] = useState('')
   const [payment, setPayment] = useState('')
@@ -178,7 +180,7 @@ export default function OrdersPage() {
           <button
             onClick={(e) => {
               e.stopPropagation()
-              openInNewTab(ROUTES.orderDetail(o.id))
+              navigate(ROUTES.orderDetail(o.id))
             }}
             className="focus-ring rounded font-semibold text-brand-700 hover:underline"
             title="Open order details"
@@ -267,18 +269,20 @@ export default function OrdersPage() {
       headerClassName: 'text-right',
       className: 'whitespace-nowrap text-right',
       cell: (o) => (
-        <div className="flex items-center justify-end gap-1">
-          <button
+        <div className="flex items-center justify-end gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="px-2"
             onClick={(e) => {
               e.stopPropagation()
               openInNewTab(ROUTES.orderDetail(o.id))
             }}
-            className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600"
-            aria-label="View order details"
-            title="View order details"
+            aria-label="Open in new tab"
+            title="Open in new tab"
           >
             <Eye className="h-4 w-4" />
-          </button>
+          </Button>
           {!['delivered', 'cancelled'].includes(o.status) && (
             <Button
               variant={o.driverId ? 'outline' : 'secondary'}
@@ -321,17 +325,17 @@ export default function OrdersPage() {
           <Tabs items={tabs} value={tab} onChange={setTab} />
         </div>
 
-        <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:items-center">
+        <div className="flex flex-col gap-3 px-4 py-4 sm:flex-row sm:flex-wrap sm:items-center">
           <div className="relative flex-1">
             <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by reference, name or phone…"
-              className="focus-ring h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm"
+              className="focus-ring h-10 w-full rounded-xl border border-slate-200 bg-white pl-10 pr-3 text-sm"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:flex">
+          <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
             <div className="w-full sm:w-40">
               <Select value={zone} onChange={(e) => setZone(e.target.value)} placeholder="All zones" options={ZONES.map((z) => ({ label: z, value: z }))} />
             </div>
@@ -363,7 +367,7 @@ export default function OrdersPage() {
           columns={columns}
           data={shown}
           rowKey={(o) => o.id}
-          onRowClick={(o) => openInNewTab(ROUTES.orderDetail(o.id))}
+          onRowClick={(o) => navigate(ROUTES.orderDetail(o.id))}
           loading={isLoading}
           emptyTitle="No orders found"
           emptyDescription="Try a different filter or search term."

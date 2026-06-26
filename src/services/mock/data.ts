@@ -87,7 +87,7 @@ export const drivers: Driver[] = [
   { id: 'd4', name: 'Ramesh Bhandari', phone: '+977 9841000004', avatar: avatar('d4'), vehicle: 'Bike · LU 5 CHA 7711', status: 'on_delivery', zone: 'Golpark', rating: 4.6, activeOrderId: 'o4', deliveriesToday: 9, totalDeliveries: 1110, onTimeRate: 91, kmToday: 31, lat: 27.6906, lng: 83.4617 },
   { id: 'd5', name: 'Dipesh Shrestha', phone: '+977 9841000005', avatar: avatar('d5'), vehicle: 'Scooter · BA 31 PA 2200', status: 'available', zone: 'Traffic Chowk', rating: 4.9, activeOrderId: null, deliveriesToday: 12, totalDeliveries: 2050, onTimeRate: 98, kmToday: 44, lat: 27.7001, lng: 83.4472 },
   { id: 'd6', name: 'Anil Karki', phone: '+977 9841000006', avatar: avatar('d6'), vehicle: 'Bike · LU 3 CHA 5532', status: 'offline', zone: 'Sukkhanagar', rating: 4.5, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 640, onTimeRate: 88, kmToday: 0, lat: 27.6852, lng: 83.4701 },
-  { id: 'd7', name: 'Kiran Magar', phone: '+977 9841000007', avatar: avatar('d7'), vehicle: 'Scooter · LU 1 PA 9087', status: 'available', zone: 'Buddhanagar', rating: 4.8, activeOrderId: null, deliveriesToday: 7, totalDeliveries: 1005, onTimeRate: 94, kmToday: 23, lat: 27.6981, lng: 83.4662 },
+  { id: 'd7', name: 'Kiran Magar', phone: '+977 9841000007', avatar: avatar('d7'), vehicle: 'Scooter · LU 1 PA 9087', status: 'on_delivery', zone: 'Buddhanagar', rating: 4.8, activeOrderId: 'o8', deliveriesToday: 7, totalDeliveries: 1005, onTimeRate: 94, kmToday: 23, lat: 27.6981, lng: 83.4662 },
   { id: 'd8', name: 'Sanjay Bk', phone: '+977 9841000008', avatar: avatar('d8'), vehicle: 'Bike · BA 12 PA 6543', status: 'offline', zone: 'Amarpath', rating: 4.4, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 480, onTimeRate: 86, kmToday: 0, lat: 27.6942, lng: 83.4556 },
 ]
 
@@ -226,7 +226,7 @@ export const orders: Order[] = [
   makeOrder('o5', '#GF-48206-NP', customers[2], [{ p: P('p1'), qty: 5 }], 'delivered', 'esewa', 'd5', 55, 0),
   makeOrder('o6', '#GF-48207-NP', customers[7], [{ p: P('p4'), qty: 1 }, { p: P('p5'), qty: 1 }], 'delivered', 'khalti', 'd2', 80, 0),
   makeOrder('o7', '#GF-48208-NP', customers[6], [{ p: P('p12'), qty: 2 }, { p: P('p11'), qty: 3 }], 'confirmed', 'cod', null, 1, 15),
-  makeOrder('o8', '#GF-48209-NP', customers[4], [{ p: P('p7'), qty: 4 }, { p: P('p1'), qty: 2 }], 'packed', 'esewa', null, 3, 13),
+  makeOrder('o8', '#GF-48209-NP', customers[4], [{ p: P('p7'), qty: 4 }, { p: P('p1'), qty: 2 }], 'packed', 'esewa', 'd7', 3, 13),
   makeOrder('o9', '#GF-48210-NP', customers[3], [{ p: P('p2'), qty: 1 }, { p: P('p10'), qty: 2 }], 'delivered', 'esewa', 'd5', 140, 0),
   makeOrder('o10', '#GF-48211-NP', customers[0], [{ p: P('p3'), qty: 2 }, { p: P('p8'), qty: 2 }, { p: P('p1'), qty: 4 }], 'arrived', 'connectips', 'd3', 12, 1),
   makeOrder('o11', '#GF-48212-NP', customers[1], [{ p: P('p6'), qty: 1 }], 'cancelled', 'khalti', null, 200, 0),

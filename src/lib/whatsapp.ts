@@ -44,6 +44,23 @@ export function buildPackerMessage(order: Order, packer: Packer, byProductId: Ma
   return lines.join('\n')
 }
 
+/** "Order ready for pickup" alert to the assigned rider (diagram: Rider notified). */
+export function buildRiderPickupMessage(order: Order): string {
+  const cod =
+    order.paymentMethod === 'cod'
+      ? `Collect COD: ${formatNPR(order.grandTotal)}`
+      : 'Prepaid — no cash to collect'
+  return [
+    `🛵 *Chutkima — Order ${order.reference} is ready for pickup*`,
+    `Please collect it from the dark store now.`,
+    ``,
+    `Customer: ${order.customerName} (${order.customerPhone})`,
+    `Deliver to: ${order.address}`,
+    `Items: ${order.items.reduce((s, it) => s + it.quantity, 0)}`,
+    cod,
+  ].join('\n')
+}
+
 /** New-order alert for admins (feature 110): order, customer, amount, payment. */
 export function buildAdminOrderAlert(order: Order): string {
   return [

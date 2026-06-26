@@ -1,10 +1,11 @@
 import { useState } from 'react'
-import { Bike, Check, UserPlus, X } from 'lucide-react'
+import { Bike, Check, MessageCircle, UserPlus, X } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/shared/Avatar'
 import { AssignDriverModal } from './AssignDriverModal'
+import { buildRiderPickupMessage, openWhatsApp } from '@/lib/whatsapp'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
 import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
 import {
@@ -27,6 +28,10 @@ export function RiderCard({ order, onAssignPrimary }: { order: Order; onAssignPr
   const multi = ops?.multiRiderEnabled ?? false
   const max = ops?.maxRiders ?? 1
   const driver = (id: string) => drivers.find((d) => d.id === id)
+
+  // Diagram step "Rider notified — order ready for pickup" (admin-side WhatsApp).
+  const primary = order.driverId ? driver(order.driverId) : undefined
+  const notifyPickup = () => primary && openWhatsApp(primary.phone, buildRiderPickupMessage(order))
 
   return (
     <Card>
@@ -94,6 +99,13 @@ export function RiderCard({ order, onAssignPrimary }: { order: Order; onAssignPr
               </div>
             )
           })
+        )}
+
+        {/* Packed + rider assigned → notify the rider it's ready for pickup. */}
+        {!closed && order.status === 'packed' && primary && (
+          <Button variant="primary" className="w-full" leftIcon={<MessageCircle className="h-4 w-4" />} onClick={notifyPickup}>
+            Notify rider — ready for pickup
+          </Button>
         )}
 
         {!closed && multi && order.assignments.length > 0 && order.assignments.length < max && (

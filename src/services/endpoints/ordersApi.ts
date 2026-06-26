@@ -177,6 +177,8 @@ export const ordersApi = api.injectEndpoints({
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
         order.status = status
+        // Keep the packed flag in sync once an order reaches "Packed" or beyond.
+        if (['packed', 'picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status)) order.packed = true
         if (status === 'cancelled') order.cancelReason = reason ?? order.cancelReason
         if (status === 'delivered' || status === 'cancelled') {
           order.etaMinutes = 0
@@ -212,7 +214,8 @@ export const ordersApi = api.injectEndpoints({
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
         order.packerId = packerId
-        if (order.status === 'placed') order.status = 'packing'
+        // Sending to a packer moves a confirmed order into packing (confirm must happen first).
+        if (order.status === 'confirmed') order.status = 'packing'
         return { data: clone(order) }
       },
       invalidatesTags: ['Order'],
@@ -223,7 +226,9 @@ export const ordersApi = api.injectEndpoints({
         await mockDelay(200)
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        // Packing complete → status "Packed" (triggers the rider "ready for pickup" alert).
         order.packed = true
+        if (['confirmed', 'packing'].includes(order.status)) order.status = 'packed'
         return { data: clone(order) }
       },
       invalidatesTags: ['Order'],

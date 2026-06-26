@@ -48,21 +48,28 @@ export function PackingCard({ order }: { order: Order }) {
           <p className="text-sm text-slate-400">No packer assigned.</p>
         )}
 
-        {!closed && (
-          <Button
-            variant={order.packerId ? 'outline' : 'secondary'}
-            className="w-full"
-            leftIcon={<UserPlus className="h-4 w-4" />}
-            onClick={() => setAssignOpen(true)}
-          >
-            {order.packerId ? 'Reassign packer' : 'Assign packer'}
-          </Button>
-        )}
+        {order.status === 'pending' ? (
+          <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500">Confirm the order first, then assign a packer or mark it ready.</p>
+        ) : (
+          !closed && (
+            <>
+              <Button
+                variant={order.packerId ? 'outline' : 'secondary'}
+                className="w-full"
+                leftIcon={<UserPlus className="h-4 w-4" />}
+                onClick={() => setAssignOpen(true)}
+              >
+                {order.packerId ? 'Reassign packer' : 'Assign packer'}
+              </Button>
 
-        {!closed && order.packerId && !order.packed && (
-          <Button variant="secondary" className="w-full" loading={marking} leftIcon={<PackageCheck className="h-4 w-4" />} onClick={() => markPacked(order.id)}>
-            Mark packing complete
-          </Button>
+              {/* Packer is optional — admin can mark ready for pickup with or without one. */}
+              {!order.packed && (
+                <Button variant="secondary" className="w-full" loading={marking} leftIcon={<PackageCheck className="h-4 w-4" />} onClick={() => markPacked(order.id)}>
+                  Mark ready for pickup
+                </Button>
+              )}
+            </>
+          )
         )}
       </CardContent>
 

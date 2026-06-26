@@ -45,9 +45,7 @@ export default function DashboardPage() {
   const { data: orders = [], isLoading: ordersLoading } = useGetOrdersQuery()
   const { data: drivers = [] } = useGetDriversQuery()
 
-  const liveOrders = orders.filter((o) =>
-    ['placed', 'packing', 'picked_up', 'on_the_way', 'arrived'].includes(o.status),
-  )
+  const liveOrders = orders.filter((o) => !['delivered', 'cancelled'].includes(o.status))
   const recentOrders = orders.slice(0, 6)
   const onDelivery = drivers.filter((d) => d.status === 'on_delivery')
 

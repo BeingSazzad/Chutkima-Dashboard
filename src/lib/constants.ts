@@ -26,11 +26,21 @@ export const ORDER_STATUS_META: Record<
   OrderStatus,
   { label: string; dot: string; badge: string }
 > = {
-  placed: { label: 'Confirmed', dot: 'bg-info', badge: 'bg-blue-50 text-blue-700 ring-blue-600/15' },
+  pending: {
+    label: 'Pending',
+    dot: 'bg-slate-400',
+    badge: 'bg-slate-100 text-slate-600 ring-slate-500/15',
+  },
+  confirmed: { label: 'Confirmed', dot: 'bg-info', badge: 'bg-blue-50 text-blue-700 ring-blue-600/15' },
   packing: {
     label: 'Packing',
     dot: 'bg-warning',
     badge: 'bg-amber-50 text-amber-700 ring-amber-600/15',
+  },
+  packed: {
+    label: 'Packed',
+    dot: 'bg-indigo-500',
+    badge: 'bg-indigo-50 text-indigo-700 ring-indigo-600/15',
   },
   picked_up: {
     label: 'Picked Up',
@@ -61,8 +71,10 @@ export const ORDER_STATUS_META: Record<
 
 /** The forward order of the live "Order Journey" (excludes cancelled). */
 export const ORDER_JOURNEY: OrderStatus[] = [
-  'placed',
+  'pending',
+  'confirmed',
   'packing',
+  'packed',
   'picked_up',
   'on_the_way',
   'arrived',
@@ -79,8 +91,10 @@ export const ORDER_JOURNEY: OrderStatus[] = [
 export type StageActor = 'system' | 'store' | 'rider'
 
 export const ORDER_STAGE_ACTOR: Record<OrderStatus, StageActor> = {
-  placed: 'system',
+  pending: 'system',
+  confirmed: 'system',
   packing: 'store',
+  packed: 'store',
   picked_up: 'rider',
   on_the_way: 'rider',
   arrived: 'rider',

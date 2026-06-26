@@ -33,7 +33,7 @@ import {
   useUpdateOrderStatusMutation,
   useAcceptRiderMutation,
 } from '@/services/endpoints/ordersApi'
-import { adminOrderStage, awaitingRiderAcceptance } from '@/lib/orderStage'
+import { awaitingRiderAcceptance } from '@/lib/orderStage'
 import { useGetDriverQuery } from '@/services/endpoints/driversApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import { useGetOpsConfigQuery, useGetStoreSetupQuery, useGetSystemControlsQuery } from '@/services/endpoints/settingsApi'
@@ -84,7 +84,7 @@ export default function OrderDetailPage() {
         breadcrumbs={[{ label: 'Orders', to: ROUTES.orders }, { label: order.reference }]}
         actions={
           <>
-            {sysControls?.whatsappAdminAlert && order.status === 'placed' && (
+            {sysControls?.whatsappAdminAlert && ['pending', 'confirmed'].includes(order.status) && (
               <Button
                 variant="outline"
                 leftIcon={<MessageCircle className="h-4 w-4" />}
@@ -110,12 +110,7 @@ export default function OrderDetailPage() {
             <CardHeader
               title="Order items"
               subtitle={`${order.items.length} products · placed ${formatDateTime(order.placedAt)}`}
-              action={
-                <div className="flex items-center gap-2">
-                  <Badge tone={adminOrderStage(order).badge}>{adminOrderStage(order).label}</Badge>
-                  <OrderStatusBadge status={order.status} />
-                </div>
-              }
+              action={<OrderStatusBadge status={order.status} />}
             />
             <CardContent className="space-y-3 pt-2">
               {order.scheduledFor && (
@@ -185,6 +180,16 @@ export default function OrderDetailPage() {
                 )
               ) : (
                 <>
+                  {/* Pending → one-click confirm (then dispatch to packer + rider). */}
+                  {order.status === 'pending' && (
+                    <div className="rounded-xl bg-blue-50 px-3 py-3">
+                      <p className="text-sm font-medium text-blue-700">New order — confirm to dispatch to packer &amp; rider.</p>
+                      <Button className="mt-2" size="sm" loading={updating} onClick={() => updateStatus({ orderId: order.id, status: 'confirmed' })}>
+                        Confirm order
+                      </Button>
+                    </div>
+                  )}
+
                   {/* Rider assigned but not yet accepted — admin can mark accepted or reassign. */}
                   {awaitingRiderAcceptance(order) && (
                     <div className="rounded-xl bg-amber-50 px-3 py-3">
@@ -225,20 +230,18 @@ export default function OrderDetailPage() {
                     )
                   )}
 
-                  {/* Action buttons — spaced row */}
-                  {((nextStatus && nextActor === 'store') || order.status === 'placed' || order.status === 'packing') && (
-                    <div className="flex flex-wrap gap-2">
-                      {nextStatus && nextActor === 'store' && (
-                        <Button loading={updating} onClick={() => updateStatus({ orderId: order.id, status: nextStatus })}>
-                          Accept &amp; mark {nextLabel}
-                        </Button>
-                      )}
-                      {(order.status === 'placed' || order.status === 'packing') && (
-                        <Button variant="danger" onClick={() => setCancelOpen(true)}>
-                          Cancel order
-                        </Button>
-                      )}
-                    </div>
+                  {/* Confirmed/packing: packing is owned by the Packing card below; rider is assigned in parallel. */}
+                  {(order.status === 'confirmed' || order.status === 'packing') && (
+                    <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500">
+                      Assign a packer &amp; rider, then <strong>Mark ready for pickup</strong> in the Packing card below.
+                    </p>
+                  )}
+
+                  {/* Cancel — allowed only before the rider picks up. */}
+                  {['pending', 'confirmed', 'packing', 'packed'].includes(order.status) && (
+                    <Button variant="danger" onClick={() => setCancelOpen(true)}>
+                      Cancel order
+                    </Button>
                   )}
                 </>
               )}

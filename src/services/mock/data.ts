@@ -83,7 +83,7 @@ export const products: Product[] = [
 export const drivers: Driver[] = [
   { id: 'd1', name: 'Manoj Thapa', phone: '+977 9841000001', avatar: avatar('d1'), vehicle: 'Scooter · BA 24 PA 1290', status: 'on_delivery', zone: 'Traffic Chowk', rating: 4.9, activeOrderId: 'o1', deliveriesToday: 11, totalDeliveries: 1820, onTimeRate: 97, kmToday: 38, lat: 27.7010, lng: 83.4486 },
   { id: 'd2', name: 'Suresh Gurung', phone: '+977 9841000002', avatar: avatar('d2'), vehicle: 'Bike · LU 1 CHA 4421', status: 'available', zone: 'Amarpath', rating: 4.8, activeOrderId: null, deliveriesToday: 8, totalDeliveries: 1340, onTimeRate: 95, kmToday: 26, lat: 27.6962, lng: 83.4521 },
-  { id: 'd3', name: 'Bikash Tamang', phone: '+977 9841000003', avatar: avatar('d3'), vehicle: 'Scooter · LU 2 PA 0098', status: 'available', zone: 'Milanchowk', rating: 4.7, activeOrderId: null, deliveriesToday: 6, totalDeliveries: 920, onTimeRate: 93, kmToday: 19, lat: 27.7052, lng: 83.4402 },
+  { id: 'd3', name: 'Bikash Tamang', phone: '+977 9841000003', avatar: avatar('d3'), vehicle: 'Scooter · LU 2 PA 0098', status: 'on_delivery', zone: 'Milanchowk', rating: 4.7, activeOrderId: 'o10', deliveriesToday: 6, totalDeliveries: 920, onTimeRate: 93, kmToday: 19, lat: 27.7052, lng: 83.4402 },
   { id: 'd4', name: 'Ramesh Bhandari', phone: '+977 9841000004', avatar: avatar('d4'), vehicle: 'Bike · LU 5 CHA 7711', status: 'on_delivery', zone: 'Golpark', rating: 4.6, activeOrderId: 'o4', deliveriesToday: 9, totalDeliveries: 1110, onTimeRate: 91, kmToday: 31, lat: 27.6906, lng: 83.4617 },
   { id: 'd5', name: 'Dipesh Shrestha', phone: '+977 9841000005', avatar: avatar('d5'), vehicle: 'Scooter · BA 31 PA 2200', status: 'available', zone: 'Traffic Chowk', rating: 4.9, activeOrderId: null, deliveriesToday: 12, totalDeliveries: 2050, onTimeRate: 98, kmToday: 44, lat: 27.7001, lng: 83.4472 },
   { id: 'd6', name: 'Anil Karki', phone: '+977 9841000006', avatar: avatar('d6'), vehicle: 'Bike · LU 3 CHA 5532', status: 'offline', zone: 'Sukkhanagar', rating: 4.5, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 640, onTimeRate: 88, kmToday: 0, lat: 27.6852, lng: 83.4701 },
@@ -163,7 +163,7 @@ function makeOrder(
       : subtotal >= 800 ? 0 : subtotal >= 600 ? 20 : subtotal >= 400 ? 40 : subtotal >= 200 ? 60 : 80
 
   // Per-stage timestamps (placed → … → current), spread from placedAt to now/delivery.
-  const STAGES: OrderStatus[] = ['placed', 'packing', 'picked_up', 'on_the_way', 'arrived', 'delivered']
+  const STAGES: OrderStatus[] = ['pending', 'confirmed', 'packing', 'packed', 'picked_up', 'on_the_way', 'arrived', 'delivered']
   const placedAtIso = minsAgo(placedMinsAgo)
   const placedMs = Date.parse(placedAtIso)
   const reached = status === 'cancelled' ? 0 : STAGES.indexOf(status)
@@ -193,11 +193,11 @@ function makeOrder(
     status,
     driverId,
     assignments: driverId
-      ? [{ driverId, note: '', confirmed: ['arrived', 'delivered'].includes(status) }]
+      ? [{ driverId, note: '', confirmed: status === 'delivered' }]
       : [],
     storeId: ['Golpark', 'Sukkhanagar', 'Buddhanagar'].includes(cust.zone) ? 's2' : 's1',
     packerId: null,
-    packed: ['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
+    packed: ['packed', 'picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
     // A rider on an in-transit order has already accepted; freshly-assigned ones await acceptance.
     riderAccepted: driverId != null && ['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
     // Delivery destination — deterministic point around Butwal for live tracking.
@@ -221,19 +221,19 @@ const P = (id: string) => products.find((p) => p.id === id)!
 export const orders: Order[] = [
   makeOrder('o1', '#GF-48202-NP', customers[3], [{ p: P('p1'), qty: 3 }, { p: P('p7'), qty: 2 }], 'on_the_way', 'esewa', 'd1', 9, 6, 'Call on arrival — 3rd floor, blue gate.'),
   makeOrder('o2', '#GF-48203-NP', customers[0], [{ p: P('p2'), qty: 1 }, { p: P('p3'), qty: 1 }, { p: P('p9'), qty: 1 }], 'packing', 'khalti', null, 4, 14, 'Leave at the door if no answer.'),
-  makeOrder('o3', '#GF-48204-NP', customers[1], [{ p: P('p11'), qty: 2 }, { p: P('p12'), qty: 1 }], 'placed', 'cod', null, 2, 15),
+  makeOrder('o3', '#GF-48204-NP', customers[1], [{ p: P('p11'), qty: 2 }, { p: P('p12'), qty: 1 }], 'pending', 'cod', null, 2, 15),
   makeOrder('o4', '#GF-48205-NP', customers[5], [{ p: P('p5'), qty: 2 }, { p: P('p8'), qty: 1 }], 'picked_up', 'connectips', 'd4', 7, 8),
   makeOrder('o5', '#GF-48206-NP', customers[2], [{ p: P('p1'), qty: 5 }], 'delivered', 'esewa', 'd5', 55, 0),
   makeOrder('o6', '#GF-48207-NP', customers[7], [{ p: P('p4'), qty: 1 }, { p: P('p5'), qty: 1 }], 'delivered', 'khalti', 'd2', 80, 0),
-  makeOrder('o7', '#GF-48208-NP', customers[6], [{ p: P('p12'), qty: 2 }, { p: P('p11'), qty: 3 }], 'placed', 'cod', null, 1, 15),
-  makeOrder('o8', '#GF-48209-NP', customers[4], [{ p: P('p7'), qty: 4 }, { p: P('p1'), qty: 2 }], 'packing', 'esewa', null, 3, 13),
+  makeOrder('o7', '#GF-48208-NP', customers[6], [{ p: P('p12'), qty: 2 }, { p: P('p11'), qty: 3 }], 'confirmed', 'cod', null, 1, 15),
+  makeOrder('o8', '#GF-48209-NP', customers[4], [{ p: P('p7'), qty: 4 }, { p: P('p1'), qty: 2 }], 'packed', 'esewa', null, 3, 13),
   makeOrder('o9', '#GF-48210-NP', customers[3], [{ p: P('p2'), qty: 1 }, { p: P('p10'), qty: 2 }], 'delivered', 'esewa', 'd5', 140, 0),
-  makeOrder('o10', '#GF-48211-NP', customers[0], [{ p: P('p3'), qty: 2 }, { p: P('p8'), qty: 2 }, { p: P('p1'), qty: 4 }], 'arrived', 'connectips', 'd1', 12, 1),
+  makeOrder('o10', '#GF-48211-NP', customers[0], [{ p: P('p3'), qty: 2 }, { p: P('p8'), qty: 2 }, { p: P('p1'), qty: 4 }], 'arrived', 'connectips', 'd3', 12, 1),
   makeOrder('o11', '#GF-48212-NP', customers[1], [{ p: P('p6'), qty: 1 }], 'cancelled', 'khalti', null, 200, 0),
   makeOrder('o12', '#GF-48213-NP', customers[5], [{ p: P('p11'), qty: 6 }], 'delivered', 'cod', 'd2', 320, 0),
   // Scheduled (after-hours pre-booked) orders — feature 113 / 105.
-  makeOrder('o13', '#GF-48214-NP', customers[2], [{ p: P('p7'), qty: 2 }, { p: P('p1'), qty: 1 }], 'placed', 'esewa', null, 30, 15, 'Pre-booked for tomorrow morning.', daysAhead(1)),
-  makeOrder('o14', '#GF-48215-NP', customers[6], [{ p: P('p12'), qty: 1 }, { p: P('p5'), qty: 2 }], 'placed', 'cod', null, 45, 15, '', daysAhead(1)),
+  makeOrder('o13', '#GF-48214-NP', customers[2], [{ p: P('p7'), qty: 2 }, { p: P('p1'), qty: 1 }], 'confirmed', 'esewa', null, 30, 15, 'Pre-booked for tomorrow morning.', daysAhead(1)),
+  makeOrder('o14', '#GF-48215-NP', customers[6], [{ p: P('p12'), qty: 1 }, { p: P('p5'), qty: 2 }], 'confirmed', 'cod', null, 45, 15, '', daysAhead(1)),
 ]
 
 // Seed a couple of demo admin notes + a refund so the audit trails aren't empty.

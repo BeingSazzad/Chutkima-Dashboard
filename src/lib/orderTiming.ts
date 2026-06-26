@@ -31,8 +31,10 @@ export function deliveryTiming(order: Order): DeliveryTiming | null {
  * Used to flag a stage as on-time / ahead / delayed against its own schedule.
  */
 const STAGE_SCHEDULE_FRACTION: Partial<Record<OrderStatus, number>> = {
-  placed: 0,
+  pending: 0,
+  confirmed: 0.05,
   packing: 0.15,
+  packed: 0.25,
   picked_up: 0.35,
   on_the_way: 0.5,
   arrived: 0.85,

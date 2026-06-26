@@ -4,8 +4,10 @@ export type ID = string
 
 /** Order lifecycle — mirrors the customer app's "Order Journey". */
 export type OrderStatus =
-  | 'placed'
+  | 'pending'
+  | 'confirmed'
   | 'packing'
+  | 'packed'
   | 'picked_up'
   | 'on_the_way'
   | 'arrived'

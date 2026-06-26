@@ -4,8 +4,8 @@ import { ORDER_JOURNEY, ORDER_STATUS_META } from '@/lib/constants'
 import { cn } from '@/lib/utils'
 import type { OrderStatus } from '@/types/common.types'
 
-/** Statuses the admin can pick inline: the full live journey + a cancel option. */
-const SELECTABLE: OrderStatus[] = [...ORDER_JOURNEY, 'cancelled']
+/** Cancel is only allowed before the rider picks up the order. */
+const CANCELLABLE: OrderStatus[] = ['pending', 'confirmed', 'packing', 'packed']
 
 interface OrderStatusSelectProps {
   status: OrderStatus
@@ -16,8 +16,8 @@ interface OrderStatusSelectProps {
 
 /**
  * Inline, status-coloured dropdown for changing an order's status straight from
- * the Orders table — no need to open the detail page. Terminal states
- * (delivered / cancelled) render as a read-only badge.
+ * the Orders table. To respect the order flow it only offers the legal next
+ * step (plus cancel while still pre-pickup); terminal states render read-only.
  */
 export function OrderStatusSelect({ status, loading, onChange }: OrderStatusSelectProps) {
   if (status === 'delivered' || status === 'cancelled') {
@@ -25,6 +25,13 @@ export function OrderStatusSelect({ status, loading, onChange }: OrderStatusSele
   }
 
   const meta = ORDER_STATUS_META[status]
+  // Only the current status, the single next journey step, and cancel (if allowed).
+  const next = ORDER_JOURNEY[ORDER_JOURNEY.indexOf(status) + 1]
+  const options: OrderStatus[] = [
+    status,
+    ...(next ? [next] : []),
+    ...(CANCELLABLE.includes(status) ? (['cancelled'] as OrderStatus[]) : []),
+  ]
 
   return (
     // Stop clicks from bubbling to the row (which navigates to the detail page).
@@ -42,7 +49,7 @@ export function OrderStatusSelect({ status, loading, onChange }: OrderStatusSele
           meta.badge,
         )}
       >
-        {SELECTABLE.map((s) => (
+        {options.map((s) => (
           <option key={s} value={s} className="bg-white font-medium text-slate-700">
             {ORDER_STATUS_META[s].label}
           </option>

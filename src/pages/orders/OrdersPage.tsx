@@ -5,7 +5,6 @@ import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
 import { Tabs, type TabItem } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
-import { Badge } from '@/components/ui/Badge'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
@@ -16,7 +15,7 @@ import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
 import { OrderStatusSelect } from '@/components/orders/OrderStatusSelect'
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { ORDER_STATUS_META, PAYMENT_META, ZONES } from '@/lib/constants'
-import { adminOrderStage, awaitingRiderAcceptance } from '@/lib/orderStage'
+import { awaitingRiderAcceptance } from '@/lib/orderStage'
 import { downloadCSV } from '@/lib/export'
 import { formatDateTime, formatNPR, openInNewTab, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
@@ -26,11 +25,16 @@ import { useGetDriversQuery } from '@/services/endpoints/driversApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import type { Order, OrderStatus, PaymentMethod } from '@/types/common.types'
 
+/** The three rider stages, grouped under one "In transit" tab. */
+const IN_TRANSIT: OrderStatus[] = ['picked_up', 'on_the_way', 'arrived']
+
 const TABS: TabItem[] = [
   { label: 'All', value: 'all' },
-  { label: 'New', value: 'placed' },
+  { label: 'Pending', value: 'pending' },
+  { label: 'Confirmed', value: 'confirmed' },
   { label: 'Packing', value: 'packing' },
-  { label: 'On the way', value: 'on_the_way' },
+  { label: 'Packed', value: 'packed' },
+  { label: 'In transit', value: 'in_transit' },
   { label: 'Delivered', value: 'delivered' },
   { label: 'Scheduled', value: 'scheduled' },
   { label: 'Cancelled', value: 'cancelled' },
@@ -56,10 +60,15 @@ export default function OrdersPage() {
   const [updateStatus, { isLoading: cancelling }] = useUpdateOrderStatusMutation()
   const { data: stores = [] } = useGetStoresQuery()
 
-  /** Quick inline status change. Cancelling needs a reason; every other change asks for confirmation. */
+  /** Quick inline status change. Cancel needs a reason; pickup needs a rider; others confirm. */
   const changeStatus = (order: Order, status: OrderStatus) => {
     if (status === 'cancelled') {
       setCancelFor(order)
+      return
+    }
+    if (status === 'picked_up' && !order.driverId) {
+      // Can't pick up without a rider — open the assign dialog instead.
+      setAssignFor(order)
       return
     }
     setConfirmStatus({ order, status })
@@ -85,7 +94,7 @@ export default function OrdersPage() {
   }
 
   const { data: orders = [], isLoading } = useGetOrdersQuery({
-    status: (tab === 'scheduled' ? 'all' : tab) as OrderStatus | 'all',
+    status: (tab === 'scheduled' || tab === 'in_transit' ? 'all' : tab) as OrderStatus | 'all',
     zone: zone || undefined,
     payment: (payment as PaymentMethod) || undefined,
     from: from || undefined,
@@ -96,8 +105,13 @@ export default function OrdersPage() {
   const { data: drivers = [] } = useGetDriversQuery()
   const { data: allOrders = [] } = useGetOrdersQuery()
 
-  // Scheduled tab shows pre-booked (after-hours) orders.
-  const shown = tab === 'scheduled' ? orders.filter((o) => o.scheduledFor) : orders
+  // Scheduled tab shows pre-booked orders; In transit groups the three rider stages.
+  const shown =
+    tab === 'scheduled'
+      ? orders.filter((o) => o.scheduledFor)
+      : tab === 'in_transit'
+        ? orders.filter((o) => IN_TRANSIT.includes(o.status))
+        : orders
 
   // Orders where a rider was assigned but hasn't accepted yet — admin should reassign.
   const awaitingAccept = allOrders.filter(awaitingRiderAcceptance)
@@ -117,7 +131,6 @@ export default function OrdersPage() {
         payment: PAYMENT_META[o.paymentMethod].label,
         paymentStatus: o.paymentStatus,
         rider: driverName(o.driverId) ?? 'Unassigned',
-        fulfilment: adminOrderStage(o).label,
         status: ORDER_STATUS_META[o.status].label,
         placed: formatDateTime(o.placedAt),
         scheduledFor: o.scheduledFor ? formatDateTime(o.scheduledFor) : '',
@@ -132,7 +145,6 @@ export default function OrdersPage() {
         { key: 'payment', label: 'Payment' },
         { key: 'paymentStatus', label: 'Payment status' },
         { key: 'rider', label: 'Rider' },
-        { key: 'fulfilment', label: 'Fulfilment' },
         { key: 'status', label: 'Status' },
         { key: 'placed', label: 'Placed' },
         { key: 'scheduledFor', label: 'Scheduled for' },
@@ -149,7 +161,9 @@ export default function OrdersPage() {
             ? allOrders.length
             : t.value === 'scheduled'
               ? allOrders.filter((o) => o.scheduledFor).length
-              : allOrders.filter((o) => o.status === t.value).length,
+              : t.value === 'in_transit'
+                ? allOrders.filter((o) => IN_TRANSIT.includes(o.status)).length
+                : allOrders.filter((o) => o.status === t.value).length,
       })),
     [allOrders],
   )
@@ -240,15 +254,6 @@ export default function OrdersPage() {
         ) : (
           <span className="text-xs font-medium text-amber-600">Unassigned</span>
         ),
-    },
-    {
-      key: 'stage',
-      header: 'Fulfilment',
-      className: 'whitespace-nowrap',
-      cell: (o) => {
-        const stage = adminOrderStage(o)
-        return <Badge tone={stage.badge}>{stage.label}</Badge>
-      },
     },
     {
       key: 'status',

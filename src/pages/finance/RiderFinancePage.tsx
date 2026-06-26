@@ -221,19 +221,27 @@ export default function RiderFinancePage() {
         ) : (
           <div className="divide-y divide-slate-50">
             {deposits.map((d) => (
-              <div key={d.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+              <div key={d.id} className="flex flex-wrap items-start gap-3 px-4 py-3">
                 <Avatar name={d.driverName} size="sm" />
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-semibold text-slate-800">{d.driverName}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-slate-800">{d.driverName}</p>
+                    {d.confirmedByRider ? (
+                      <Badge tone="bg-green-50 text-green-700 ring-green-600/15" dot="bg-success">Settled</Badge>
+                    ) : (
+                      <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15">Awaiting rider</Badge>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500">
+                    Due {formatNPR(d.amountDue)} · Collected {formatNPR(d.amount)} · Remaining {formatNPR(Math.max(0, d.amountDue - d.amount))}
+                  </p>
                   <p className="text-xs text-slate-400">
-                    Due {formatNPR(d.amountDue)} · collected by {d.collectedBy} · {formatDateTime(d.createdAt)}
+                    By {d.collectedBy} · {formatDateTime(d.createdAt)}
+                    {d.confirmedByRider && d.confirmedAt ? ` · rider confirmed ${formatDateTime(d.confirmedAt)}` : ''}
                     {d.note ? ` · ${d.note}` : ''}
                   </p>
                 </div>
-                <span className="text-sm font-bold text-slate-800">{formatNPR(d.amount)}</span>
-                {d.confirmedByRider ? (
-                  <Badge tone="bg-green-50 text-green-700 ring-green-600/15" dot="bg-success">Rider confirmed</Badge>
-                ) : (
+                {!d.confirmedByRider && (
                   <Button size="sm" variant="outline" onClick={() => confirmDeposit(d.id)}>
                     Mark rider-confirmed
                   </Button>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Bike, CheckCircle2, Eye, Pencil, Phone, Plus, PowerOff, Search, Star, Trash2, Truck } from 'lucide-react'
+import { Bike, CheckCircle2, Download, Eye, Pencil, Phone, Plus, PowerOff, Search, Star, Trash2, Truck } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -14,6 +14,8 @@ import { Avatar } from '@/components/shared/Avatar'
 import { StatCard } from '@/components/shared/StatCard'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
 import { openInNewTab } from '@/lib/utils'
+import { downloadCSV } from '@/lib/export'
+import { DRIVER_ACCOUNT_META, DRIVER_STATUS_META } from '@/lib/constants'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
   useDeleteDriverMutation,
@@ -51,6 +53,38 @@ export default function DriversPage() {
   )
 
   const orderRef = (id: string | null) => orders.find((o) => o.id === id)?.reference
+
+  const exportCsv = () => {
+    downloadCSV(
+      'chutkima-riders.csv',
+      drivers.map((d) => ({
+        name: d.name,
+        phone: d.phone,
+        vehicle: d.vehicle,
+        zone: d.zone,
+        status: DRIVER_STATUS_META[d.status].label,
+        account: DRIVER_ACCOUNT_META[d.accountStatus ?? 'active'].label,
+        rating: d.rating.toString(),
+        today: d.deliveriesToday.toString(),
+        total: d.totalDeliveries.toString(),
+        onTime: `${d.onTimeRate}%`,
+        km: d.kmToday.toString(),
+      })),
+      [
+        { key: 'name', label: 'Rider' },
+        { key: 'phone', label: 'Phone' },
+        { key: 'vehicle', label: 'Vehicle' },
+        { key: 'zone', label: 'Zone' },
+        { key: 'status', label: 'Status' },
+        { key: 'account', label: 'Account' },
+        { key: 'rating', label: 'Rating' },
+        { key: 'today', label: 'Deliveries today' },
+        { key: 'total', label: 'Total deliveries' },
+        { key: 'onTime', label: 'On-time %' },
+        { key: 'km', label: 'KM today' },
+      ],
+    )
+  }
 
   const columns: Column<Driver>[] = [
     {
@@ -147,9 +181,14 @@ export default function DriversPage() {
         title="Drivers"
         description="Your delivery fleet across Butwal. Assign riders from the Orders board."
         actions={
-          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setFormFor('new')}>
-            Add rider
-          </Button>
+          <>
+            <Button variant="outline" leftIcon={<Download className="h-4 w-4" />} onClick={exportCsv} disabled={drivers.length === 0}>
+              Export CSV
+            </Button>
+            <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setFormFor('new')}>
+              Add rider
+            </Button>
+          </>
         }
       />
 

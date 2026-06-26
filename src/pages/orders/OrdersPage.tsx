@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, Bike, Check, Clock3, Eye, Search, UserPlus } from 'lucide-react'
+import { AlertTriangle, Bike, Check, Clock3, Download, Eye, Search, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -17,7 +17,8 @@ import { OrderStatusSelect } from '@/components/orders/OrderStatusSelect'
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { ORDER_STATUS_META, PAYMENT_META, ZONES } from '@/lib/constants'
 import { adminOrderStage, awaitingRiderAcceptance } from '@/lib/orderStage'
-import { formatNPR, openInNewTab, timeAgo } from '@/lib/utils'
+import { downloadCSV } from '@/lib/export'
+import { formatDateTime, formatNPR, openInNewTab, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useGetOrdersQuery, useUpdateOrderStatusMutation } from '@/services/endpoints/ordersApi'
@@ -102,6 +103,42 @@ export default function OrdersPage() {
   const awaitingAccept = allOrders.filter(awaitingRiderAcceptance)
 
   const driverName = (id: string | null) => drivers.find((d) => d.id === id)?.name
+
+  const exportCsv = () => {
+    downloadCSV(
+      'chutkima-orders.csv',
+      shown.map((o) => ({
+        reference: o.reference,
+        customer: o.customerName,
+        phone: o.customerPhone,
+        zone: o.zone,
+        items: o.items.reduce((s, i) => s + i.quantity, 0).toString(),
+        total: formatNPR(o.grandTotal, false),
+        payment: PAYMENT_META[o.paymentMethod].label,
+        paymentStatus: o.paymentStatus,
+        rider: driverName(o.driverId) ?? 'Unassigned',
+        fulfilment: adminOrderStage(o).label,
+        status: ORDER_STATUS_META[o.status].label,
+        placed: formatDateTime(o.placedAt),
+        scheduledFor: o.scheduledFor ? formatDateTime(o.scheduledFor) : '',
+      })),
+      [
+        { key: 'reference', label: 'Order' },
+        { key: 'customer', label: 'Customer' },
+        { key: 'phone', label: 'Phone' },
+        { key: 'zone', label: 'Zone' },
+        { key: 'items', label: 'Items' },
+        { key: 'total', label: 'Total (NPR)' },
+        { key: 'payment', label: 'Payment' },
+        { key: 'paymentStatus', label: 'Payment status' },
+        { key: 'rider', label: 'Rider' },
+        { key: 'fulfilment', label: 'Fulfilment' },
+        { key: 'status', label: 'Status' },
+        { key: 'placed', label: 'Placed' },
+        { key: 'scheduledFor', label: 'Scheduled for' },
+      ],
+    )
+  }
 
   const tabs = useMemo<TabItem[]>(
     () =>
@@ -260,6 +297,11 @@ export default function OrdersPage() {
       <PageHeader
         title="Orders"
         description="Track and dispatch every order across Butwal zones."
+        actions={
+          <Button variant="outline" leftIcon={<Download className="h-4 w-4" />} onClick={exportCsv} disabled={shown.length === 0}>
+            Export CSV
+          </Button>
+        }
       />
 
       {awaitingAccept.length > 0 && (

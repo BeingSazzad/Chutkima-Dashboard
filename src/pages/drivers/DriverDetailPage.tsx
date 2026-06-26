@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Ban, Bike, Fuel, IdCard, MapPin, MessageSquare, Phone, ShieldAlert, ShieldCheck, Star, UserX } from 'lucide-react'
+import { Ban, Bike, Fuel, IdCard, MapPin, MessageSquare, Phone, ShieldAlert, ShieldCheck, Star, UserX } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -80,6 +80,7 @@ export default function DriverDetailPage() {
     <>
       <PageHeader
         title={driver.name}
+        backTo={ROUTES.drivers}
         breadcrumbs={[{ label: 'Drivers', to: ROUTES.drivers }, { label: driver.name }]}
         actions={
           <>
@@ -99,9 +100,6 @@ export default function DriverDetailPage() {
             )}
             <Button variant="danger" leftIcon={<ShieldAlert className="h-4 w-4" />} onClick={() => setWarnFor({})}>
               Warn rider
-            </Button>
-            <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate(ROUTES.drivers)}>
-              Back
             </Button>
           </>
         }

@@ -345,10 +345,10 @@ export default function OrdersPage() {
                 onChange={(e) => setPayment(e.target.value)}
                 placeholder="All payments"
                 options={[
+                  { label: 'COD (cash)', value: 'cod' },
                   { label: 'eSewa', value: 'esewa' },
                   { label: 'Khalti', value: 'khalti' },
                   { label: 'ConnectIPS', value: 'connectips' },
-                  { label: 'Cash on Delivery', value: 'cod' },
                 ]}
               />
             </div>

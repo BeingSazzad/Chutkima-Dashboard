@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Banknote, Clock, MapPin, MessageCircle, Phone, Printer, RotateCcw, StickyNote } from 'lucide-react'
+import { Banknote, Clock, MapPin, MessageCircle, Phone, Printer, RotateCcw, StickyNote } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -81,6 +81,7 @@ export default function OrderDetailPage() {
     <>
       <PageHeader
         title={order.reference}
+        backTo={ROUTES.orders}
         breadcrumbs={[{ label: 'Orders', to: ROUTES.orders }, { label: order.reference }]}
         actions={
           <>
@@ -95,9 +96,6 @@ export default function OrderDetailPage() {
             )}
             <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />} onClick={() => printOrderInvoice(order, driver?.name, storeSetup)}>
               Print invoice
-            </Button>
-            <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate(ROUTES.orders)}>
-              Back
             </Button>
           </>
         }

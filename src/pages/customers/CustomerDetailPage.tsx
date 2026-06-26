@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Ban, Calendar, HandCoins, MapPin, Phone, Plus, Receipt, ShieldCheck, Trash2, Wallet } from 'lucide-react'
+import { Ban, Calendar, HandCoins, MapPin, Phone, Plus, Receipt, ShieldCheck, Trash2, Wallet } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -72,6 +72,7 @@ export default function CustomerDetailPage() {
     <>
       <PageHeader
         title={customer.name}
+        backTo={ROUTES.customers}
         breadcrumbs={[{ label: 'Customers', to: ROUTES.customers }, { label: customer.name }]}
         actions={
           <>
@@ -85,9 +86,6 @@ export default function CustomerDetailPage() {
             </Button>
             <Button variant="danger" leftIcon={<Trash2 className="h-4 w-4" />} onClick={() => setConfirmDelete(true)}>
               Remove
-            </Button>
-            <Button variant="outline" leftIcon={<ArrowLeft className="h-4 w-4" />} onClick={() => navigate(ROUTES.customers)}>
-              Back
             </Button>
           </>
         }

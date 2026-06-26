@@ -136,6 +136,21 @@ export const categoryGroups: CategoryGroup[] = [
   { id: 'g3', name: 'Beauty & Personal Care', position: 3, active: true },
 ]
 
+/**
+ * Single source of truth for zone -> dark store routing. The zone config below
+ * is seeded from this, and orders are auto-routed to a store by the customer's
+ * zone (no manual store pick). Editing a zone's store in the admin updates the
+ * live `zones` config used by `storeIdForZone`.
+ */
+const ZONE_STORE: Record<string, string> = {
+  'Traffic Chowk': 's1',
+  Amarpath: 's1',
+  Milanchowk: 's1',
+  Golpark: 's2',
+  Sukkhanagar: 's2',
+  Buddhanagar: 's2',
+}
+
 // ── Orders ──────────────────────────────────────────────────────────────────
 function lineItem(p: Product, qty: number) {
   return { productId: p.id, name: p.name, image: p.image, quantity: qty, price: p.price }
@@ -195,7 +210,8 @@ function makeOrder(
     assignments: driverId
       ? [{ driverId, note: '', confirmed: status === 'delivered' }]
       : [],
-    storeId: ['Golpark', 'Sukkhanagar', 'Buddhanagar'].includes(cust.zone) ? 's2' : 's1',
+    // Auto-route to the dark store that serves the customer's zone.
+    storeId: ZONE_STORE[cust.zone] ?? 's1',
     packerId: null,
     packed: ['packed', 'picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
     // A rider on an in-transit order has already accepted; freshly-assigned ones await acceptance.
@@ -387,6 +403,16 @@ export const zones: Zone[] = [
   { id: 'z5', name: 'Sukkhanagar', etaMins: 16, areas: ['Sukkhanagar', 'Fulbari'], mapLink: '', geofence: [], storeId: 's2', active: true },
   { id: 'z6', name: 'Buddhanagar', etaMins: 18, areas: ['Buddhanagar', 'Manglapur'], mapLink: '', geofence: [], storeId: 's2', active: false },
 ]
+
+/**
+ * Auto-routing: resolve the dark store that serves a customer's zone, reading the
+ * LIVE zone config (matches by zone name or a covered area). This is what a new
+ * order would call to pick its store without manual intervention.
+ */
+export function storeIdForZone(zoneName: string): string | undefined {
+  const zone = zones.find((z) => z.name === zoneName || z.areas.includes(zoneName))
+  return zone?.storeId ?? ZONE_STORE[zoneName]
+}
 
 /** Dispatch / operations config. */
 export const opsConfig = {

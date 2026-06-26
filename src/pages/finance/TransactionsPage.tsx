@@ -129,32 +129,35 @@ export default function TransactionsPage() {
               className="focus-ring h-10 w-full rounded-xl border border-slate-200 bg-slate-50 pl-10 pr-3 text-sm"
             />
           </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Select
-              value={type}
-              onChange={(e) => setType(e.target.value as TransactionType | 'all')}
-              options={[
-                { label: 'All types', value: 'all' },
-                ...(Object.keys(TXN_TYPE_META) as TransactionType[]).map((t) => ({ label: TXN_TYPE_META[t].label, value: t })),
-              ]}
-            />
-            <Select
-              value={method}
-              onChange={(e) => setMethod(e.target.value)}
-              options={[{ label: 'All methods', value: 'all' }, ...methods.map((m) => ({ label: m, value: m }))]}
-            />
-            <Select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as TransactionStatus | 'all')}
-              options={[
-                { label: 'All statuses', value: 'all' },
-                ...(Object.keys(TXN_STATUS_META) as TransactionStatus[]).map((s) => ({ label: TXN_STATUS_META[s].label, value: s })),
-              ]}
-            />
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">Date</span>
-            <DateRangeFilter from={from} to={to} onChange={(r) => { setFrom(r.from); setTo(r.to) }} />
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="w-full sm:w-40">
+              <Select
+                value={type}
+                onChange={(e) => setType(e.target.value as TransactionType | 'all')}
+                options={[
+                  { label: 'All types', value: 'all' },
+                  ...(Object.keys(TXN_TYPE_META) as TransactionType[]).map((t) => ({ label: TXN_TYPE_META[t].label, value: t })),
+                ]}
+              />
+            </div>
+            <div className="w-full sm:w-40">
+              <Select
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+                options={[{ label: 'All methods', value: 'all' }, ...methods.map((m) => ({ label: m, value: m }))]}
+              />
+            </div>
+            <div className="w-full sm:w-40">
+              <Select
+                value={status}
+                onChange={(e) => setStatus(e.target.value as TransactionStatus | 'all')}
+                options={[
+                  { label: 'All statuses', value: 'all' },
+                  ...(Object.keys(TXN_STATUS_META) as TransactionStatus[]).map((s) => ({ label: TXN_STATUS_META[s].label, value: s })),
+                ]}
+              />
+            </div>
+            <DateRangeFilter from={from} to={to} onChange={(r) => { setFrom(r.from); setTo(r.to) }} className="sm:ml-auto" />
           </div>
         </div>
 

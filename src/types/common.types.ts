@@ -119,6 +119,8 @@ export interface Product {
   /** Stock-keeping unit code. */
   sku: string
   name: string
+  /** Customer-facing product description shown on the product page in the app. */
+  description: string
   brand: string
   category: string
   categoryGroup: string

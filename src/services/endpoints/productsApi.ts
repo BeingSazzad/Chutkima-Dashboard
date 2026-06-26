@@ -18,6 +18,7 @@ function deriveStatus(stock: number, threshold: number): ProductStatus {
 export interface BulkProductRow {
   sku: string
   name: string
+  description?: string
   brand?: string
   category?: string
   categoryGroup?: string
@@ -86,6 +87,7 @@ export const productsApi = api.injectEndpoints({
           id: `p${Date.now()}`,
           sku: payload.sku || `SKU-${Date.now().toString().slice(-5)}`,
           name: payload.name ?? 'New Product',
+          description: payload.description ?? '',
           brand: payload.brand ?? '—',
           category: payload.category ?? 'Uncategorized',
           categoryGroup: payload.categoryGroup ?? 'Grocery & Kitchen',
@@ -144,6 +146,7 @@ export const productsApi = api.injectEndpoints({
           if (existing) {
             Object.assign(existing, {
               name: row.name,
+              description: row.description ?? existing.description,
               brand: row.brand ?? existing.brand,
               category: row.category ?? existing.category,
               categoryGroup: row.categoryGroup ?? existing.categoryGroup,
@@ -161,6 +164,7 @@ export const productsApi = api.injectEndpoints({
               id: `p${Date.now()}-${added}`,
               sku: row.sku,
               name: row.name,
+              description: row.description ?? '',
               brand: row.brand ?? '—',
               category: row.category ?? 'Uncategorized',
               categoryGroup: row.categoryGroup ?? 'Grocery & Kitchen',

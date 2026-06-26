@@ -12,8 +12,6 @@ export const ROUTES = {
   orderDetail: (id = ':orderId') => `/orders/${id}`,
 
   products: '/products',
-  productDetail: (id = ':productId') => `/products/${id}`,
-
   categories: '/categories',
 
   drivers: '/drivers',

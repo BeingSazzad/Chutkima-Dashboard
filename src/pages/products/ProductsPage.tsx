@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Textarea } from '@/components/ui/Textarea'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/Switch'
@@ -191,7 +192,7 @@ function ProductFormModal({ product, onClose }: { product: Product | 'new' | nul
   const p = isEdit ? (product as Product) : null
 
   const empty = {
-    sku: '', name: '', brand: '', category: '',
+    sku: '', name: '', description: '', brand: '', category: '',
     price: '', mrp: '', stock: '', unit: '', shelfNo: '', lowStockThreshold: '15',
     onClearance: false,
   }
@@ -205,7 +206,7 @@ function ProductFormModal({ product, onClose }: { product: Product | 'new' | nul
     setForm(
       p
         ? {
-            sku: p.sku, name: p.name, brand: p.brand, category: p.category,
+            sku: p.sku, name: p.name, description: p.description ?? '', brand: p.brand, category: p.category,
             price: String(p.price), mrp: p.mrp ? String(p.mrp) : '', stock: String(p.stock), unit: p.unit,
             shelfNo: p.shelfNo, lowStockThreshold: String(p.lowStockThreshold), onClearance: p.onClearance,
           }
@@ -222,6 +223,7 @@ function ProductFormModal({ product, onClose }: { product: Product | 'new' | nul
       id: p?.id,
       sku: form.sku,
       name: form.name,
+      description: form.description.trim(),
       brand: form.brand,
       category: form.category,
       categoryGroup: cat?.group ?? '',
@@ -269,6 +271,14 @@ function ProductFormModal({ product, onClose }: { product: Product | 'new' | nul
           <Input label="SKU" value={form.sku} onChange={(e) => set('sku', e.target.value)} placeholder="e.g. WW-001" className="font-mono" />
           <Input label="Shelf number" value={form.shelfNo} onChange={(e) => set('shelfNo', e.target.value)} placeholder="e.g. A-3" />
         </div>
+        <Textarea
+          label="Description"
+          value={form.description}
+          onChange={(e) => set('description', e.target.value)}
+          rows={3}
+          placeholder="Short description shown on the product page in the app — key features, size, flavour, usage…"
+          hint="Optional, but recommended. Appears under the product name in the customer app."
+        />
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <Input label="Selling price (NPR)" type="number" value={form.price} onChange={(e) => set('price', e.target.value)} />
           <Input label="Original price" type="number" value={form.mrp} onChange={(e) => set('mrp', e.target.value)} hint="Optional" />
@@ -348,8 +358,8 @@ function BulkImportModal({ open, onClose }: { open: boolean; onClose: () => void
     if (mode === 'products') {
       downloadCSV(
         'chutkima-products-template.csv',
-        [{ sku: 'WW-001', name: 'Wai Wai Noodles', brand: 'Wai Wai', category: 'Chips & Snacks', categoryGroup: 'Snacks & Drinks', price: '35', mrp: '40', stock: '100', unit: '84g', shelfNo: 'A-3', image: '' }],
-        ['sku', 'name', 'brand', 'category', 'categoryGroup', 'price', 'mrp', 'stock', 'unit', 'shelfNo', 'image'].map((k) => ({ key: k, label: k })),
+        [{ sku: 'WW-001', name: 'Wai Wai Noodles', description: 'Classic instant noodles with veg masala', brand: 'Wai Wai', category: 'Chips & Snacks', categoryGroup: 'Snacks & Drinks', price: '35', mrp: '40', stock: '100', unit: '84g', shelfNo: 'A-3', image: '' }],
+        ['sku', 'name', 'description', 'brand', 'category', 'categoryGroup', 'price', 'mrp', 'stock', 'unit', 'shelfNo', 'image'].map((k) => ({ key: k, label: k })),
       )
     } else {
       downloadCSV('chutkima-stock-template.csv', [{ sku: 'WW-001', stock: '120' }], [{ key: 'sku', label: 'sku' }, { key: 'stock', label: 'stock' }])
@@ -371,7 +381,7 @@ function BulkImportModal({ open, onClose }: { open: boolean; onClose: () => void
         const payload = rows
           .filter((r) => r.sku && r.name)
           .map((r) => ({
-            sku: r.sku, name: r.name, brand: r.brand, category: r.category, categoryGroup: r.categoryGroup,
+            sku: r.sku, name: r.name, description: r.description, brand: r.brand, category: r.category, categoryGroup: r.categoryGroup,
             price: r.price ? Number(r.price) : undefined, mrp: r.mrp ? Number(r.mrp) : undefined,
             stock: r.stock ? Number(r.stock) : undefined, unit: r.unit, shelfNo: r.shelfNo, image: r.image,
           }))
@@ -401,7 +411,7 @@ function BulkImportModal({ open, onClose }: { open: boolean; onClose: () => void
 
         <div className="rounded-xl bg-mint-50 p-4 text-sm text-slate-600">
           {mode === 'products' ? (
-            <p>Columns: <span className="font-mono text-xs">sku, name, brand, category, categoryGroup, price, mrp, stock, unit, shelfNo, image</span>. Rows are matched by <strong>SKU</strong> — existing SKUs update, new ones are added.</p>
+            <p>Columns: <span className="font-mono text-xs">sku, name, description, brand, category, categoryGroup, price, mrp, stock, unit, shelfNo, image</span>. Rows are matched by <strong>SKU</strong> — existing SKUs update, new ones are added.</p>
           ) : (
             <p>Columns: <span className="font-mono text-xs">sku, stock</span>. Updates stock for matching SKUs only — no other fields touched. Great for daily restock.</p>
           )}

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { AlertTriangle, Bike, Clock3, Eye, Search, UserPlus } from 'lucide-react'
+import { AlertTriangle, Bike, Check, Clock3, Eye, Search, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -14,6 +14,7 @@ import { Avatar } from '@/components/shared/Avatar'
 import { PaymentBadge } from '@/components/shared/StatusBadge'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
 import { OrderStatusSelect } from '@/components/orders/OrderStatusSelect'
+import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { ORDER_STATUS_META, PAYMENT_META, ZONES } from '@/lib/constants'
 import { adminOrderStage, awaitingRiderAcceptance } from '@/lib/orderStage'
 import { formatNPR, openInNewTab, timeAgo } from '@/lib/utils'
@@ -41,7 +42,8 @@ export default function OrdersPage() {
   const [tab, setTab] = useState<string>('all')
   const [zone, setZone] = useState('')
   const [payment, setPayment] = useState('')
-  const [days, setDays] = useState('')
+  const [from, setFrom] = useState('')
+  const [to, setTo] = useState('')
   const [store, setStore] = useState('')
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
@@ -85,7 +87,8 @@ export default function OrdersPage() {
     status: (tab === 'scheduled' ? 'all' : tab) as OrderStatus | 'all',
     zone: zone || undefined,
     payment: (payment as PaymentMethod) || undefined,
-    days: days ? Number(days) : undefined,
+    from: from || undefined,
+    to: to || undefined,
     storeId: store || undefined,
     search: debouncedSearch || undefined,
   })
@@ -187,11 +190,15 @@ export default function OrdersPage() {
                 <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">+{o.assignments.length - 1}</span>
               )}
             </span>
-            {awaitingRiderAcceptance(o) && (
+            {awaitingRiderAcceptance(o) ? (
               <span className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-amber-600">
                 <Clock3 className="h-3 w-3" /> Awaiting accept
               </span>
-            )}
+            ) : o.riderAccepted && !['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(o.status) ? (
+              <span className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-success">
+                <Check className="h-3 w-3" /> Accepted
+              </span>
+            ) : null}
           </div>
         ) : (
           <span className="text-xs font-medium text-amber-600">Unassigned</span>
@@ -294,17 +301,8 @@ export default function OrdersPage() {
                 ]}
               />
             </div>
-            <div className="w-full sm:w-36">
-              <Select
-                value={days}
-                onChange={(e) => setDays(e.target.value)}
-                placeholder="All time"
-                options={[
-                  { label: 'Today', value: '1' },
-                  { label: 'Last 7 days', value: '7' },
-                  { label: 'Last 30 days', value: '30' },
-                ]}
-              />
+            <div className="col-span-2 sm:w-auto">
+              <DateRangeFilter from={from} to={to} max={new Date().toISOString().slice(0, 10)} onChange={(r) => { setFrom(r.from); setTo(r.to) }} />
             </div>
             {stores.length > 1 && (
               <div className="w-full sm:w-44">

@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/Switch'
 import { Badge } from '@/components/ui/Badge'
@@ -22,6 +23,7 @@ import {
   useSaveZoneMutation,
   useToggleZoneMutation,
 } from '@/services/endpoints/deliveryApi'
+import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import type { DeliveryTier, Zone } from '@/types/common.types'
 
 export default function DeliveryZonesPage() {
@@ -148,13 +150,15 @@ function ZonesCard({
   onFence: (z: Zone) => void
 }) {
   const { data: zones = [], isLoading } = useGetZonesQuery()
+  const { data: stores = [] } = useGetStoresQuery()
   const [toggle] = useToggleZoneMutation()
+  const storeName = (id?: string) => stores.find((s) => s.id === id)?.name
 
   return (
     <Card>
       <CardHeader
         title="Service zones"
-        subtitle={`${zones.filter((z) => z.active).length} active areas in Butwal`}
+        subtitle={`${zones.filter((z) => z.active).length} active areas · auto-routed to dark stores`}
         action={
           <Button variant="secondary" size="sm" leftIcon={<Plus className="h-3.5 w-3.5" />} onClick={onAdd}>
             Add zone
@@ -184,6 +188,11 @@ function ZonesCard({
                 </p>
                 {z.areas.length > 0 && <p className="mt-0.5 truncate text-xs text-slate-400">Covers: {z.areas.join(', ')}</p>}
               </div>
+              {storeName(z.storeId) ? (
+                <Badge tone="bg-violet-50 text-violet-700 ring-violet-600/15">{storeName(z.storeId)}</Badge>
+              ) : (
+                <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15">No store</Badge>
+              )}
               {z.geofence.length >= 3 && <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15">Geo-fenced</Badge>}
               {!z.active && <Badge>Paused</Badge>}
               <Switch checked={z.active} onChange={() => toggle(z.id)} size="sm" aria-label={`Toggle ${z.name}`} />
@@ -206,16 +215,17 @@ function ZonesCard({
 
 function ZoneFormModal({ zone, onClose }: { zone: Zone | 'new' | null; onClose: () => void }) {
   const [save, { isLoading }] = useSaveZoneMutation()
+  const { data: stores = [] } = useGetStoresQuery()
   const isEdit = zone && zone !== 'new'
   const z = isEdit ? (zone as Zone) : null
 
-  const empty = { name: '', etaMins: '12', areas: '', mapLink: '' }
+  const empty = { name: '', etaMins: '12', areas: '', mapLink: '', storeId: '' }
   const [form, setForm] = useState(empty)
   const key = zone === 'new' ? 'new' : z?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
   if (key !== lastKey && zone) {
     setLastKey(key)
-    setForm(z ? { name: z.name, etaMins: String(z.etaMins), areas: z.areas.join(', '), mapLink: z.mapLink } : empty)
+    setForm(z ? { name: z.name, etaMins: String(z.etaMins), areas: z.areas.join(', '), mapLink: z.mapLink, storeId: z.storeId ?? '' } : empty)
   }
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -226,6 +236,7 @@ function ZoneFormModal({ zone, onClose }: { zone: Zone | 'new' | null; onClose: 
       etaMins: Number(form.etaMins) || 12,
       areas: form.areas.split(',').map((a) => a.trim()).filter(Boolean),
       mapLink: form.mapLink.trim(),
+      storeId: form.storeId || undefined,
     }).unwrap()
     onClose()
   }
@@ -246,6 +257,16 @@ function ZoneFormModal({ zone, onClose }: { zone: Zone | 'new' | null; onClose: 
     >
       <div className="space-y-3">
         <Input label="Zone name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Traffic Chowk" autoFocus />
+        <div>
+          <Select
+            label="Dark store (order routing)"
+            value={form.storeId}
+            onChange={(e) => set('storeId', e.target.value)}
+            placeholder="Select a dark store"
+            options={stores.map((s) => ({ label: s.name, value: s.id }))}
+          />
+          <p className="mt-1 text-xs text-slate-400">Orders placed in this zone are automatically routed to this dark store.</p>
+        </div>
         <Input label="Avg. ETA (min)" type="number" value={form.etaMins} onChange={(e) => set('etaMins', e.target.value)} hint="Delivery fee is set globally by cart-value tiers (left panel)." />
         <Input
           label="Covered areas"

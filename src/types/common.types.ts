@@ -367,6 +367,8 @@ export interface Zone {
   mapLink: string
   /** Geo-fence polygon as [lat, lng] vertices (empty = not drawn yet). */
   geofence: [number, number][]
+  /** Dark store that fulfils orders in this zone (order auto-routing). */
+  storeId?: ID
   active: boolean
 }
 

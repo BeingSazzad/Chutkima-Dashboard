@@ -14,6 +14,7 @@ import { Avatar } from '@/components/shared/Avatar'
 import { ProductThumb } from '@/components/shared/ProductThumb'
 import { OrderStatusBadge, PaymentBadge } from '@/components/shared/StatusBadge'
 import { OrderJourney } from '@/components/orders/OrderJourney'
+import { LiveTrackingCard } from '@/components/orders/LiveTrackingCard'
 import { PackingCard } from '@/components/orders/PackingCard'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
 import { RiderCard } from '@/components/orders/RiderCard'
@@ -34,6 +35,7 @@ import {
 } from '@/services/endpoints/ordersApi'
 import { adminOrderStage, awaitingRiderAcceptance } from '@/lib/orderStage'
 import { useGetDriverQuery } from '@/services/endpoints/driversApi'
+import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import { useGetOpsConfigQuery, useGetStoreSetupQuery, useGetSystemControlsQuery } from '@/services/endpoints/settingsApi'
 import { useAuth } from '@/hooks/useAuth'
 import type { Order, OrderItem, OrderStatus, RefundType } from '@/types/common.types'
@@ -43,6 +45,7 @@ export default function OrderDetailPage() {
   const navigate = useNavigate()
   const { data: order, isLoading } = useGetOrderQuery(orderId)
   const { data: driver } = useGetDriverQuery(order?.driverId ?? '', { skip: !order?.driverId })
+  const { data: stores = [] } = useGetStoresQuery()
   const { data: ops } = useGetOpsConfigQuery()
   const { data: storeSetup } = useGetStoreSetupQuery()
   const { data: sysControls } = useGetSystemControlsQuery()
@@ -72,6 +75,7 @@ export default function OrderDetailPage() {
   const timing = deliveryTiming(order)
   const nextLabel = nextStatus ? ORDER_STATUS_META[nextStatus].label : ''
   const needsRider = nextStatus === 'picked_up' && !order.driverId
+  const store = stores.find((s) => s.id === order.storeId)
 
   return (
     <>
@@ -261,6 +265,8 @@ export default function OrderDetailPage() {
               <OrderJourney status={order.status} timestamps={order.stageTimestamps} order={order} />
             </CardContent>
           </Card>
+
+          {order.driverId && !isClosed && <LiveTrackingCard order={order} driver={driver} store={store} />}
 
           <RefundCard order={order} />
 

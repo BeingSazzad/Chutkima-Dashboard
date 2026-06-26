@@ -12,6 +12,9 @@ interface OrderFilters {
   payment?: PaymentMethod | 'all'
   /** Restrict to orders placed within the last N days. */
   days?: number
+  /** Inclusive placed-date range (YYYY-MM-DD). */
+  from?: string
+  to?: string
   storeId?: string
 }
 
@@ -35,6 +38,8 @@ export const ordersApi = api.injectEndpoints({
           const cutoff = Date.now() - filters.days * 86_400_000
           result = result.filter((o) => new Date(o.placedAt).getTime() >= cutoff)
         }
+        if (filters?.from) result = result.filter((o) => o.placedAt.slice(0, 10) >= filters.from!)
+        if (filters?.to) result = result.filter((o) => o.placedAt.slice(0, 10) <= filters.to!)
         if (filters?.search) {
           const q = filters.search.toLowerCase()
           result = result.filter(

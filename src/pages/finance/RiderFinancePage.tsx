@@ -23,10 +23,11 @@ import {
 } from '@/services/endpoints/driversApi'
 import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
 
-/** netToDeposit = cash the rider should hand over after keeping their fuel allowance. */
-const net = (r: RiderFinance) => Math.max(0, r.codCollected - r.fuel)
-/** outstanding = net still owed after subtracting what the rider already deposited. */
-const outstanding = (r: RiderFinance) => Math.max(0, net(r) - r.deposited)
+/**
+ * The rider must deposit the FULL COD cash they collected — fuel is NOT deducted
+ * here; it's reimbursed separately. outstanding = COD collected − already deposited.
+ */
+const outstanding = (r: RiderFinance) => Math.max(0, r.codCollected - r.deposited)
 
 export default function RiderFinancePage() {
   const today = new Date().toISOString().slice(0, 10)
@@ -83,10 +84,9 @@ export default function RiderFinancePage() {
         rider: r.name,
         deliveries: r.deliveriesToday.toString(),
         km: r.kmToday.toString(),
-        fuel: formatNPR(r.fuel, false),
-        codInHand: formatNPR(r.codCollected, false),
+        fuelReimburse: formatNPR(r.fuel, false),
+        codCollected: formatNPR(r.codCollected, false),
         pendingCod: formatNPR(r.discrepancy, false),
-        netToDeposit: formatNPR(net(r), false),
         deposited: formatNPR(r.deposited, false),
         outstanding: formatNPR(outstanding(r), false),
       })),
@@ -94,12 +94,11 @@ export default function RiderFinancePage() {
         { key: 'rider', label: 'Rider' },
         { key: 'deliveries', label: 'Deliveries' },
         { key: 'km', label: 'KM' },
-        { key: 'fuel', label: 'Fuel due (NPR)' },
-        { key: 'codInHand', label: 'COD in hand (NPR)' },
+        { key: 'fuelReimburse', label: 'Fuel reimbursement (NPR)' },
+        { key: 'codCollected', label: 'COD collected (NPR)' },
         { key: 'pendingCod', label: 'Pending COD (NPR)' },
-        { key: 'netToDeposit', label: 'Net to deposit (NPR)' },
         { key: 'deposited', label: 'Deposited (NPR)' },
-        { key: 'outstanding', label: 'Outstanding (NPR)' },
+        { key: 'outstanding', label: 'Outstanding to deposit (NPR)' },
       ],
     )
   }
@@ -121,10 +120,10 @@ export default function RiderFinancePage() {
     { key: 'km', header: 'KM', cell: (r) => <span className="text-slate-700">{r.kmToday} km</span> },
     {
       key: 'fuel',
-      header: `Fuel due (×${fuelRate})`,
+      header: `Fuel reimburse (×${fuelRate})`,
       cell: (r) => <span className="font-semibold text-amber-600">{formatNPR(r.fuel)}</span>,
     },
-    { key: 'hand', header: 'COD in hand', cell: (r) => <span className="text-slate-700">{formatNPR(r.codCollected)}</span> },
+    { key: 'hand', header: 'COD collected', cell: (r) => <span className="font-semibold text-slate-800">{formatNPR(r.codCollected)}</span> },
     {
       key: 'pending',
       header: 'Pending COD',
@@ -135,7 +134,6 @@ export default function RiderFinancePage() {
           <span className="text-xs text-slate-400">—</span>
         ),
     },
-    { key: 'net', header: 'Net to deposit', cell: (r) => <span className="font-semibold text-slate-700">{formatNPR(net(r))}</span> },
     {
       key: 'deposited',
       header: 'Deposited',
@@ -160,7 +158,7 @@ export default function RiderFinancePage() {
             </Button>
           )
         }
-        return net(r) > 0 ? (
+        return r.codCollected > 0 ? (
           <Badge tone="bg-green-50 text-green-700 ring-green-600/15" dot="bg-success">
             Settled
           </Badge>
@@ -175,7 +173,7 @@ export default function RiderFinancePage() {
     <>
       <PageHeader
         title="Rider Finance"
-        description="Fuel allowance and cash-on-delivery reconciliation per rider."
+        description="COD reconciliation per rider · fuel reimbursed separately (not deducted)."
         actions={
           <div className="flex flex-wrap items-center gap-2">
             <span className="hidden text-xs font-medium text-slate-500 sm:block">From</span>
@@ -214,8 +212,8 @@ export default function RiderFinancePage() {
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Fuel due to riders" value={formatNPR(totalFuel)} icon={<Fuel className="h-5 w-5" />} iconClass="bg-amber-50 text-amber-600" />
-        <StatCard label="COD in riders' hands" value={formatNPR(totalInHand)} icon={<HandCoins className="h-5 w-5" />} iconClass="bg-brand-50 text-brand-600" />
+        <StatCard label="Fuel to reimburse (separate)" value={formatNPR(totalFuel)} icon={<Fuel className="h-5 w-5" />} iconClass="bg-amber-50 text-amber-600" />
+        <StatCard label="COD collected" value={formatNPR(totalInHand)} icon={<HandCoins className="h-5 w-5" />} iconClass="bg-brand-50 text-brand-600" />
         <StatCard label="Cash deposited" value={formatNPR(totalDeposited)} icon={<Wallet className="h-5 w-5" />} iconClass="bg-green-50 text-green-600" />
         <StatCard label="Outstanding to collect" value={formatNPR(totalOutstanding)} icon={<Banknote className="h-5 w-5" />} iconClass={cn(totalOutstanding > 0 ? 'bg-amber-50 text-amber-600' : 'bg-slate-100 text-slate-500')} />
       </div>
@@ -259,7 +257,7 @@ export default function RiderFinancePage() {
       </Card>
 
       <p className="mt-3 px-1 text-xs text-slate-400">
-        Net to deposit = COD cash in hand − fuel allowance. Riders keep their fuel and deposit the rest; use “Collect” to record each handover, then the rider confirms it.
+        Riders deposit the <strong>full COD</strong> they collected — fuel is <strong>not</strong> deducted; it's reimbursed separately. Use “Collect” to record each handover, then the rider confirms it.
       </p>
 
       <Modal
@@ -283,8 +281,8 @@ export default function RiderFinancePage() {
           <div className="space-y-3">
             <div className="grid grid-cols-3 gap-2 text-center text-sm">
               <div className="rounded-xl border border-slate-100 px-2 py-2">
-                <p className="text-xs text-slate-400">Net to deposit</p>
-                <p className="font-bold text-slate-800">{formatNPR(net(collectFor), false)}</p>
+                <p className="text-xs text-slate-400">COD collected</p>
+                <p className="font-bold text-slate-800">{formatNPR(collectFor.codCollected, false)}</p>
               </div>
               <div className="rounded-xl border border-slate-100 px-2 py-2">
                 <p className="text-xs text-slate-400">Deposited</p>

@@ -29,6 +29,7 @@ export const deliveryApi = api.injectEndpoints({
           areas: payload.areas ?? [],
           mapLink: payload.mapLink ?? '',
           geofence: payload.geofence ?? [],
+          storeId: payload.storeId,
           active: payload.active ?? true,
         }
         zones.push(created)

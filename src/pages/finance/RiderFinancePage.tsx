@@ -9,6 +9,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Input } from '@/components/ui/Input'
 import { Textarea } from '@/components/ui/Textarea'
 import { StatCard } from '@/components/shared/StatCard'
+import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { Avatar } from '@/components/shared/Avatar'
 import { FUEL_RATE_PER_KM } from '@/lib/constants'
 import { cn, formatDateTime, formatNPR } from '@/lib/utils'
@@ -176,28 +177,15 @@ export default function RiderFinancePage() {
         description="COD reconciliation per rider · fuel reimbursed separately (not deducted)."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <span className="hidden text-xs font-medium text-slate-500 sm:block">From</span>
-            <input
-              type="date"
-              value={from}
-              max={to || today}
-              onChange={(e) => {
-                const v = e.target.value || today
-                setFrom(v)
-                if (v > to) setTo(v)
-              }}
-              aria-label="From date"
-              className="focus-ring h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700"
-            />
-            <span className="text-slate-400">–</span>
-            <input
-              type="date"
-              value={to}
-              min={from}
+            <DateRangeFilter
+              from={from}
+              to={to}
               max={today}
-              onChange={(e) => setTo(e.target.value || today)}
-              aria-label="To date"
-              className="focus-ring h-10 rounded-xl border border-slate-200 bg-white px-3 text-sm text-slate-700"
+              clearable={false}
+              onChange={(r) => {
+                setFrom(r.from || today)
+                setTo(r.to || today)
+              }}
             />
             <Button variant="outline" leftIcon={<Download className="h-4 w-4" />} onClick={exportCsv} disabled={rows.length === 0}>
               Export CSV

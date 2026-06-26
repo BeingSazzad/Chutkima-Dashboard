@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { StatCard } from '@/components/shared/StatCard'
+import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { TXN_STATUS_META, TXN_TYPE_META } from '@/lib/constants'
 import { cn, formatDateTime, formatNPR } from '@/lib/utils'
 import { downloadCSV } from '@/lib/export'
@@ -152,39 +153,8 @@ export default function TransactionsPage() {
             />
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-slate-500">Date range</span>
-            <input
-              type="date"
-              value={from}
-              max={to || undefined}
-              onChange={(e) => {
-                const v = e.target.value
-                setFrom(v)
-                if (v && to && v > to) setTo(v)
-              }}
-              aria-label="From date"
-              className="focus-ring h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700"
-            />
-            <span className="text-slate-400">–</span>
-            <input
-              type="date"
-              value={to}
-              min={from || undefined}
-              onChange={(e) => setTo(e.target.value)}
-              aria-label="To date"
-              className="focus-ring h-10 rounded-xl border border-slate-200 bg-slate-50 px-3 text-sm text-slate-700"
-            />
-            {(from || to) && (
-              <button
-                onClick={() => {
-                  setFrom('')
-                  setTo('')
-                }}
-                className="focus-ring rounded-lg px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50"
-              >
-                Clear
-              </button>
-            )}
+            <span className="text-xs font-medium text-slate-500">Date</span>
+            <DateRangeFilter from={from} to={to} onChange={(r) => { setFrom(r.from); setTo(r.to) }} />
           </div>
         </div>
 

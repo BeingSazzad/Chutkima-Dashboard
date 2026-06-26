@@ -200,6 +200,9 @@ function makeOrder(
     packed: ['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
     // A rider on an in-transit order has already accepted; freshly-assigned ones await acceptance.
     riderAccepted: driverId != null && ['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
+    // Delivery destination — deterministic point around Butwal for live tracking.
+    lat: 27.7006 + Math.sin(([...id].reduce((a, c) => a + c.charCodeAt(0), 0) % 360) * (Math.PI / 180)) * (0.006 + (id.length % 12) * 0.0011),
+    lng: 83.4484 + Math.cos(([...id].reduce((a, c) => a + c.charCodeAt(0), 0) % 360) * (Math.PI / 180)) * (0.006 + (id.length % 12) * 0.0011),
     etaMinutes,
     placedAt: placedAtIso,
     note,

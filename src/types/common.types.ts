@@ -107,6 +107,9 @@ export interface Order {
   refunds: OrderRefund[]
   /** Pre-booked delivery time (after-hours scheduled order); null = deliver now. */
   scheduledFor: string | null
+  /** Delivery destination coordinates (for live rider tracking on the map). */
+  lat?: number
+  lng?: number
 }
 
 export interface Product {

@@ -31,6 +31,10 @@ export function AssignDriverModal({ order, open, onClose }: Props) {
 
   const available = drivers
     .filter((d) => d.status !== 'offline')
+    // Suspended / terminated riders cannot take new orders.
+    .filter((d) => (d.accountStatus ?? 'active') === 'active')
+    // Only riders that serve this order's dark store (matches the packer rule).
+    .filter((d) => !order?.storeId || (d.storeIds?.includes(order.storeId) ?? false))
     .filter((d) => d.name.toLowerCase().includes(search.toLowerCase()))
     // Nearest available rider first: sort by distance to the dark store
     // (riders with no GPS fix sink to the bottom), then availability.
@@ -137,7 +141,9 @@ export function AssignDriverModal({ order, open, onClose }: Props) {
           })
         )}
         {!isLoading && available.length === 0 && (
-          <p className="py-6 text-center text-sm text-slate-400">No riders match your search.</p>
+          <p className="py-6 text-center text-sm text-slate-400">
+            {search ? 'No riders match your search.' : 'No available riders serving this store right now.'}
+          </p>
         )}
       </div>
     </Modal>

@@ -229,6 +229,9 @@ export const driversApi = api.injectEndpoints({
         await mockDelay(200)
         const driver = drivers.find((d) => d.id === id)
         if (!driver) return { error: { status: 404, data: 'Not found' } as never }
+        // A suspended/terminated rider must be reinstated before going back on shift.
+        if (status !== 'offline' && (driver.accountStatus ?? 'active') !== 'active')
+          return { error: { status: 409, data: 'Reinstate the rider before setting them available.' } as never }
         driver.status = status
         if (status !== 'on_delivery') driver.activeOrderId = null
         return { data: clone(driver) }

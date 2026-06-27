@@ -67,8 +67,12 @@ export default function AnalyticsPage() {
   const totalRevenue = revenue.reduce((s, r) => s + r.revenue, 0)
   const totalOrders = revenue.reduce((s, r) => s + r.orders, 0)
   const avgOrderValue = totalOrders ? Math.round(totalRevenue / totalOrders) : 0
+  // Real growth across the selected period (end vs start) — no fabricated deltas.
+  const growth = (arr: number[]) =>
+    arr.length >= 2 && arr[0] > 0 ? Math.round(((arr[arr.length - 1] - arr[0]) / arr[0]) * 1000) / 10 : undefined
+  const revenueGrowth = growth(revenue.map((r) => r.revenue))
+  const ordersGrowth = growth(revenue.map((r) => r.orders))
   const peak = hourly.reduce((max, h) => (h.orders > max.orders ? h : max), hourly[0] ?? { label: '—', orders: 0 })
-  const suffix = `${from} → ${to}`
 
   const exportCsv = () => {
     downloadCSV(
@@ -99,10 +103,10 @@ export default function AnalyticsPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label={`${PERIOD_LABEL[period]} revenue`} value={formatNPR(totalRevenue)} change={12.4} icon={<Banknote className="h-5 w-5" />} changeSuffix={suffix} />
-        <StatCard label={`${PERIOD_LABEL[period]} orders`} value={formatCompact(totalOrders)} change={8.1} icon={<Receipt className="h-5 w-5" />} changeSuffix={suffix} />
-        <StatCard label="Avg. order value" value={formatNPR(avgOrderValue)} change={3.2} icon={<TrendingUp className="h-5 w-5" />} changeSuffix={suffix} />
-        <StatCard label="Peak hour" value={peak.label} icon={<Users className="h-5 w-5" />} changeSuffix={`${peak.orders} orders today`} />
+        <StatCard label={`${PERIOD_LABEL[period]} revenue`} value={formatNPR(totalRevenue)} change={revenueGrowth} icon={<Banknote className="h-5 w-5" />} changeSuffix={`over ${PERIOD_LABEL[period].toLowerCase()}`} />
+        <StatCard label={`${PERIOD_LABEL[period]} orders`} value={formatCompact(totalOrders)} change={ordersGrowth} icon={<Receipt className="h-5 w-5" />} changeSuffix={`over ${PERIOD_LABEL[period].toLowerCase()}`} />
+        <StatCard label="Avg. order value" value={formatNPR(avgOrderValue)} icon={<TrendingUp className="h-5 w-5" />} />
+        <StatCard label="Peak hour" value={peak.label} icon={<Users className="h-5 w-5" />} changeSuffix={`${peak.orders} orders at peak`} />
       </div>
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">

@@ -16,6 +16,9 @@ export function RiderCard({ order, onAssignPrimary }: { order: Order; onAssignPr
   const [removeRider] = useRemoveRiderMutation()
 
   const closed = order.status === 'delivered' || order.status === 'cancelled'
+  // Once the rider has picked up, "remove" would strand the order with no rider —
+  // only allow unassign before pickup. Reassign (header button) stays available.
+  const preTransit = !['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(order.status)
   const rider = order.driverId ? drivers.find((d) => d.id === order.driverId) : undefined
 
   // Diagram step "Rider notified — order ready for pickup" (admin-side WhatsApp).
@@ -49,11 +52,12 @@ export function RiderCard({ order, onAssignPrimary }: { order: Order; onAssignPr
               ) : (
                 <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15"><Bike className="h-3 w-3" /> ETA <EtaCountdown placedAt={order.placedAt} etaMinutes={order.etaMinutes} /></Badge>
               )}
-              {!closed && (
+              {preTransit && (
                 <button
                   onClick={() => removeRider({ orderId: order.id, driverId: order.driverId! })}
                   className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger"
                   aria-label="Remove rider"
+                  title="Unassign rider (before pickup)"
                 >
                   <X className="h-4 w-4" />
                 </button>

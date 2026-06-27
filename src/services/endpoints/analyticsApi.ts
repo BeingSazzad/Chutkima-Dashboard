@@ -1,6 +1,5 @@
 import { api, clone, mockDelay } from '@/services/api'
 import {
-  categorySales,
   drivers,
   hourlyOrders,
   orders,
@@ -63,19 +62,37 @@ export const analyticsApi = api.injectEndpoints({
     getKpis: build.query<KpiSummary, void>({
       async queryFn() {
         await mockDelay(300)
-        // Derive from the same orders the Orders page shows — no fabricated padding.
-        const delivered = orders.filter((o) => o.status === 'delivered')
-        const revenueToday = delivered.reduce((s, o) => s + o.grandTotal, 0)
-        const ordersToday = orders.length
+        // Everything derived from the same orders the Orders page shows — no fabrication.
+        const day = (iso: string) => iso.slice(0, 10)
+        const today = new Date().toISOString().slice(0, 10)
+        const yesterday = new Date(Date.now() - 86_400_000).toISOString().slice(0, 10)
+        const pct = (now: number, prev: number) => (prev > 0 ? Math.round(((now - prev) / prev) * 1000) / 10 : 0)
+
+        // Revenue = delivered orders placed on the day; Orders = non-cancelled placed that day.
+        const revenueOn = (d: string) =>
+          orders.filter((o) => o.status === 'delivered' && day(o.placedAt) === d).reduce((s, o) => s + o.grandTotal, 0)
+        const ordersOn = (d: string) => orders.filter((o) => o.status !== 'cancelled' && day(o.placedAt) === d).length
+
+        const revenueToday = revenueOn(today)
+        const ordersToday = ordersOn(today)
+
+        // Avg delivery time from real placed→delivered stamps.
+        const deliveredMins = orders
+          .filter((o) => o.status === 'delivered' && o.stageTimestamps.delivered)
+          .map((o) => (Date.parse(o.stageTimestamps.delivered!) - Date.parse(o.placedAt)) / 60000)
+        const avgDeliveryMins = deliveredMins.length
+          ? Math.round((deliveredMins.reduce((s, m) => s + m, 0) / deliveredMins.length) * 10) / 10
+          : 0
+
         const activeDrivers = drivers.filter((d) => d.status !== 'offline').length
         return {
           data: {
             revenueToday,
-            revenueChange: 12.4,
+            revenueChange: pct(revenueToday, revenueOn(yesterday)),
             ordersToday,
-            ordersChange: 8.1,
-            avgDeliveryMins: 11.6,
-            deliveryChange: -4.2,
+            ordersChange: pct(ordersToday, ordersOn(yesterday)),
+            avgDeliveryMins,
+            deliveryChange: 0,
             activeDrivers,
             totalDrivers: drivers.length,
           },
@@ -94,8 +111,17 @@ export const analyticsApi = api.injectEndpoints({
     getCategorySales: build.query<CategorySalesPoint[], void>({
       async queryFn() {
         await mockDelay()
-        return { data: categorySales }
+        // Derive the split from the catalog's real category groups + units sold —
+        // no phantom groups that don't exist in the product catalogue.
+        const byGroup = new Map<string, number>()
+        for (const p of products) byGroup.set(p.categoryGroup, (byGroup.get(p.categoryGroup) ?? 0) + p.sold)
+        const total = [...byGroup.values()].reduce((s, v) => s + v, 0) || 1
+        const data: CategorySalesPoint[] = [...byGroup.entries()]
+          .map(([name, sold]) => ({ name, value: Math.round((sold / total) * 100) }))
+          .sort((a, b) => b.value - a.value)
+        return { data }
       },
+      providesTags: ['Product'],
     }),
 
     getHourlyOrders: build.query<{ label: string; orders: number }[], void>({
@@ -113,13 +139,14 @@ export const analyticsApi = api.injectEndpoints({
       providesTags: ['Product'],
     }),
 
-    /** Fulfillment rate = delivered / (delivered + cancelled-ish). */
+    /** Fulfillment rate = delivered / (delivered + cancelled) from real orders. */
     getFulfillment: build.query<{ rate: number; delivered: number; cancelled: number }, void>({
       async queryFn() {
         await mockDelay(200)
-        const delivered = orders.filter((o) => o.status === 'delivered').length + 180
-        const cancelled = orders.filter((o) => o.status === 'cancelled').length + 9
-        const rate = Math.round((delivered / (delivered + cancelled)) * 1000) / 10
+        const delivered = orders.filter((o) => o.status === 'delivered').length
+        const cancelled = orders.filter((o) => o.status === 'cancelled').length
+        const total = delivered + cancelled
+        const rate = total ? Math.round((delivered / total) * 1000) / 10 : 100
         return { data: { rate, delivered, cancelled } }
       },
       providesTags: ['Order'],

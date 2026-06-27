@@ -201,8 +201,9 @@ export default function OrderDetailPage() {
                     </div>
                   )}
 
-                  {/* Rider-controlled step (full-width info box) */}
-                  {nextStatus && nextActor === 'rider' && (
+                  {/* Rider-controlled step — hidden while the rider hasn't accepted yet
+                      (the acceptance box above handles that state). */}
+                  {nextStatus && nextActor === 'rider' && !awaitingRiderAcceptance(order) && (
                     needsRider ? (
                       <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-700">
                         Assign a rider in the <strong>Rider</strong> card below to begin delivery.
@@ -296,7 +297,7 @@ export default function OrderDetailPage() {
             <div className="mt-2">
               <PaymentBadge method={order.paymentMethod} status={order.paymentStatus} />
             </div>
-            {order.paymentMethod === 'cod' && (
+            {order.paymentMethod === 'cod' && order.status !== 'cancelled' && (
               <>
                 <div className="mt-3 flex items-center justify-between rounded-xl bg-amber-50 px-3 py-2.5">
                   <span className="text-xs font-semibold text-amber-700">Rider collects on delivery</span>

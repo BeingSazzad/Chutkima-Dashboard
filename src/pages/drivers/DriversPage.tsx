@@ -159,7 +159,9 @@ export default function DriversPage() {
       className: 'text-right',
       cell: (d) => (
         <div className="flex items-center justify-end gap-0.5" onClick={(e) => e.stopPropagation()}>
-          {d.status === 'offline' ? (
+          {(d.accountStatus ?? 'active') !== 'active' ? (
+            <span className="text-xs font-medium capitalize text-slate-400">{d.accountStatus}</span>
+          ) : d.status === 'offline' ? (
             <Button size="sm" variant="secondary" onClick={() => setDriverStatus({ id: d.id, status: 'available' })}>Set available</Button>
           ) : d.status === 'available' ? (
             <Button size="sm" variant="outline" onClick={() => setDriverStatus({ id: d.id, status: 'offline' })}>Set offline</Button>

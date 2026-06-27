@@ -133,7 +133,9 @@ export default function DriverDetailPage() {
                 <p className="flex items-center gap-2 text-slate-600"><Fuel className="h-4 w-4 text-slate-400" /> {driver.kmToday} km today · {formatNPR(driver.kmToday * (ops?.fuelRatePerKm ?? FUEL_RATE_PER_KM))} fuel</p>
               </div>
               <div className="mt-4 flex gap-2">
-                {driver.status === 'offline' ? (
+                {accountStatus !== 'active' ? (
+                  <Button size="sm" variant="outline" className="flex-1" disabled>{acctMeta.label} — reinstate first</Button>
+                ) : driver.status === 'offline' ? (
                   <Button size="sm" className="flex-1" onClick={() => setStatus({ id: driver.id, status: 'available' })}>Set available</Button>
                 ) : driver.status === 'available' ? (
                   <Button size="sm" variant="outline" className="flex-1" onClick={() => setStatus({ id: driver.id, status: 'offline' })}>Set offline</Button>

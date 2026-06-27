@@ -5,6 +5,22 @@ import type { Order, OrderStatus, PaymentMethod, RefundItem, RefundType } from '
 
 const uid = (prefix: string) => `${prefix}${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`
 
+/** Forward order of the journey stages (cancelled is handled separately). */
+const STAGE_ORDER: OrderStatus[] = ['pending', 'confirmed', 'packing', 'packed', 'picked_up', 'on_the_way', 'arrived', 'delivered']
+
+/**
+ * Stamp the reached stage (and backfill any skipped earlier stages) so the
+ * Order Journey + timing chips reflect every in-app transition, not just seeds.
+ */
+function stampStage(order: Order, status: OrderStatus) {
+  const idx = STAGE_ORDER.indexOf(status)
+  if (idx === -1) return // 'cancelled' — not part of the linear journey
+  const now = new Date().toISOString()
+  for (let i = 0; i <= idx; i++) {
+    if (!order.stageTimestamps[STAGE_ORDER[i]]) order.stageTimestamps[STAGE_ORDER[i]] = now
+  }
+}
+
 interface OrderFilters {
   status?: OrderStatus | 'all'
   zone?: string
@@ -108,6 +124,9 @@ export const ordersApi = api.injectEndpoints({
         await mockDelay(200)
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        // Removing a rider after pickup would strand an in-transit order — reassign instead.
+        if (['picked_up', 'on_the_way', 'arrived', 'delivered'].includes(order.status))
+          return { error: { status: 409, data: 'Cannot unassign a rider after pickup — reassign instead.' } as never }
         order.assignments = order.assignments.filter((a) => a.driverId !== driverId)
         const driver = drivers.find((d) => d.id === driverId)
         if (driver && driver.activeOrderId === orderId) {
@@ -126,9 +145,42 @@ export const ordersApi = api.injectEndpoints({
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
         order.status = status
+        // Record the stage timestamp (and backfill skips) for the journey/timing UI.
+        stampStage(order, status)
         // Keep the packed flag in sync once an order reaches "Packed" or beyond.
         if (['packed', 'picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status)) order.packed = true
-        if (status === 'cancelled') order.cancelReason = reason ?? order.cancelReason
+        if (status === 'cancelled') {
+          order.cancelReason = reason ?? order.cancelReason
+          // Auto-refund a prepaid order — fulfils the cancel dialog's promise so the
+          // payment state, refund history and ledger all reflect the reversal.
+          const alreadyRefunded = order.refunds.reduce((s, r) => s + r.amount, 0)
+          if (order.paymentMethod !== 'cod' && order.paymentStatus === 'paid' && alreadyRefunded < order.grandTotal) {
+            const refundAmount = order.grandTotal - alreadyRefunded
+            const at = new Date().toISOString()
+            order.refunds.push({
+              id: uid('rf'),
+              type: 'full',
+              amount: refundAmount,
+              reason: 'Order cancelled',
+              comments: order.cancelReason || 'Auto-refund on cancellation.',
+              adminName: 'System',
+              at,
+              status: 'processed',
+            })
+            order.paymentStatus = 'refunded'
+            transactions.unshift({
+              id: uid('t'),
+              type: 'refund',
+              reference: order.reference,
+              party: order.customerName,
+              amount: refundAmount,
+              method: PAYMENT_META[order.paymentMethod].label,
+              status: 'success',
+              orderId: order.id,
+              createdAt: at,
+            })
+          }
+        }
         if (status === 'delivered' || status === 'cancelled') {
           order.etaMinutes = 0
           if (order.driverId) {
@@ -142,7 +194,7 @@ export const ordersApi = api.injectEndpoints({
         }
         return { data: clone(order) }
       },
-      invalidatesTags: ['Order', 'Driver', 'Kpi'],
+      invalidatesTags: ['Order', 'Driver', 'Kpi', 'Transaction'],
     }),
 
     markCodCollected: build.mutation<Order, string>({
@@ -164,7 +216,10 @@ export const ordersApi = api.injectEndpoints({
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
         order.packerId = packerId
         // Sending to a packer moves a confirmed order into packing (confirm must happen first).
-        if (order.status === 'confirmed') order.status = 'packing'
+        if (order.status === 'confirmed') {
+          order.status = 'packing'
+          stampStage(order, 'packing')
+        }
         return { data: clone(order) }
       },
       invalidatesTags: ['Order'],
@@ -177,7 +232,10 @@ export const ordersApi = api.injectEndpoints({
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
         // Packing complete → status "Packed" (triggers the rider "ready for pickup" alert).
         order.packed = true
-        if (['confirmed', 'packing'].includes(order.status)) order.status = 'packed'
+        if (['confirmed', 'packing'].includes(order.status)) {
+          order.status = 'packed'
+          stampStage(order, 'packed')
+        }
         return { data: clone(order) }
       },
       invalidatesTags: ['Order'],

@@ -180,6 +180,8 @@ function makeOrder(
     cust.tier === 'vip'
       ? 0
       : subtotal >= 800 ? 0 : subtotal >= 600 ? 20 : subtotal >= 400 ? 40 : subtotal >= 200 ? 60 : 80
+  // A cancelled prepaid order is auto-refunded (keeps payment state + ledger consistent).
+  const isCancelledPrepaid = status === 'cancelled' && payment !== 'cod'
 
   // Per-stage timestamps (placed → … → current), spread from placedAt to now/delivery.
   const STAGES: OrderStatus[] = ['pending', 'confirmed', 'packing', 'packed', 'picked_up', 'on_the_way', 'arrived', 'delivered']
@@ -208,7 +210,7 @@ function makeOrder(
     deliveryFee,
     grandTotal: subtotal + deliveryFee,
     paymentMethod: payment,
-    paymentStatus: payment === 'cod' ? 'pending' : 'paid',
+    paymentStatus: payment === 'cod' ? 'pending' : isCancelledPrepaid ? 'refunded' : 'paid',
     status,
     driverId,
     assignments: driverId
@@ -231,7 +233,9 @@ function makeOrder(
     stageTimestamps,
     adminNote: '',
     notes: [],
-    refunds: [],
+    refunds: isCancelledPrepaid
+      ? [{ id: `rf-${id}`, type: 'full', amount: subtotal + deliveryFee, reason: 'Order cancelled', comments: 'Auto-refund on cancellation.', adminName: 'System', at: placedAtIso, status: 'processed' }]
+      : [],
     scheduledFor,
     holdUntil: null,
   }
@@ -262,8 +266,8 @@ export const orders: Order[] = [
   makeOrder('o18', '#GF-48219-NP', customers[4], [{ p: P('p11'), qty: 4 }, { p: P('p12'), qty: 1 }], 'delivered', 'cod', 'd3', 240, 0),
   makeOrder('o19', '#GF-48220-NP', customers[5], [{ p: P('p5'), qty: 2 }, { p: P('p1'), qty: 1 }], 'delivered', 'esewa', 'd4', 360, 0),
   makeOrder('o20', '#GF-48221-NP', customers[7], [{ p: P('p7'), qty: 3 }, { p: P('p10'), qty: 1 }], 'delivered', 'connectips', 'd7', 200, 0),
-  makeOrder('o21', '#GF-48222-NP', customers[1], [{ p: P('p2'), qty: 1 }, { p: P('p9'), qty: 2 }], 'delivered', 'cod', 'd6', 1600, 0),
-  makeOrder('o22', '#GF-48223-NP', customers[3], [{ p: P('p1'), qty: 4 }], 'delivered', 'esewa', 'd8', 2000, 0),
+  makeOrder('o21', '#GF-48222-NP', customers[1], [{ p: P('p2'), qty: 1 }, { p: P('p9'), qty: 2 }], 'delivered', 'cod', 'd3', 1600, 0),
+  makeOrder('o22', '#GF-48223-NP', customers[3], [{ p: P('p1'), qty: 4 }], 'delivered', 'esewa', 'd7', 2000, 0),
 ]
 
 // Seed a busy packer (pk1 is packing o2) so the assign screen shows free-vs-busy.
@@ -324,7 +328,7 @@ export const banners: Banner[] = [
   { id: 'b2', title: 'Fresh Veggies Daily', subtitle: 'Farm-fresh fruits & vegetables', image: banner('veggies'), placement: 'hero', position: 2, ctaLabel: 'Order fresh', ctaLink: '/category/fruits-vegetables', active: true },
   { id: 'b3', title: 'Midnight Cravings?', subtitle: 'Snacks delivered in 10 mins', image: banner('snacks'), placement: 'hero', position: 3, ctaLabel: 'Explore', ctaLink: '/category/snacks', active: false },
   { id: 'b4', title: 'Free Delivery', subtitle: 'On orders above NPR 800', image: banner('free'), placement: 'grid_small', position: 1, ctaLabel: 'Learn more', ctaLink: '/offers', active: true },
-  { id: 'b5', title: 'Refer & Earn', subtitle: 'Get NPR 100 per friend', image: banner('refer'), placement: 'grid_small', position: 2, ctaLabel: 'Invite', ctaLink: '/refer', active: true },
+  { id: 'b5', title: 'Refer & Earn', subtitle: 'Get up to NPR 50 per friend', image: banner('refer'), placement: 'grid_small', position: 2, ctaLabel: 'Invite', ctaLink: '/refer', active: true },
   { id: 'b6', title: 'New in Beauty', subtitle: 'Personal care essentials', image: banner('beauty'), placement: 'grid_small', position: 3, ctaLabel: 'Discover', ctaLink: '/category/beauty', active: true },
   { id: 'b7', title: 'Weekend Combo', subtitle: 'Save big on staples', image: banner('combo'), placement: 'category_strip', position: 1, ctaLabel: 'Grab deal', ctaLink: '/offers/combo', active: true },
 ]

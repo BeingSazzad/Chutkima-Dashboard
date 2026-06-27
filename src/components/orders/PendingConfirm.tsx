@@ -27,13 +27,31 @@ export function PendingConfirm({ order, confirm, confirming }: { order: Order; c
   const remaining = Math.max(0, Math.ceil(WINDOW_SECS - elapsed))
   const fresh = elapsed < FRESH_SECS
   const withinWindow = remaining > 0
+  // Don't auto-confirm an order that's on hold or pre-booked for a future slot.
+  const onHold = order.holdUntil != null && Date.parse(order.holdUntil) > now
+  const scheduledFuture = order.scheduledFor != null && Date.parse(order.scheduledFor) > now
+  const deferred = onHold || scheduledFuture
 
   useEffect(() => {
-    if (fresh && !withinWindow && !fired.current && order.status === 'pending') {
+    if (fresh && !withinWindow && !deferred && !fired.current && order.status === 'pending') {
       fired.current = true
       confirm()
     }
-  }, [fresh, withinWindow, order.status, confirm])
+  }, [fresh, withinWindow, deferred, order.status, confirm])
+
+  // On hold / scheduled → processing is paused; surface that instead of a countdown.
+  if (deferred) {
+    return (
+      <div className="rounded-xl bg-slate-50 px-3 py-3">
+        <p className="text-sm font-medium text-slate-600">
+          {onHold ? 'On hold — auto-confirm paused until the hold is released.' : 'Scheduled order — held until its delivery slot.'}
+        </p>
+        <Button className="mt-2" size="sm" variant="outline" loading={confirming} onClick={confirm}>
+          Confirm now anyway
+        </Button>
+      </div>
+    )
+  }
 
   if (fresh && withinWindow) {
     return (

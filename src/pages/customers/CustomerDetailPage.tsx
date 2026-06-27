@@ -185,9 +185,9 @@ export default function CustomerDetailPage() {
           <CreditCard customer={customer} orders={orders} />
         </div>
 
-        {/* Order history */}
+        {/* Order history — shows the recent orders on record; lifetime count is the historical total. */}
         <Card className="lg:col-span-2">
-          <CardHeader title="Recent orders" subtitle={`Lifetime: ${customer.totalOrders} orders`} />
+          <CardHeader title="Recent orders" subtitle={`${orders.length} on record · ${customer.totalOrders} lifetime`} />
           <CardContent className="pt-2">
             {ordersLoading ? (
               <Spinner label="Loading orders…" className="py-10" />

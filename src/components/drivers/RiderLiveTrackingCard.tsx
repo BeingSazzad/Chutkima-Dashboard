@@ -32,16 +32,20 @@ export function RiderLiveTrackingCard({ driver }: { driver: Driver }) {
   const hasGps = driver.lat != null && driver.lng != null
   const here = { lat: driver.lat, lng: driver.lng }
 
-  // Nearest of the rider's assigned stores.
+  // Pickup store = the active order's store; otherwise the nearest assigned store.
   let nearest: DarkStore | undefined
   let nearestKm: number | null = null
-  for (const s of stores.filter((x) => driver.storeIds?.includes(x.id))) {
-    const km = distanceKm(here, { lat: s.lat, lng: s.lng })
-    if (km != null && (nearestKm == null || km < nearestKm)) {
-      nearestKm = km
-      nearest = s
+  if (activeOrder) nearest = stores.find((s) => s.id === activeOrder.storeId)
+  if (!nearest) {
+    for (const s of stores.filter((x) => driver.storeIds?.includes(x.id))) {
+      const km = distanceKm(here, { lat: s.lat, lng: s.lng })
+      if (km != null && (nearestKm == null || km < nearestKm)) {
+        nearestKm = km
+        nearest = s
+      }
     }
   }
+  if (nearest && nearestKm == null) nearestKm = distanceKm(here, { lat: nearest.lat, lng: nearest.lng })
   const storePt: [number, number] | undefined = nearest?.lat != null && nearest?.lng != null ? [nearest.lat, nearest.lng] : undefined
   const destPt: [number, number] | undefined = activeOrder?.lat != null && activeOrder?.lng != null ? [activeOrder.lat, activeOrder.lng] : undefined
   const kmToCustomer = destPt ? distanceKm(here, { lat: destPt[0], lng: destPt[1] }) : null

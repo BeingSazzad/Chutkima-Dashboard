@@ -32,7 +32,7 @@ export const storesApi = api.injectEndpoints({
             orders: storeOrders.length,
             revenue: storeOrders.filter((o) => o.status === 'delivered').reduce((s, o) => s + o.grandTotal, 0),
             pending: storeOrders.filter((o) => !['delivered', 'cancelled'].includes(o.status)).length,
-            ridersOnline: drivers.filter((d) => d.status !== 'offline').length,
+            ridersOnline: drivers.filter((d) => d.status !== 'offline' && (d.storeIds?.includes(store.id) ?? false)).length,
           }
         })
         return { data: rows }
@@ -119,10 +119,13 @@ export const storesApi = api.injectEndpoints({
         await mockDelay(250)
         const idx = darkStores.findIndex((s) => s.id === id)
         if (idx === -1) return { error: { status: 404, data: 'Not found' } as never }
+        // Cascade: detach the store from zones + riders so nothing keeps a dangling ref.
+        for (const z of zones) if (z.storeId === id) z.storeId = undefined
+        for (const d of drivers) if (d.storeIds?.includes(id)) d.storeIds = d.storeIds.filter((s) => s !== id)
         darkStores.splice(idx, 1)
         return { data: { id } }
       },
-      invalidatesTags: ['Store'],
+      invalidatesTags: ['Store', 'Zone', 'Driver'],
     }),
   }),
 })

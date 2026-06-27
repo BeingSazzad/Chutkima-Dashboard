@@ -158,9 +158,11 @@ export const analyticsApi = api.injectEndpoints({
         await mockDelay()
         const map = new Map<string, ZoneStat>()
         for (const o of orders) {
+          // Mirror KPI/store rules: skip cancelled; revenue counts delivered only.
+          if (o.status === 'cancelled') continue
           const z = map.get(o.zone) ?? { zone: o.zone, orders: 0, revenue: 0 }
           z.orders += 1
-          z.revenue += o.grandTotal
+          if (o.status === 'delivered') z.revenue += o.grandTotal
           map.set(o.zone, z)
         }
         return { data: clone([...map.values()].sort((a, b) => b.revenue - a.revenue)) }

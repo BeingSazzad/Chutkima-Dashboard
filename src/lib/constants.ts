@@ -233,12 +233,5 @@ export const STORE_FEATURES: { key: StoreFeatureKey; label: string }[] = [
 export const allStoreFeaturesOn = (): Record<StoreFeatureKey, boolean> =>
   Object.fromEntries(STORE_FEATURES.map((f) => [f.key, true])) as Record<StoreFeatureKey, boolean>
 
-/** Service zones in Butwal (used for filtering / dispatch). */
-export const ZONES = [
-  'Traffic Chowk',
-  'Amarpath',
-  'Milanchowk',
-  'Golpark',
-  'Sukkhanagar',
-  'Buddhanagar',
-] as const
+// Zone names are NOT hardcoded here — the live `zones` config (services/mock/data.ts,
+// via useGetZonesQuery) is the single source of truth for every zone picker.

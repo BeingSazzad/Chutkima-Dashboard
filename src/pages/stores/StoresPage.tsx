@@ -228,7 +228,7 @@ function StoreZonesModal({ store, onClose }: { store: DarkStore | null; onClose:
     for (const z of zones) {
       const want = picked.has(z.id)
       if (want && z.storeId !== store.id) ops.push(saveZone({ id: z.id, storeId: store.id }).unwrap())
-      else if (!want && z.storeId === store.id) ops.push(saveZone({ id: z.id, storeId: '' }).unwrap())
+      else if (!want && z.storeId === store.id) ops.push(saveZone({ id: z.id, storeId: undefined }).unwrap())
     }
     await Promise.all(ops)
     onClose()

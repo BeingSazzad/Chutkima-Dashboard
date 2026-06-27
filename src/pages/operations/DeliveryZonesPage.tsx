@@ -170,7 +170,7 @@ function ZonesCard({
           <Spinner label="Loading zones…" className="py-10" />
         ) : (
           zones.map((z) => (
-            <div key={z.id} className="flex items-center gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
+            <div key={z.id} className="flex items-start gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-mint-100 text-brand-600">
                 <MapPin className="h-4 w-4" />
               </div>
@@ -178,7 +178,7 @@ function ZonesCard({
                 <div className="flex items-center gap-2">
                   <p className="truncate text-sm font-semibold text-slate-800">{z.name}</p>
                   {z.mapLink && (
-                    <a href={z.mapLink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="text-slate-400 hover:text-brand-600" title="Open map" aria-label="Open map">
+                    <a href={z.mapLink} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="shrink-0 text-slate-400 hover:text-brand-600" title="Open map" aria-label="Open map">
                       <ExternalLink className="h-3.5 w-3.5" />
                     </a>
                   )}
@@ -187,24 +187,30 @@ function ZonesCard({
                   <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /> {z.etaMins} min ETA</span>
                 </p>
                 {z.areas.length > 0 && <p className="mt-0.5 truncate text-xs text-slate-400">Covers: {z.areas.join(', ')}</p>}
+                {/* Badges wrap under the meta so a paused/geo-fenced row never crushes the name column. */}
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  {storeName(z.storeId) ? (
+                    <Badge tone="bg-violet-50 text-violet-700 ring-violet-600/15">{storeName(z.storeId)}</Badge>
+                  ) : (
+                    <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15">No store</Badge>
+                  )}
+                  {z.geofence.length >= 3 && <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15">Geo-fenced</Badge>}
+                  {!z.active && <Badge>Paused</Badge>}
+                </div>
               </div>
-              {storeName(z.storeId) ? (
-                <Badge tone="bg-violet-50 text-violet-700 ring-violet-600/15">{storeName(z.storeId)}</Badge>
-              ) : (
-                <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15">No store</Badge>
-              )}
-              {z.geofence.length >= 3 && <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15">Geo-fenced</Badge>}
-              {!z.active && <Badge>Paused</Badge>}
-              <Switch checked={z.active} onChange={() => toggle(z.id)} size="sm" aria-label={`Toggle ${z.name}`} />
-              <button onClick={() => onFence(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Geo-fence" title="Draw geo-fence">
-                <Hexagon className="h-4 w-4" />
-              </button>
-              <button onClick={() => onEdit(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit">
-                <Pencil className="h-4 w-4" />
-              </button>
-              <button onClick={() => onDelete(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger" aria-label="Delete">
-                <Trash2 className="h-4 w-4" />
-              </button>
+              {/* Action controls — fixed width, never shrink. */}
+              <div className="flex shrink-0 items-center gap-0.5">
+                <Switch checked={z.active} onChange={() => toggle(z.id)} size="sm" aria-label={`Toggle ${z.name}`} />
+                <button onClick={() => onFence(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Geo-fence" title="Draw geo-fence">
+                  <Hexagon className="h-4 w-4" />
+                </button>
+                <button onClick={() => onEdit(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit">
+                  <Pencil className="h-4 w-4" />
+                </button>
+                <button onClick={() => onDelete(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger" aria-label="Delete">
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           ))
         )}

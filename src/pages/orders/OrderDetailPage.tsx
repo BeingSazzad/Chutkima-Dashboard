@@ -262,12 +262,7 @@ export default function OrderDetailPage() {
             </CardContent>
           </Card>
 
-          {order.driverId && !isClosed && <LiveTrackingCard order={order} driver={driver} store={store} />}
-
-          <RefundCard order={order} />
-
-          <OrderNotesCard order={order} />
-
+          {/* Customer + live map kept adjacent: who/where the order goes. */}
           <Card>
             <CardHeader title="Customer" />
             <CardContent className="pt-2">
@@ -292,6 +287,8 @@ export default function OrderDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {order.driverId && !isClosed && <LiveTrackingCard order={order} driver={driver} store={store} />}
 
           <Card className="p-5">
             <p className="text-sm font-medium text-slate-400">Payment</p>
@@ -323,6 +320,10 @@ export default function OrderDetailPage() {
               </>
             )}
           </Card>
+
+          <RefundCard order={order} />
+
+          <OrderNotesCard order={order} />
         </div>
       </div>
 

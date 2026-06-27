@@ -285,13 +285,6 @@ function ProductFormModal({ product, onClose }: { product: Product | 'new' | nul
           <Input label="Stock" type="number" value={form.stock} onChange={(e) => set('stock', e.target.value)} />
           <Input label="Low-stock at" type="number" value={form.lowStockThreshold} onChange={(e) => set('lowStockThreshold', e.target.value)} />
         </div>
-        <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-2.5">
-          <div>
-            <span className="text-sm font-medium text-slate-700">Mark as clearance</span>
-            <p className="text-xs text-slate-400">Shows a “Clearance” badge in the app. Drop the selling price to discount.</p>
-          </div>
-          <Switch checked={form.onClearance} onChange={(v) => set('onClearance', v)} />
-        </label>
       </div>
     </Modal>
   )

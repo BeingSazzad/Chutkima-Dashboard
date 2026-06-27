@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { AlertTriangle, Bike, Check, Clock3, Download, Eye, PauseCircle, Search, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -46,7 +45,6 @@ const fmtSchedule = (iso: string) =>
   new Date(iso).toLocaleString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 export default function OrdersPage() {
-  const navigate = useNavigate()
   const [tab, setTab] = useState<string>('all')
   const [zone, setZone] = useState('')
   const [payment, setPayment] = useState('')
@@ -181,10 +179,10 @@ export default function OrdersPage() {
           <button
             onClick={(e) => {
               e.stopPropagation()
-              navigate(ROUTES.orderDetail(o.id))
+              openInNewTab(ROUTES.orderDetail(o.id))
             }}
             className="focus-ring rounded font-semibold text-brand-700 hover:underline"
-            title="Open order details"
+            title="Open order details in a new tab"
           >
             {o.reference}
           </button>
@@ -387,7 +385,7 @@ export default function OrdersPage() {
           columns={columns}
           data={shown}
           rowKey={(o) => o.id}
-          onRowClick={(o) => navigate(ROUTES.orderDetail(o.id))}
+          onRowClick={(o) => openInNewTab(ROUTES.orderDetail(o.id))}
           loading={isLoading}
           emptyTitle="No orders found"
           emptyDescription="Try a different filter or search term."

@@ -40,6 +40,8 @@ import { ROUTES } from '@/constants/routes'
 
 const img = (seed: string) => `https://picsum.photos/seed/chutkima-${seed}/200/200`
 const avatar = (seed: string) => `https://i.pravatar.cc/120?u=chutkima-${seed}`
+/** Scanned KYC document stand-in (license / vehicle registration photo). */
+const doc = (seed: string) => `https://picsum.photos/seed/chutkima-doc-${seed}/640/400`
 const minsAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
 const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString()
 const daysAhead = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString()
@@ -83,14 +85,14 @@ export const products: Product[] = [
 
 // ── Drivers ─────────────────────────────────────────────────────────────────
 export const drivers: Driver[] = [
-  { id: 'd1', name: 'Manoj Thapa', phone: '+977 9841000001', avatar: avatar('d1'), vehicle: 'Scooter · BA 24 PA 1290', status: 'on_delivery', storeIds: ['s1', 's2'], zone: 'Traffic Chowk', rating: 4.9, activeOrderId: 'o1', deliveriesToday: 11, totalDeliveries: 1820, onTimeRate: 97, kmToday: 38, lat: 27.7010, lng: 83.4486 },
-  { id: 'd2', name: 'Suresh Gurung', phone: '+977 9841000002', avatar: avatar('d2'), vehicle: 'Bike · LU 1 CHA 4421', status: 'available', storeIds: ['s1'], zone: 'Amarpath', rating: 4.8, activeOrderId: null, deliveriesToday: 8, totalDeliveries: 1340, onTimeRate: 95, kmToday: 26, lat: 27.6962, lng: 83.4521 },
-  { id: 'd3', name: 'Bikash Tamang', phone: '+977 9841000003', avatar: avatar('d3'), vehicle: 'Scooter · LU 2 PA 0098', status: 'on_delivery', storeIds: ['s1'], zone: 'Milanchowk', rating: 4.7, activeOrderId: 'o10', deliveriesToday: 6, totalDeliveries: 920, onTimeRate: 93, kmToday: 19, lat: 27.7052, lng: 83.4402 },
-  { id: 'd4', name: 'Ramesh Bhandari', phone: '+977 9841000004', avatar: avatar('d4'), vehicle: 'Bike · LU 5 CHA 7711', status: 'on_delivery', storeIds: ['s2'], zone: 'Golpark', rating: 4.6, activeOrderId: 'o4', deliveriesToday: 9, totalDeliveries: 1110, onTimeRate: 91, kmToday: 31, lat: 27.6906, lng: 83.4617 },
-  { id: 'd5', name: 'Dipesh Shrestha', phone: '+977 9841000005', avatar: avatar('d5'), vehicle: 'Scooter · BA 31 PA 2200', status: 'available', storeIds: ['s1', 's2'], zone: 'Traffic Chowk', rating: 4.9, activeOrderId: null, deliveriesToday: 12, totalDeliveries: 2050, onTimeRate: 98, kmToday: 44, lat: 27.7001, lng: 83.4472 },
-  { id: 'd6', name: 'Anil Karki', phone: '+977 9841000006', avatar: avatar('d6'), vehicle: 'Bike · LU 3 CHA 5532', status: 'offline', storeIds: ['s2'], zone: 'Sukkhanagar', rating: 4.5, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 640, onTimeRate: 88, kmToday: 0, lat: 27.6852, lng: 83.4701 },
-  { id: 'd7', name: 'Kiran Magar', phone: '+977 9841000007', avatar: avatar('d7'), vehicle: 'Scooter · LU 1 PA 9087', status: 'on_delivery', storeIds: ['s2'], zone: 'Buddhanagar', rating: 4.8, activeOrderId: 'o8', deliveriesToday: 7, totalDeliveries: 1005, onTimeRate: 94, kmToday: 23, lat: 27.6981, lng: 83.4662 },
-  { id: 'd8', name: 'Sanjay Bk', phone: '+977 9841000008', avatar: avatar('d8'), vehicle: 'Bike · BA 12 PA 6543', status: 'offline', storeIds: ['s1'], zone: 'Amarpath', rating: 4.4, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 480, onTimeRate: 86, kmToday: 0, lat: 27.6942, lng: 83.4556 },
+  { id: 'd1', name: 'Manoj Thapa', phone: '+977 9841000001', avatar: avatar('d1'), licenseNo: '03-06-00128431', licenseDoc: doc('lic-d1'), vehicleRegDoc: doc('reg-d1'), vehicle: 'Scooter · BA 24 PA 1290', status: 'on_delivery', storeIds: ['s1', 's2'], zone: 'Traffic Chowk', rating: 4.9, activeOrderId: 'o1', deliveriesToday: 11, totalDeliveries: 1820, onTimeRate: 97, kmToday: 38, lat: 27.7010, lng: 83.4486 },
+  { id: 'd2', name: 'Suresh Gurung', phone: '+977 9841000002', avatar: avatar('d2'), licenseNo: '05-02-00094217', licenseDoc: doc('lic-d2'), vehicleRegDoc: doc('reg-d2'), vehicle: 'Bike · LU 1 CHA 4421', status: 'available', storeIds: ['s1'], zone: 'Amarpath', rating: 4.8, activeOrderId: null, deliveriesToday: 8, totalDeliveries: 1340, onTimeRate: 95, kmToday: 26, lat: 27.6962, lng: 83.4521 },
+  { id: 'd3', name: 'Bikash Tamang', phone: '+977 9841000003', avatar: avatar('d3'), licenseNo: '05-02-00110558', licenseDoc: doc('lic-d3'), vehicleRegDoc: doc('reg-d3'), vehicle: 'Scooter · LU 2 PA 0098', status: 'on_delivery', storeIds: ['s1'], zone: 'Milanchowk', rating: 4.7, activeOrderId: 'o10', deliveriesToday: 6, totalDeliveries: 920, onTimeRate: 93, kmToday: 19, lat: 27.7052, lng: 83.4402 },
+  { id: 'd4', name: 'Ramesh Bhandari', phone: '+977 9841000004', avatar: avatar('d4'), licenseNo: '05-02-00087650', licenseDoc: doc('lic-d4'), vehicleRegDoc: doc('reg-d4'), vehicle: 'Bike · LU 5 CHA 7711', status: 'on_delivery', storeIds: ['s2'], zone: 'Golpark', rating: 4.6, activeOrderId: 'o4', deliveriesToday: 9, totalDeliveries: 1110, onTimeRate: 91, kmToday: 31, lat: 27.6906, lng: 83.4617 },
+  { id: 'd5', name: 'Dipesh Shrestha', phone: '+977 9841000005', avatar: avatar('d5'), licenseNo: '03-06-00131902', licenseDoc: doc('lic-d5'), vehicleRegDoc: doc('reg-d5'), vehicle: 'Scooter · BA 31 PA 2200', status: 'available', storeIds: ['s1', 's2'], zone: 'Traffic Chowk', rating: 4.9, activeOrderId: null, deliveriesToday: 12, totalDeliveries: 2050, onTimeRate: 98, kmToday: 44, lat: 27.7001, lng: 83.4472 },
+  { id: 'd6', name: 'Anil Karki', phone: '+977 9841000006', avatar: avatar('d6'), licenseNo: '05-02-00102284', licenseDoc: doc('lic-d6'), vehicleRegDoc: doc('reg-d6'), vehicle: 'Bike · LU 3 CHA 5532', status: 'offline', storeIds: ['s2'], zone: 'Sukkhanagar', rating: 4.5, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 640, onTimeRate: 88, kmToday: 0, lat: 27.6852, lng: 83.4701 },
+  { id: 'd7', name: 'Kiran Magar', phone: '+977 9841000007', avatar: avatar('d7'), licenseNo: '05-02-00099137', licenseDoc: doc('lic-d7'), vehicleRegDoc: doc('reg-d7'), vehicle: 'Scooter · LU 1 PA 9087', status: 'on_delivery', storeIds: ['s2'], zone: 'Buddhanagar', rating: 4.8, activeOrderId: 'o8', deliveriesToday: 7, totalDeliveries: 1005, onTimeRate: 94, kmToday: 23, lat: 27.6981, lng: 83.4662 },
+  { id: 'd8', name: 'Sanjay Bk', phone: '+977 9841000008', avatar: avatar('d8'), licenseNo: '05-02-00075413', licenseDoc: doc('lic-d8'), accountStatus: 'suspended', vehicle: 'Bike · BA 12 PA 6543', status: 'offline', storeIds: ['s1'], zone: 'Amarpath', rating: 4.4, activeOrderId: null, deliveriesToday: 0, totalDeliveries: 480, onTimeRate: 86, kmToday: 0, lat: 27.6942, lng: 83.4556 },
 ]
 
 // ── Customers ───────────────────────────────────────────────────────────────
@@ -253,6 +255,15 @@ export const orders: Order[] = [
   // Scheduled (after-hours pre-booked) orders — feature 113 / 105.
   makeOrder('o13', '#GF-48214-NP', customers[2], [{ p: P('p7'), qty: 2 }, { p: P('p1'), qty: 1 }], 'confirmed', 'esewa', null, 30, 15, 'Pre-booked for tomorrow morning.', daysAhead(1)),
   makeOrder('o14', '#GF-48215-NP', customers[6], [{ p: P('p12'), qty: 1 }, { p: P('p5'), qty: 2 }], 'confirmed', 'cod', null, 45, 15, '', daysAhead(1)),
+  // Delivered history — gives every rider a populated "Recent deliveries" list.
+  makeOrder('o15', '#GF-48216-NP', customers[2], [{ p: P('p1'), qty: 2 }, { p: P('p7'), qty: 1 }], 'delivered', 'cod', 'd1', 180, 0),
+  makeOrder('o16', '#GF-48217-NP', customers[6], [{ p: P('p4'), qty: 1 }, { p: P('p8'), qty: 1 }], 'delivered', 'esewa', 'd1', 300, 0),
+  makeOrder('o17', '#GF-48218-NP', customers[0], [{ p: P('p3'), qty: 3 }], 'delivered', 'khalti', 'd1', 1500, 0),
+  makeOrder('o18', '#GF-48219-NP', customers[4], [{ p: P('p11'), qty: 4 }, { p: P('p12'), qty: 1 }], 'delivered', 'cod', 'd3', 240, 0),
+  makeOrder('o19', '#GF-48220-NP', customers[5], [{ p: P('p5'), qty: 2 }, { p: P('p1'), qty: 1 }], 'delivered', 'esewa', 'd4', 360, 0),
+  makeOrder('o20', '#GF-48221-NP', customers[7], [{ p: P('p7'), qty: 3 }, { p: P('p10'), qty: 1 }], 'delivered', 'connectips', 'd7', 200, 0),
+  makeOrder('o21', '#GF-48222-NP', customers[1], [{ p: P('p2'), qty: 1 }, { p: P('p9'), qty: 2 }], 'delivered', 'cod', 'd6', 1600, 0),
+  makeOrder('o22', '#GF-48223-NP', customers[3], [{ p: P('p1'), qty: 4 }], 'delivered', 'esewa', 'd8', 2000, 0),
 ]
 
 // Seed a busy packer (pk1 is packing o2) so the assign screen shows free-vs-busy.
@@ -590,7 +601,13 @@ export const driverWarnings: DriverWarning[] = [
 ]
 
 // ── Driver account events (suspension / termination / reinstatement records) ──
-export const driverAccountEvents: DriverAccountEvent[] = []
+export const driverAccountEvents: DriverAccountEvent[] = [
+  // d8 (Sanjay Bk) — currently suspended pending KYC re-verification.
+  { id: 'dae1', driverId: 'd8', action: 'suspended', reason: 'Vehicle registration document expired — suspended until renewed papers are submitted.', by: 'Kiran Chetri', at: daysAgo(2) },
+  // d6 (Anil Karki) — past suspension over the extra-charge complaint, since reinstated.
+  { id: 'dae2', driverId: 'd6', action: 'suspended', reason: 'Repeated extra-charge complaints from customers (see complaint #rp3).', by: 'Kiran Chetri', at: daysAgo(20) },
+  { id: 'dae3', driverId: 'd6', action: 'reinstated', reason: 'Completed re-training and acknowledged the no-extra-charge policy. Clean for 2 weeks.', by: 'Prakash Thapa', at: daysAgo(14) },
+]
 
 // ── Transactions ────────────────────────────────────────────────────────────
 export const transactions: Transaction[] = [

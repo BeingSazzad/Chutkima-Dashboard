@@ -39,7 +39,7 @@ import {
 import { awaitingRiderAcceptance } from '@/lib/orderStage'
 import { useGetDriverQuery } from '@/services/endpoints/driversApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
-import { useGetOpsConfigQuery, useGetStoreSetupQuery, useGetSystemControlsQuery, type StoreSetup } from '@/services/endpoints/settingsApi'
+import { useGetStoreSetupQuery, useGetSystemControlsQuery, type StoreSetup } from '@/services/endpoints/settingsApi'
 import { useAuth } from '@/hooks/useAuth'
 import type { InvoiceSize, Order, OrderItem, OrderStatus, RefundType } from '@/types/common.types'
 
@@ -49,7 +49,6 @@ export default function OrderDetailPage() {
   const { data: order, isLoading } = useGetOrderQuery(orderId)
   const { data: driver } = useGetDriverQuery(order?.driverId ?? '', { skip: !order?.driverId })
   const { data: stores = [] } = useGetStoresQuery()
-  const { data: ops } = useGetOpsConfigQuery()
   const { data: storeSetup } = useGetStoreSetupQuery()
   const { data: sysControls } = useGetSystemControlsQuery()
   const [updateStatus, { isLoading: updating }] = useUpdateOrderStatusMutation()
@@ -208,10 +207,6 @@ export default function OrderDetailPage() {
                       <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-700">
                         Assign a rider in the <strong>Rider</strong> card below to begin delivery.
                       </p>
-                    ) : nextStatus === 'delivered' && ops?.multiRiderEnabled && order.assignments.length > 1 ? (
-                      <div className="rounded-xl bg-violet-50 px-3 py-3 text-sm font-medium text-violet-700">
-                        This is a team order — it’s marked Delivered once <strong>all {order.assignments.length} riders confirm</strong> in the Riders panel.
-                      </div>
                     ) : (
                       <div className="rounded-xl bg-violet-50 px-3 py-3">
                         <p className="text-sm font-medium text-violet-700">

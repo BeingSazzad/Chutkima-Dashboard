@@ -264,9 +264,6 @@ export default function OrdersPage() {
             <span className="flex items-center gap-1.5">
               <Bike className="h-4 w-4 text-brand-500" />
               <EntityLink kind="driver" id={o.driverId} className="font-medium text-slate-700">{driverName(o.driverId)}</EntityLink>
-              {o.assignments.length > 1 && (
-                <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">+{o.assignments.length - 1}</span>
-              )}
               {!closed && (
                 <button
                   onClick={(e) => {

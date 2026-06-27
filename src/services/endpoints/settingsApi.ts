@@ -43,8 +43,6 @@ export interface ReferralConfig {
 }
 
 export interface OpsConfig {
-  multiRiderEnabled: boolean
-  maxRiders: number
   fuelRatePerKm: number
 }
 
@@ -73,8 +71,6 @@ export const settingsApi = api.injectEndpoints({
     saveOpsConfig: build.mutation<OpsConfig, OpsConfig>({
       async queryFn(payload) {
         await mockDelay(250)
-        opsConfig.multiRiderEnabled = payload.multiRiderEnabled
-        opsConfig.maxRiders = payload.maxRiders
         opsConfig.fuelRatePerKm = payload.fuelRatePerKm
         return { data: clone(opsConfig) }
       },

@@ -103,22 +103,6 @@ export const ordersApi = api.injectEndpoints({
       invalidatesTags: ['Order'],
     }),
 
-    addRider: build.mutation<Order, { orderId: string; driverId: string; note?: string }>({
-      async queryFn({ orderId, driverId, note }) {
-        await mockDelay(250)
-        const order = orders.find((o) => o.id === orderId)
-        const driver = drivers.find((d) => d.id === driverId)
-        if (!order || !driver) return { error: { status: 404, data: 'Not found' } as never }
-        if (order.assignments.some((a) => a.driverId === driverId)) return { data: clone(order) }
-        order.assignments.push({ driverId, note: note ?? '', confirmed: false })
-        if (!order.driverId) order.driverId = driverId
-        driver.status = 'on_delivery'
-        driver.activeOrderId = orderId
-        return { data: clone(order) }
-      },
-      invalidatesTags: ['Order', 'Driver'],
-    }),
-
     removeRider: build.mutation<Order, { orderId: string; driverId: string }>({
       async queryFn({ orderId, driverId }) {
         await mockDelay(200)
@@ -131,41 +115,6 @@ export const ordersApi = api.injectEndpoints({
           driver.activeOrderId = null
         }
         order.driverId = order.assignments[0]?.driverId ?? null
-        return { data: clone(order) }
-      },
-      invalidatesTags: ['Order', 'Driver'],
-    }),
-
-    setRiderNote: build.mutation<Order, { orderId: string; driverId: string; note: string }>({
-      async queryFn({ orderId, driverId, note }) {
-        await mockDelay(150)
-        const order = orders.find((o) => o.id === orderId)
-        const a = order?.assignments.find((x) => x.driverId === driverId)
-        if (!order || !a) return { error: { status: 404, data: 'Not found' } as never }
-        a.note = note
-        return { data: clone(order) }
-      },
-      invalidatesTags: ['Order'],
-    }),
-
-    confirmRider: build.mutation<Order, { orderId: string; driverId: string }>({
-      async queryFn({ orderId, driverId }) {
-        await mockDelay(200)
-        const order = orders.find((o) => o.id === orderId)
-        const a = order?.assignments.find((x) => x.driverId === driverId)
-        if (!order || !a) return { error: { status: 404, data: 'Not found' } as never }
-        a.confirmed = !a.confirmed
-        // Order is delivered only when every assigned rider confirms.
-        if (order.assignments.length > 0 && order.assignments.every((x) => x.confirmed)) {
-          order.status = 'delivered'
-          order.assignments.forEach((x) => {
-            const d = drivers.find((dr) => dr.id === x.driverId)
-            if (d) {
-              d.status = 'available'
-              d.activeOrderId = null
-            }
-          })
-        }
         return { data: clone(order) }
       },
       invalidatesTags: ['Order', 'Driver'],
@@ -359,10 +308,7 @@ export const {
   useGetOrderQuery,
   useAssignDriverMutation,
   useAcceptRiderMutation,
-  useAddRiderMutation,
   useRemoveRiderMutation,
-  useSetRiderNoteMutation,
-  useConfirmRiderMutation,
   useUpdateOrderStatusMutation,
   useMarkCodCollectedMutation,
   useAssignPackerMutation,

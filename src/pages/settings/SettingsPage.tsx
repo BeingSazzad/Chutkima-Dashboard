@@ -34,32 +34,15 @@ function DispatchCard() {
   if (!ops) return null
   return (
     <Card>
-      <CardHeader title="Dispatch & finance" subtitle="Multi-rider assignment · fuel allowance" />
+      <CardHeader title="Dispatch & finance" subtitle="Rider fuel allowance" />
       <CardContent className="space-y-3 pt-2">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-semibold text-slate-800">Allow multiple riders</p>
-            <p className="text-xs text-slate-400">Split one order across several riders</p>
-          </div>
-          <Switch checked={ops.multiRiderEnabled} onChange={(v) => save({ ...ops, multiRiderEnabled: v })} aria-label="Multi-rider" />
-        </div>
-        {ops.multiRiderEnabled && (
-          <Select
-            label="Max riders per order"
-            value={String(ops.maxRiders)}
-            onChange={(e) => save({ ...ops, maxRiders: Number(e.target.value) })}
-            options={[2, 3, 4].map((n) => ({ label: String(n), value: String(n) }))}
-          />
-        )}
-        <div className="border-t border-slate-100 pt-3">
-          <Input
-            label="Rider fuel rate (NPR per km)"
-            type="number"
-            defaultValue={ops.fuelRatePerKm}
-            onBlur={(e) => save({ ...ops, fuelRatePerKm: Number(e.target.value) || 0 })}
-            hint="Used to auto-calculate each rider's fuel allowance."
-          />
-        </div>
+        <Input
+          label="Rider fuel rate (NPR per km)"
+          type="number"
+          defaultValue={ops.fuelRatePerKm}
+          onBlur={(e) => save({ ...ops, fuelRatePerKm: Number(e.target.value) || 0 })}
+          hint="Used to auto-calculate each rider's fuel allowance."
+        />
       </CardContent>
     </Card>
   )

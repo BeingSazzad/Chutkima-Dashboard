@@ -7,25 +7,20 @@ import { DriverStatusBadge } from '@/components/shared/StatusBadge'
 import { cn, distanceKm } from '@/lib/utils'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
-import { useAddRiderMutation, useAssignDriverMutation } from '@/services/endpoints/ordersApi'
+import { useAssignDriverMutation } from '@/services/endpoints/ordersApi'
 import type { Order } from '@/types/common.types'
 
 interface Props {
   order: Order | null
   open: boolean
   onClose: () => void
-  /** 'primary' replaces the rider; 'add' appends a second/third rider. */
-  mode?: 'primary' | 'add'
-  /** Driver ids to hide (already assigned). */
-  excludeIds?: string[]
 }
 
-/** Pick an available rider and assign them to an order. */
-export function AssignDriverModal({ order, open, onClose, mode = 'primary', excludeIds = [] }: Props) {
+/** Pick an available rider and assign (or reassign) them to an order. */
+export function AssignDriverModal({ order, open, onClose }: Props) {
   const { data: drivers = [], isLoading } = useGetDriversQuery()
   const { data: stores = [] } = useGetStoresQuery()
   const [assignDriver, { isLoading: assigning }] = useAssignDriverMutation()
-  const [addRider, { isLoading: adding }] = useAddRiderMutation()
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
@@ -36,7 +31,6 @@ export function AssignDriverModal({ order, open, onClose, mode = 'primary', excl
 
   const available = drivers
     .filter((d) => d.status !== 'offline')
-    .filter((d) => !excludeIds.includes(d.id))
     .filter((d) => d.name.toLowerCase().includes(search.toLowerCase()))
     // Nearest available rider first: sort by distance to the dark store
     // (riders with no GPS fix sink to the bottom), then availability.
@@ -51,11 +45,7 @@ export function AssignDriverModal({ order, open, onClose, mode = 'primary', excl
 
   const handleAssign = async () => {
     if (!order || !selected) return
-    if (mode === 'add') {
-      await addRider({ orderId: order.id, driverId: selected }).unwrap()
-    } else {
-      await assignDriver({ orderId: order.id, driverId: selected }).unwrap()
-    }
+    await assignDriver({ orderId: order.id, driverId: selected }).unwrap()
     setSelected(null)
     onClose()
   }
@@ -64,15 +54,15 @@ export function AssignDriverModal({ order, open, onClose, mode = 'primary', excl
     <Modal
       open={open}
       onClose={onClose}
-      title={mode === 'add' ? 'Add another rider' : 'Assign a rider'}
+      title="Assign a rider"
       description={order ? `Order ${order.reference} · ${order.zone}` : undefined}
       footer={
         <>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={handleAssign} disabled={!selected} loading={assigning || adding} leftIcon={<Bike className="h-4 w-4" />}>
-            {mode === 'add' ? 'Add rider' : 'Assign rider'}
+          <Button onClick={handleAssign} disabled={!selected} loading={assigning} leftIcon={<Bike className="h-4 w-4" />}>
+            Assign rider
           </Button>
         </>
       }

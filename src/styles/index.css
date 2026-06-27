@@ -33,6 +33,18 @@
   *::-webkit-scrollbar-thumb:hover {
     @apply bg-brand-300;
   }
+
+  /*
+   * Leaflet sets z-index up to 1000 on its panes/controls. Left in the page
+   * stacking context that bleeds over modals (z-50) and dropdowns. Pinning the
+   * map container to its own stacking context (z-index: 0) traps those internal
+   * layers inside the map, so the map always sits below app overlays while its
+   * own zoom controls still render correctly above the tiles.
+   */
+  .leaflet-container {
+    position: relative;
+    z-index: 0;
+  }
 }
 
 @layer components {

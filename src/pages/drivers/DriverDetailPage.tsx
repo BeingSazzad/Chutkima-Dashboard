@@ -9,6 +9,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
 import { EmptyState } from '@/components/ui/EmptyState'
+import { Tabs } from '@/components/ui/Tabs'
 import { Avatar } from '@/components/shared/Avatar'
 import { EntityLink } from '@/components/shared/EntityLink'
 import { Stars } from '@/components/shared/Stars'
@@ -54,6 +55,7 @@ export default function DriverDetailPage() {
   const [warnFor, setWarnFor] = useState<{ reportId?: string; reportReason?: string } | null>(null)
   const [acctAction, setAcctAction] = useState<DriverAccountAction | null>(null)
   const [acctReason, setAcctReason] = useState('')
+  const [activityTab, setActivityTab] = useState('deliveries')
 
   if (isLoading) return <Spinner label="Loading rider…" className="py-24" />
   if (!driver)
@@ -191,138 +193,125 @@ export default function DriverDetailPage() {
         <div className="space-y-4 lg:col-span-2">
           <RiderLiveTrackingCard driver={driver} />
 
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <Card>
-            <CardHeader title="Recent deliveries" subtitle={`${deliveries.length} completed`} />
-            <CardContent className="pt-2">
-              {deliveries.length === 0 ? (
-                <EmptyState title="No deliveries yet" description="Completed deliveries will appear here." icon={<Bike className="h-6 w-6" />} />
-              ) : (
-                <div className="divide-y divide-slate-50">
-                  {deliveries.map((o) => (
-                    <div key={o.id} className="flex items-center justify-between py-2.5">
-                      <div className="min-w-0">
-                        <EntityLink kind="order" id={o.id} newTab className="block text-sm font-semibold text-slate-800">{o.reference}</EntityLink>
-                        <p className="truncate text-xs text-slate-400">
-                          <EntityLink kind="customer" id={o.customerId} className="hover:text-brand-600">{o.customerName}</EntityLink> · {o.zone} · {timeAgo(o.placedAt)}
-                        </p>
-                      </div>
-                      <span className="text-sm font-bold text-slate-800">{formatNPR(o.grandTotal)}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader title="Reports" subtitle={`${reports.length} filed by customers`} />
-            <CardContent className="pt-2">
-              {reports.length === 0 ? (
-                <EmptyState title="No reports" description="This rider has a clean record." icon={<ShieldAlert className="h-6 w-6" />} />
-              ) : (
-                <div className="space-y-2">
-                  {reports.map((r) => (
-                    <div key={r.id} className="rounded-xl border border-slate-100 p-3.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="font-semibold text-slate-800">{REPORT_REASON_META[r.reason]}</span>
-                        <Badge tone={REPORT_STATUS_META[r.status].badge}>{REPORT_STATUS_META[r.status].label}</Badge>
-                      </div>
-                      <p className="mt-1 text-sm text-slate-600">{r.details}</p>
-                      <div className="mt-1.5 flex items-center justify-between gap-2">
-                        <p className="text-xs text-slate-400">By {r.customerName} · {r.orderId} · {timeAgo(r.createdAt)}</p>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          leftIcon={<ShieldAlert className="h-3.5 w-3.5" />}
-                          onClick={() => setWarnFor({ reportId: r.id, reportReason: REPORT_REASON_META[r.reason] })}
-                        >
-                          Warn
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader
-              title="Warnings"
-              subtitle={`${warnings.length} issued by admin`}
-              action={
-                <Button size="sm" variant="outline" leftIcon={<ShieldAlert className="h-3.5 w-3.5" />} onClick={() => setWarnFor({})}>
-                  Send warning
-                </Button>
-              }
+            <Tabs
+              className="px-3 pt-1"
+              items={[
+                { label: 'Deliveries', value: 'deliveries', count: deliveries.length },
+                { label: 'Reports', value: 'reports', count: reports.length },
+                { label: 'Warnings', value: 'warnings', count: warnings.length },
+                { label: 'Account', value: 'account', count: accountEvents.length },
+                { label: 'Reviews', value: 'reviews', count: reviews.length },
+              ]}
+              value={activityTab}
+              onChange={setActivityTab}
             />
-            <CardContent className="pt-2">
-              {warnings.length === 0 ? (
-                <EmptyState title="No warnings" description="This rider has not been warned." icon={<ShieldAlert className="h-6 w-6" />} />
-              ) : (
-                <div className="space-y-2">
-                  {warnings.map((w) => (
-                    <div key={w.id} className="rounded-xl border border-slate-100 p-3.5">
-                      <div className="flex items-center justify-between gap-2">
-                        <Badge tone={WARNING_SEVERITY_META[w.severity].badge}>{WARNING_SEVERITY_META[w.severity].label}</Badge>
-                        <span className="text-xs text-slate-400">{formatDateTime(w.createdAt)}</span>
+            <CardContent className="pt-3">
+              {activityTab === 'deliveries' &&
+                (deliveries.length === 0 ? (
+                  <EmptyState title="No deliveries yet" description="Completed deliveries will appear here." icon={<Bike className="h-6 w-6" />} />
+                ) : (
+                  <div className="divide-y divide-slate-50">
+                    {deliveries.map((o) => (
+                      <div key={o.id} className="flex items-center justify-between py-2.5">
+                        <div className="min-w-0">
+                          <EntityLink kind="order" id={o.id} newTab className="block text-sm font-semibold text-slate-800">{o.reference}</EntityLink>
+                          <p className="truncate text-xs text-slate-400">
+                            <EntityLink kind="customer" id={o.customerId} className="hover:text-brand-600">{o.customerName}</EntityLink> · {o.zone} · {timeAgo(o.placedAt)}
+                          </p>
+                        </div>
+                        <span className="text-sm font-bold text-slate-800">{formatNPR(o.grandTotal)}</span>
                       </div>
-                      <p className="mt-1.5 text-sm text-slate-600">{w.message}</p>
-                      <p className="mt-1.5 text-xs text-slate-400">
-                        By {w.issuedBy}{w.reportId ? ' · from a complaint' : ''}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                ))}
 
-          <Card>
-            <CardHeader title="Account actions" subtitle="Suspension / termination / reinstatement records" />
-            <CardContent className="pt-2">
-              {accountEvents.length === 0 ? (
-                <EmptyState title="No account actions" description="No suspensions or terminations on record." icon={<ShieldCheck className="h-6 w-6" />} />
-              ) : (
-                <ol className="space-y-2.5">
-                  {accountEvents.map((e) => (
-                    <li key={e.id} className="flex gap-2.5">
-                      <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${e.action === 'reinstated' ? 'bg-success' : e.action === 'terminated' ? 'bg-danger' : 'bg-amber-400'}`} />
-                      <div className="min-w-0">
-                        <p className="text-sm font-semibold text-slate-800">{ACCOUNT_ACTION_LABEL[e.action]}</p>
-                        <p className="text-sm text-slate-600">{e.reason}</p>
-                        <p className="text-xs text-slate-400">{e.by} · {formatDateTime(e.at)}</p>
+              {activityTab === 'reports' &&
+                (reports.length === 0 ? (
+                  <EmptyState title="No reports" description="This rider has a clean record." icon={<ShieldAlert className="h-6 w-6" />} />
+                ) : (
+                  <div className="space-y-2">
+                    {reports.map((r) => (
+                      <div key={r.id} className="rounded-xl border border-slate-100 p-3.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-semibold text-slate-800">{REPORT_REASON_META[r.reason]}</span>
+                          <Badge tone={REPORT_STATUS_META[r.status].badge}>{REPORT_STATUS_META[r.status].label}</Badge>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-600">{r.details}</p>
+                        <div className="mt-1.5 flex items-center justify-between gap-2">
+                          <p className="text-xs text-slate-400">By {r.customerName} · {r.orderId} · {timeAgo(r.createdAt)}</p>
+                          <Button size="sm" variant="ghost" leftIcon={<ShieldAlert className="h-3.5 w-3.5" />} onClick={() => setWarnFor({ reportId: r.id, reportReason: REPORT_REASON_META[r.reason] })}>
+                            Warn
+                          </Button>
+                        </div>
                       </div>
-                    </li>
-                  ))}
-                </ol>
-              )}
-            </CardContent>
-          </Card>
+                    ))}
+                  </div>
+                ))}
 
-          <Card>
-            <CardHeader title="Reviews" subtitle={`${reviews.length} customer ratings`} />
-            <CardContent className="pt-2">
-              {reviews.length === 0 ? (
-                <EmptyState title="No reviews yet" description="Customer ratings will show here." icon={<MessageSquare className="h-6 w-6" />} />
-              ) : (
-                <div className="space-y-2">
-                  {reviews.map((rv) => (
-                    <div key={rv.id} className="rounded-xl border border-slate-100 p-3.5">
-                      <div className="flex items-center gap-2">
-                        <Stars value={rv.rating} />
-                        <span className="text-sm font-semibold text-slate-700">{rv.rating}.0</span>
-                      </div>
-                      <p className="mt-1 text-sm text-slate-600">“{rv.comment}”</p>
-                      <p className="mt-1.5 text-xs text-slate-400">By {rv.customerName} · {rv.orderId} · {timeAgo(rv.createdAt)}</p>
+              {activityTab === 'warnings' && (
+                <>
+                  <div className="mb-3 flex justify-end">
+                    <Button size="sm" variant="outline" leftIcon={<ShieldAlert className="h-3.5 w-3.5" />} onClick={() => setWarnFor({})}>
+                      Send warning
+                    </Button>
+                  </div>
+                  {warnings.length === 0 ? (
+                    <EmptyState title="No warnings" description="This rider has not been warned." icon={<ShieldAlert className="h-6 w-6" />} />
+                  ) : (
+                    <div className="space-y-2">
+                      {warnings.map((w) => (
+                        <div key={w.id} className="rounded-xl border border-slate-100 p-3.5">
+                          <div className="flex items-center justify-between gap-2">
+                            <Badge tone={WARNING_SEVERITY_META[w.severity].badge}>{WARNING_SEVERITY_META[w.severity].label}</Badge>
+                            <span className="text-xs text-slate-400">{formatDateTime(w.createdAt)}</span>
+                          </div>
+                          <p className="mt-1.5 text-sm text-slate-600">{w.message}</p>
+                          <p className="mt-1.5 text-xs text-slate-400">By {w.issuedBy}{w.reportId ? ' · from a complaint' : ''}</p>
+                        </div>
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  )}
+                </>
               )}
+
+              {activityTab === 'account' &&
+                (accountEvents.length === 0 ? (
+                  <EmptyState title="No account actions" description="No suspensions or terminations on record." icon={<ShieldCheck className="h-6 w-6" />} />
+                ) : (
+                  <ol className="space-y-2.5">
+                    {accountEvents.map((e) => (
+                      <li key={e.id} className="flex gap-2.5">
+                        <span className={`mt-1 h-2 w-2 shrink-0 rounded-full ${e.action === 'reinstated' ? 'bg-success' : e.action === 'terminated' ? 'bg-danger' : 'bg-amber-400'}`} />
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold text-slate-800">{ACCOUNT_ACTION_LABEL[e.action]}</p>
+                          <p className="text-sm text-slate-600">{e.reason}</p>
+                          <p className="text-xs text-slate-400">{e.by} · {formatDateTime(e.at)}</p>
+                        </div>
+                      </li>
+                    ))}
+                  </ol>
+                ))}
+
+              {activityTab === 'reviews' &&
+                (reviews.length === 0 ? (
+                  <EmptyState title="No reviews yet" description="Customer ratings will show here." icon={<MessageSquare className="h-6 w-6" />} />
+                ) : (
+                  <div className="space-y-2">
+                    {reviews.map((rv) => (
+                      <div key={rv.id} className="rounded-xl border border-slate-100 p-3.5">
+                        <div className="flex items-center gap-2">
+                          <Stars value={rv.rating} />
+                          <span className="text-sm font-semibold text-slate-700">{rv.rating}.0</span>
+                        </div>
+                        <p className="mt-1 text-sm text-slate-600">“{rv.comment}”</p>
+                        <p className="mt-1.5 text-xs text-slate-400">By {rv.customerName} · {rv.orderId} · {timeAgo(rv.createdAt)}</p>
+                      </div>
+                    ))}
+                  </div>
+                ))}
             </CardContent>
           </Card>
-          </div>
         </div>
       </div>
 

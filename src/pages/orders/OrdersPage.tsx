@@ -239,14 +239,45 @@ export default function OrdersPage() {
       key: 'driver',
       header: 'Rider',
       className: 'whitespace-nowrap',
-      cell: (o) =>
-        o.driverId ? (
+      cell: (o) => {
+        const closed = ['delivered', 'cancelled'].includes(o.status)
+        if (!o.driverId) {
+          return closed ? (
+            <span className="text-xs text-slate-400">—</span>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 px-2.5"
+              leftIcon={<UserPlus className="h-3.5 w-3.5" />}
+              onClick={(e) => {
+                e.stopPropagation()
+                setAssignFor(o)
+              }}
+            >
+              Assign
+            </Button>
+          )
+        }
+        return (
           <div className="text-sm font-medium text-slate-700">
             <span className="flex items-center gap-1.5">
               <Bike className="h-4 w-4 text-brand-500" />
               <EntityLink kind="driver" id={o.driverId} className="font-medium text-slate-700">{driverName(o.driverId)}</EntityLink>
               {o.assignments.length > 1 && (
                 <span className="rounded-full bg-brand-100 px-1.5 py-0.5 text-[10px] font-bold text-brand-700">+{o.assignments.length - 1}</span>
+              )}
+              {!closed && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setAssignFor(o)
+                  }}
+                  className="focus-ring rounded px-1 text-[11px] font-semibold text-brand-600 hover:underline"
+                  title="Change rider"
+                >
+                  Reassign
+                </button>
               )}
             </span>
             {awaitingRiderAcceptance(o) ? (
@@ -259,9 +290,8 @@ export default function OrdersPage() {
               </span>
             ) : null}
           </div>
-        ) : (
-          <span className="text-xs font-medium text-amber-600">Unassigned</span>
-        ),
+        )
+      },
     },
     {
       key: 'status',
@@ -289,19 +319,6 @@ export default function OrdersPage() {
           >
             <Eye className="h-4 w-4" />
           </Button>
-          {!['delivered', 'cancelled'].includes(o.status) && (
-            <Button
-              variant={o.driverId ? 'outline' : 'secondary'}
-              size="sm"
-              leftIcon={<UserPlus className="h-3.5 w-3.5" />}
-              onClick={(e) => {
-                e.stopPropagation()
-                setAssignFor(o)
-              }}
-            >
-              {o.driverId ? 'Reassign' : 'Assign'}
-            </Button>
-          )}
         </div>
       ),
     },

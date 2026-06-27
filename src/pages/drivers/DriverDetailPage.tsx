@@ -108,8 +108,8 @@ export default function DriverDetailPage() {
       />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Profile */}
-        <div className="space-y-4">
+        {/* Profile — sticky sidebar so it stays in view beside the long activity column */}
+        <div className="space-y-4 lg:sticky lg:top-6 lg:self-start">
           <Card>
             <CardContent className="p-5">
               <div className="flex items-center gap-3">
@@ -187,10 +187,11 @@ export default function DriverDetailPage() {
           )}
         </div>
 
-        {/* Feedback */}
+        {/* Activity — live tracking full-width, then a balanced 2-column card grid */}
         <div className="space-y-4 lg:col-span-2">
           <RiderLiveTrackingCard driver={driver} />
 
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
           <Card>
             <CardHeader title="Recent deliveries" subtitle={`${deliveries.length} completed`} />
             <CardContent className="pt-2">
@@ -321,6 +322,7 @@ export default function DriverDetailPage() {
               )}
             </CardContent>
           </Card>
+          </div>
         </div>
       </div>
 

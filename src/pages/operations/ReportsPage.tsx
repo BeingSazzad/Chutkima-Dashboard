@@ -142,27 +142,49 @@ function ReportsTable() {
       key: 'actions',
       header: 'Actions',
       headerClassName: 'text-right',
-      className: 'text-right',
+      className: 'whitespace-nowrap text-right',
       cell: (r) => (
-        <div className="flex items-center justify-end gap-1">
-          {r.status === 'open' ? (
+        <div className="flex items-center justify-end gap-0.5">
+          {/* Triage (open only) — status itself lives in the Status column, not duplicated here. */}
+          {r.status === 'open' && (
             <>
-              <Button size="sm" variant="secondary" loading={updating} leftIcon={<Check className="h-3.5 w-3.5" />} onClick={() => update({ id: r.id, status: 'reviewed', adminName })}>
-                Reviewed
-              </Button>
-              <Button size="sm" variant="ghost" leftIcon={<X className="h-3.5 w-3.5" />} onClick={() => update({ id: r.id, status: 'dismissed', adminName })}>
-                Dismiss
-              </Button>
+              <button
+                onClick={() => update({ id: r.id, status: 'reviewed', adminName })}
+                disabled={updating}
+                className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-green-50 hover:text-success disabled:opacity-50"
+                aria-label="Mark reviewed"
+                title="Mark reviewed"
+              >
+                <Check className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => update({ id: r.id, status: 'dismissed', adminName })}
+                disabled={updating}
+                className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
+                aria-label="Dismiss"
+                title="Dismiss"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <span className="mx-1 h-4 w-px bg-slate-200" aria-hidden />
             </>
-          ) : (
-            <Badge tone={REPORT_STATUS_META[r.status].badge}>{REPORT_STATUS_META[r.status].label}</Badge>
           )}
-          <Button size="sm" variant="ghost" leftIcon={<ShieldAlert className="h-3.5 w-3.5" />} onClick={() => setWarnFor(r)}>
-            Warn
-          </Button>
-          <Button size="sm" variant="ghost" leftIcon={<History className="h-3.5 w-3.5" />} onClick={() => setAuditFor(r)}>
-            Audit
-          </Button>
+          <button
+            onClick={() => setWarnFor(r)}
+            className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger"
+            aria-label="Warn rider"
+            title="Warn rider"
+          >
+            <ShieldAlert className="h-4 w-4" />
+          </button>
+          <button
+            onClick={() => setAuditFor(r)}
+            className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600"
+            aria-label="Audit trail"
+            title="Audit trail"
+          >
+            <History className="h-4 w-4" />
+          </button>
         </div>
       ),
     },

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
-import { Textarea } from '@/components/ui/Textarea'
+import { MarkdownEditor } from '@/components/ui/MarkdownEditor'
 import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/Switch'
@@ -109,7 +109,7 @@ function PagesEditor() {
       {active && (
         <div className="space-y-3">
           <Input label="Page title" value={title} onChange={(e) => setTitle(e.target.value)} />
-          <Textarea label="Content" value={body} onChange={(e) => setBody(e.target.value)} rows={14} hint="Plain text / markdown. Line breaks are preserved on the app." />
+          <MarkdownEditor label="Content" value={body} onChange={setBody} rows={14} hint="Use the toolbar for bold, italic, headings & lists (markdown). Renders on the app." />
           <div className="flex items-center justify-between">
             <span className="text-xs text-slate-400">Last updated {timeAgo(active.updatedAt)}</span>
             <div className="flex items-center gap-2">
@@ -233,7 +233,7 @@ function FaqFormModal({ faq, sections, onClose }: { faq: FaqItem | 'new' | null;
     >
       <div className="space-y-3">
         <Input label="Question" value={question} onChange={(e) => setQuestion(e.target.value)} placeholder="e.g. How fast is delivery?" autoFocus />
-        <Textarea label="Answer" value={answer} onChange={(e) => setAnswer(e.target.value)} rows={4} placeholder="Write a clear answer…" />
+        <MarkdownEditor label="Answer" value={answer} onChange={setAnswer} rows={4} placeholder="Write a clear answer…" hint="Markdown supported." />
         <Select
           label="Section"
           value={section}

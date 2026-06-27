@@ -3,6 +3,7 @@ import { Mail, Pencil, Phone, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
+import { Tabs, type TabItem } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
@@ -20,6 +21,7 @@ import {
 } from '@/services/endpoints/adminsApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import { useGetRolesQuery } from '@/services/endpoints/rolesApi'
+import { RolesPanel } from './RolesPanel'
 import type { AdminUser } from '@/types/common.types'
 
 /** Badge tones for built-in roles; custom roles fall back to slate. */
@@ -36,9 +38,16 @@ export default function AdminsPage() {
   const { data: roles = [] } = useGetRolesQuery()
   const roleName = (id: string) => roles.find((r) => r.id === id)?.name ?? id
   const [toggle] = useToggleAdminMutation()
+  const [tab, setTab] = useState<'team' | 'roles'>('team')
   const [formFor, setFormFor] = useState<AdminUser | 'new' | null>(null)
   const [deleteFor, setDeleteFor] = useState<AdminUser | null>(null)
+  const [roleAddOpen, setRoleAddOpen] = useState(false)
   const storeName = (id: string | null) => (id ? stores.find((s) => s.id === id)?.name ?? '—' : 'All stores (master)')
+
+  const tabs: TabItem[] = [
+    { label: 'Team', value: 'team', count: admins.length },
+    { label: 'Roles & Permissions', value: 'roles', count: roles.length },
+  ]
 
   const columns: Column<AdminUser>[] = [
     {
@@ -98,18 +107,32 @@ export default function AdminsPage() {
   return (
     <>
       <PageHeader
-        title="Admins & Staff"
-        description="Manage who can access this dashboard and what they can do."
+        title="Admins & Roles"
+        description="Manage who can access this dashboard and what each role can do."
         actions={
-          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setFormFor('new')}>
-            Add admin
-          </Button>
+          tab === 'team' ? (
+            <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setFormFor('new')}>
+              Add admin
+            </Button>
+          ) : (
+            <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setRoleAddOpen(true)}>
+              Add role
+            </Button>
+          )
         }
       />
 
-      <Card>
-        <DataTable columns={columns} data={admins} rowKey={(a) => a.id} loading={isLoading} emptyTitle="No team members yet" />
-      </Card>
+      <div className="mb-4">
+        <Tabs items={tabs} value={tab} onChange={(v) => setTab(v as 'team' | 'roles')} />
+      </div>
+
+      {tab === 'team' ? (
+        <Card>
+          <DataTable columns={columns} data={admins} rowKey={(a) => a.id} loading={isLoading} emptyTitle="No team members yet" />
+        </Card>
+      ) : (
+        <RolesPanel addOpen={roleAddOpen} onAddClose={() => setRoleAddOpen(false)} />
+      )}
 
       <AdminFormModal admin={formFor} stores={stores} onClose={() => setFormFor(null)} />
       <DeleteAdmin admin={deleteFor} onClose={() => setDeleteFor(null)} />

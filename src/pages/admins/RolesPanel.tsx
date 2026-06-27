@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Check, Plus, ShieldCheck, Trash2 } from 'lucide-react'
-import { PageHeader } from '@/components/layout/PageHeader'
+import { Check, ShieldCheck, Trash2 } from 'lucide-react'
 import { Card } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
@@ -14,11 +13,14 @@ import type { Role } from '@/types/common.types'
 
 const MODULES = NAV_SECTIONS.flatMap((s) => s.items.map((i) => ({ key: i.to, label: i.label, section: s.title })))
 
-export default function RolesPage() {
+/**
+ * Roles & permissions matrix. Rendered as a tab inside the Admins page — the
+ * "Add role" trigger lives in that page's header and is wired through props.
+ */
+export function RolesPanel({ addOpen, onAddClose }: { addOpen: boolean; onAddClose: () => void }) {
   const { data: roles = [], isLoading } = useGetRolesQuery()
   const [saveRole] = useSaveRoleMutation()
   const [deleteRole] = useDeleteRoleMutation()
-  const [addOpen, setAddOpen] = useState(false)
   const [newName, setNewName] = useState('')
   const [deleteFor, setDeleteFor] = useState<Role | null>(null)
 
@@ -38,7 +40,7 @@ export default function RolesPage() {
     if (!newName.trim()) return
     await saveRole({ name: newName.trim(), modules: ['/'], canExport: false, canExportCustomers: false }).unwrap()
     setNewName('')
-    setAddOpen(false)
+    onAddClose()
   }
   const confirmDelete = async () => {
     if (deleteFor) await deleteRole(deleteFor.id).unwrap()
@@ -66,16 +68,6 @@ export default function RolesPage() {
 
   return (
     <>
-      <PageHeader
-        title="Roles & Permissions"
-        description="Create roles and control which modules and exports each role can access."
-        actions={
-          <Button leftIcon={<Plus className="h-4 w-4" />} onClick={() => setAddOpen(true)}>
-            Add role
-          </Button>
-        }
-      />
-
       <Card className="overflow-x-auto">
         {isLoading ? (
           <Spinner label="Loading roles…" className="py-16" />
@@ -145,13 +137,13 @@ export default function RolesPage() {
 
       <Modal
         open={addOpen}
-        onClose={() => setAddOpen(false)}
+        onClose={onAddClose}
         title="Add role"
         description="Create a custom role, then tick the modules it can access."
         size="sm"
         footer={
           <>
-            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button variant="outline" onClick={onAddClose}>Cancel</Button>
             <Button onClick={addRole} disabled={!newName.trim()}>Create role</Button>
           </>
         }

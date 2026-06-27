@@ -21,7 +21,6 @@ import CustomersPage from '@/pages/customers/CustomersPage'
 import CustomerDetailPage from '@/pages/customers/CustomerDetailPage'
 import BroadcastPage from '@/pages/customers/BroadcastPage'
 import AdminsPage from '@/pages/admins/AdminsPage'
-import RolesPage from '@/pages/admins/RolesPage'
 import StoresPage from '@/pages/stores/StoresPage'
 import BannersPage from '@/pages/marketing/BannersPage'
 import OnboardingPage from '@/pages/marketing/OnboardingPage'
@@ -61,7 +60,8 @@ export const router = createBrowserRouter([
           { path: ROUTES.broadcast, element: <BroadcastPage /> },
           { path: ROUTES.stores, element: <StoresPage /> },
           { path: ROUTES.admins, element: <AdminsPage /> },
-          { path: ROUTES.roles, element: <RolesPage /> },
+          // Roles now live as a tab inside Admins — keep the old path working.
+          { path: ROUTES.roles, element: <Navigate to={ROUTES.admins} replace /> },
           { path: ROUTES.delivery, element: <DeliveryZonesPage /> },
           { path: ROUTES.coupons, element: <CouponsPage /> },
           { path: ROUTES.homeFeed, element: <HomeFeedPage /> },

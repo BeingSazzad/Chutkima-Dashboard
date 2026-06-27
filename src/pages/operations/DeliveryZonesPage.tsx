@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
-import { Check, Clock, ExternalLink, Hexagon, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Check, Clock, ExternalLink, Hexagon, MapPin, MoreVertical, Pencil, Plus, Trash2, X } from 'lucide-react'
 
 // Leaflet is heavy — load the map editor only when a geo-fence modal is opened.
 const ZoneMapEditor = lazy(() =>
@@ -152,6 +152,7 @@ function ZonesCard({
   const { data: zones = [], isLoading } = useGetZonesQuery()
   const { data: stores = [] } = useGetStoresQuery()
   const [toggle] = useToggleZoneMutation()
+  const [menuFor, setMenuFor] = useState<string | null>(null)
   const storeName = (id?: string) => stores.find((s) => s.id === id)?.name
 
   return (
@@ -198,18 +199,44 @@ function ZonesCard({
                   {!z.active && <Badge>Paused</Badge>}
                 </div>
               </div>
-              {/* Action controls — fixed width, never shrink. */}
-              <div className="flex shrink-0 items-center gap-0.5">
+              {/* Primary toggle stays visible; secondary actions tuck into a kebab menu to cut clutter. */}
+              <div className="flex shrink-0 items-center gap-1">
                 <Switch checked={z.active} onChange={() => toggle(z.id)} size="sm" aria-label={`Toggle ${z.name}`} />
-                <button onClick={() => onFence(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Geo-fence" title="Draw geo-fence">
-                  <Hexagon className="h-4 w-4" />
-                </button>
-                <button onClick={() => onEdit(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Edit">
-                  <Pencil className="h-4 w-4" />
-                </button>
-                <button onClick={() => onDelete(z)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger" aria-label="Delete">
-                  <Trash2 className="h-4 w-4" />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={() => setMenuFor((id) => (id === z.id ? null : z.id))}
+                    className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="More actions"
+                    title="More actions"
+                  >
+                    <MoreVertical className="h-4 w-4" />
+                  </button>
+                  {menuFor === z.id && (
+                    <>
+                      <div className="fixed inset-0 z-10" onClick={() => setMenuFor(null)} />
+                      <div className="absolute right-0 z-20 mt-1 w-44 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+                        <button
+                          onClick={() => { onFence(z); setMenuFor(null) }}
+                          className="focus-ring flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-mint-50"
+                        >
+                          <Hexagon className="h-4 w-4 text-slate-400" /> Draw geo-fence
+                        </button>
+                        <button
+                          onClick={() => { onEdit(z); setMenuFor(null) }}
+                          className="focus-ring flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-mint-50"
+                        >
+                          <Pencil className="h-4 w-4 text-slate-400" /> Edit zone
+                        </button>
+                        <button
+                          onClick={() => { onDelete(z); setMenuFor(null) }}
+                          className="focus-ring flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-left text-sm font-medium text-danger hover:bg-red-50"
+                        >
+                          <Trash2 className="h-4 w-4" /> Delete zone
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
           ))

@@ -24,9 +24,9 @@ export const packersApi = api.injectEndpoints({
         const created: Packer = {
           id: `pk${Date.now()}`,
           name: payload.name ?? 'New Packer',
-          phone: payload.phone ?? '',
+          phone: payload.phone,
           active: payload.active ?? true,
-          packedToday: 0,
+          storeId: payload.storeId ?? 's1',
           createdAt: new Date().toISOString(),
         }
         packers.unshift(created)

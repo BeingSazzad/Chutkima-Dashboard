@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Clock, Pencil, Plus, SlidersHorizontal, Store, Trash2 } from 'lucide-react'
+import { Check, Clock, Map, Pencil, Plus, SlidersHorizontal, Store, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -10,7 +10,7 @@ import { Switch } from '@/components/ui/Switch'
 import { Badge } from '@/components/ui/Badge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { StatCard } from '@/components/shared/StatCard'
-import { formatNPR } from '@/lib/utils'
+import { cn, formatNPR } from '@/lib/utils'
 import { STORE_FEATURES } from '@/lib/constants'
 import {
   useDeleteStoreMutation,
@@ -20,16 +20,20 @@ import {
   useToggleStoreMutation,
   useToggleStoreOfflineMutation,
 } from '@/services/endpoints/storesApi'
+import { useGetZonesQuery, useSaveZoneMutation } from '@/services/endpoints/deliveryApi'
 import type { DarkStore } from '@/types/common.types'
 
 export default function StoresPage() {
   const { data: stores = [], isLoading } = useGetStoresQuery()
   const { data: overview = [] } = useGetStoreOverviewQuery()
+  const { data: zones = [] } = useGetZonesQuery()
   const [toggle] = useToggleStoreMutation()
   const [toggleOffline] = useToggleStoreOfflineMutation()
   const [formFor, setFormFor] = useState<DarkStore | 'new' | null>(null)
   const [deleteFor, setDeleteFor] = useState<DarkStore | null>(null)
   const [featuresFor, setFeaturesFor] = useState<DarkStore | null>(null)
+  const [zonesFor, setZonesFor] = useState<DarkStore | null>(null)
+  const zoneCount = (id: string) => zones.filter((z) => z.storeId === id).length
 
   const totals = overview.reduce(
     (acc, o) => ({ orders: acc.orders + o.orders, revenue: acc.revenue + o.revenue, pending: acc.pending + o.pending }),
@@ -80,6 +84,15 @@ export default function StoresPage() {
       },
     },
     {
+      key: 'zones',
+      header: 'Zones served',
+      cell: (s) => (
+        <button onClick={() => setZonesFor(s)} className="focus-ring rounded-lg text-xs font-semibold text-brand-600 hover:underline">
+          {zoneCount(s.id)} zone{zoneCount(s.id) === 1 ? '' : 's'}
+        </button>
+      ),
+    },
+    {
       key: 'taking',
       header: 'Taking orders',
       cell: (s) => <Switch checked={!s.offline} onChange={() => toggleOffline(s.id)} size="sm" aria-label={`Toggle taking orders for ${s.name}`} />,
@@ -92,6 +105,9 @@ export default function StoresPage() {
       className: 'text-right',
       cell: (s) => (
         <div className="flex items-center justify-end gap-0.5">
+          <button onClick={() => setZonesFor(s)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Zones served">
+            <Map className="h-4 w-4" />
+          </button>
           <button onClick={() => setFeaturesFor(s)} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-slate-100 hover:text-brand-600" aria-label="Features">
             <SlidersHorizontal className="h-4 w-4" />
           </button>
@@ -130,6 +146,7 @@ export default function StoresPage() {
 
       <StoreFormModal store={formFor} onClose={() => setFormFor(null)} />
       <StoreFeaturesModal store={featuresFor} onClose={() => setFeaturesFor(null)} />
+      <StoreZonesModal store={zonesFor} onClose={() => setZonesFor(null)} />
       <DeleteStore store={deleteFor} onClose={() => setDeleteFor(null)} />
     </>
   )
@@ -179,6 +196,84 @@ function StoreFeaturesModal({ store, onClose }: { store: DarkStore | null; onClo
           ))}
         </div>
       )}
+    </Modal>
+  )
+}
+
+/** Multi-select the delivery zones a dark store serves (one store per zone). */
+function StoreZonesModal({ store, onClose }: { store: DarkStore | null; onClose: () => void }) {
+  const { data: zones = [] } = useGetZonesQuery()
+  const { data: stores = [] } = useGetStoresQuery()
+  const [saveZone, { isLoading }] = useSaveZoneMutation()
+  const [picked, setPicked] = useState<Set<string>>(new Set())
+  const key = store?.id ?? 'closed'
+  const [lastKey, setLastKey] = useState('')
+  if (key !== lastKey && store) {
+    setLastKey(key)
+    setPicked(new Set(zones.filter((z) => z.storeId === store.id).map((z) => z.id)))
+  }
+  const storeName = (id?: string) => stores.find((s) => s.id === id)?.name
+
+  const toggle = (id: string) =>
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+
+  const submit = async () => {
+    if (!store) return
+    const ops: Promise<unknown>[] = []
+    for (const z of zones) {
+      const want = picked.has(z.id)
+      if (want && z.storeId !== store.id) ops.push(saveZone({ id: z.id, storeId: store.id }).unwrap())
+      else if (!want && z.storeId === store.id) ops.push(saveZone({ id: z.id, storeId: '' }).unwrap())
+    }
+    await Promise.all(ops)
+    onClose()
+  }
+
+  return (
+    <Modal
+      open={!!store}
+      onClose={onClose}
+      title="Zones served"
+      description={store ? `Pick the delivery zones ${store.name} fulfils. Orders placed in a zone auto-route to its store.` : undefined}
+      size="lg"
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={submit} loading={isLoading}>Save zones</Button>
+        </>
+      }
+    >
+      <div className="max-h-[60vh] space-y-1 overflow-y-auto">
+        {zones.map((z) => {
+          const checked = picked.has(z.id)
+          const other = z.storeId && z.storeId !== store?.id ? storeName(z.storeId) : null
+          return (
+            <button
+              key={z.id}
+              onClick={() => toggle(z.id)}
+              className={cn(
+                'flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors',
+                checked ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:bg-slate-50',
+              )}
+            >
+              <div className="min-w-0">
+                <p className="font-medium text-slate-800">{z.name}</p>
+                <p className="truncate text-xs text-slate-400">{z.areas.join(', ')}{other ? ` · currently: ${other}` : ''}</p>
+              </div>
+              <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-md border', checked ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300')}>
+                {checked && <Check className="h-3.5 w-3.5" />}
+              </span>
+            </button>
+          )
+        })}
+        {zones.length === 0 && <p className="py-6 text-center text-sm text-slate-400">No zones yet. Add zones in Delivery &amp; Zones.</p>}
+      </div>
+      <p className="mt-2 text-xs text-slate-400">Selecting a zone moves it from its current store — each zone belongs to one store.</p>
     </Modal>
   )
 }

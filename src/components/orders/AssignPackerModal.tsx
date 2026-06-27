@@ -5,8 +5,9 @@ import { Button } from '@/components/ui/Button'
 import { Avatar } from '@/components/shared/Avatar'
 import { Badge } from '@/components/ui/Badge'
 import { cn } from '@/lib/utils'
+import { packerBusyOrder } from '@/lib/packerStatus'
 import { useGetPackersQuery } from '@/services/endpoints/packersApi'
-import { useAssignPackerMutation } from '@/services/endpoints/ordersApi'
+import { useAssignPackerMutation, useGetOrdersQuery } from '@/services/endpoints/ordersApi'
 import type { Order } from '@/types/common.types'
 
 interface Props {
@@ -18,15 +19,18 @@ interface Props {
 /** Pick an active packer and assign them to an order — mirrors the rider assignment screen. */
 export function AssignPackerModal({ order, open, onClose }: Props) {
   const { data: packers = [], isLoading } = useGetPackersQuery()
+  const { data: orders = [] } = useGetOrdersQuery()
   const [assign, { isLoading: assigning }] = useAssignPackerMutation()
   const [selected, setSelected] = useState<string | null>(null)
   const [search, setSearch] = useState('')
 
-  // Active packers first, busiest (most packed today) shown so load is visible; least-loaded on top.
+  // Only packers at this order's dark store; free packers first, busy ones at the bottom.
   const available = packers
     .filter((p) => p.active)
+    .filter((p) => !order || p.storeId === order.storeId)
     .filter((p) => p.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => a.packedToday - b.packedToday)
+    .map((p) => ({ p, busy: packerBusyOrder(p, orders) }))
+    .sort((a, b) => Number(!!a.busy) - Number(!!b.busy))
 
   const handleAssign = async () => {
     if (!order || !selected) return
@@ -66,7 +70,7 @@ export function AssignPackerModal({ order, open, onClose }: Props) {
         {isLoading ? (
           <p className="py-6 text-center text-sm text-slate-400">Loading packers…</p>
         ) : (
-          available.map((p, idx) => {
+          available.map(({ p, busy }) => {
             const isSelected = selected === p.id
             const isCurrent = order?.packerId === p.id
             return (
@@ -78,18 +82,22 @@ export function AssignPackerModal({ order, open, onClose }: Props) {
                   isSelected
                     ? 'border-brand-500 bg-brand-50 ring-1 ring-brand-500'
                     : 'border-slate-200 hover:border-brand-300 hover:bg-mint-50',
+                  busy && !isSelected && 'opacity-70',
                 )}
               >
                 <Avatar name={p.name} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="truncate font-semibold text-slate-800">{p.name}</p>
-                    {idx === 0 && <span className="rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-bold text-white">Least busy</span>}
                     {isCurrent && <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold text-slate-600">Current</span>}
                   </div>
-                  <p className="truncate text-xs text-slate-400">{p.phone} · {p.packedToday} packed today</p>
+                  <p className="truncate text-xs text-slate-400">{busy ? `Busy on ${busy.reference}` : 'Free — ready to pack'}</p>
                 </div>
-                <Badge tone="bg-green-50 text-green-700 ring-green-600/15">Active</Badge>
+                {busy ? (
+                  <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15" dot="bg-amber-500">Busy</Badge>
+                ) : (
+                  <Badge tone="bg-green-50 text-green-700 ring-green-600/15" dot="bg-green-500">Free</Badge>
+                )}
                 {isSelected && (
                   <div className="flex h-6 w-6 items-center justify-center rounded-full bg-brand-600 text-white">
                     <Check className="h-3.5 w-3.5" />

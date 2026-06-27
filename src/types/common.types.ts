@@ -226,9 +226,11 @@ export interface CustomerCredit {
 export interface Packer {
   id: ID
   name: string
-  phone: string
+  /** Optional — used only for the WhatsApp pick-list, not shown in packer management. */
+  phone?: string
   active: boolean
-  packedToday: number
+  /** A packer belongs to exactly one dark store. */
+  storeId: ID
   createdAt: string
 }
 

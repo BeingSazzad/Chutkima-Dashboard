@@ -1,12 +1,14 @@
 import { useState } from 'react'
-import { Pencil, Phone, Plus, Trash2 } from 'lucide-react'
+import { Pencil, Plus, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
+import { Select } from '@/components/ui/Select'
 import { Modal } from '@/components/ui/Modal'
 import { Switch } from '@/components/ui/Switch'
+import { Badge } from '@/components/ui/Badge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
 import {
@@ -15,13 +17,19 @@ import {
   useSavePackerMutation,
   useTogglePackerMutation,
 } from '@/services/endpoints/packersApi'
+import { useGetOrdersQuery } from '@/services/endpoints/ordersApi'
+import { useGetStoresQuery } from '@/services/endpoints/storesApi'
+import { packerBusyOrder } from '@/lib/packerStatus'
 import type { Packer } from '@/types/common.types'
 
 export default function PackersPage() {
   const { data: packers = [], isLoading } = useGetPackersQuery()
+  const { data: orders = [] } = useGetOrdersQuery()
+  const { data: stores = [] } = useGetStoresQuery()
   const [toggle] = useTogglePackerMutation()
   const [formFor, setFormFor] = useState<Packer | 'new' | null>(null)
   const [deleteFor, setDeleteFor] = useState<Packer | null>(null)
+  const storeName = (id: string) => stores.find((s) => s.id === id)?.name ?? '—'
 
   const columns: Column<Packer>[] = [
     {
@@ -30,16 +38,24 @@ export default function PackersPage() {
       cell: (p) => (
         <div className="flex items-center gap-3">
           <Avatar name={p.name} />
-          <div>
-            <p className="font-semibold text-slate-800">{p.name}</p>
-            <p className="flex items-center gap-1 text-xs text-slate-400">
-              <Phone className="h-3 w-3" /> {p.phone}
-            </p>
-          </div>
+          <p className="font-semibold text-slate-800">{p.name}</p>
         </div>
       ),
     },
-    { key: 'today', header: 'Packed today', cell: (p) => <span className="font-semibold text-slate-700">{p.packedToday}</span> },
+    { key: 'store', header: 'Dark store', cell: (p) => <span className="text-slate-600">{storeName(p.storeId)}</span> },
+    {
+      key: 'status',
+      header: 'Status',
+      cell: (p) => {
+        if (!p.active) return <Badge tone="bg-slate-100 text-slate-500 ring-slate-500/15">Inactive</Badge>
+        const busy = packerBusyOrder(p, orders)
+        return busy ? (
+          <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15" dot="bg-amber-500">Busy · {busy.reference}</Badge>
+        ) : (
+          <Badge tone="bg-green-50 text-green-700 ring-green-600/15" dot="bg-green-500">Free</Badge>
+        )
+      },
+    },
     { key: 'active', header: 'Active', cell: (p) => <Switch checked={p.active} onChange={() => toggle(p.id)} size="sm" aria-label={`Toggle ${p.name}`} /> },
     {
       key: 'actions',
@@ -83,21 +99,22 @@ export default function PackersPage() {
 
 function PackerFormModal({ packer, onClose }: { packer: Packer | 'new' | null; onClose: () => void }) {
   const [save, { isLoading }] = useSavePackerMutation()
+  const { data: stores = [] } = useGetStoresQuery()
   const isEdit = packer && packer !== 'new'
   const p = isEdit ? (packer as Packer) : null
 
   const [name, setName] = useState('')
-  const [phone, setPhone] = useState('')
+  const [storeId, setStoreId] = useState('')
   const key = packer === 'new' ? 'new' : p?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
   if (key !== lastKey && packer) {
     setLastKey(key)
     setName(p?.name ?? '')
-    setPhone(p?.phone ?? '')
+    setStoreId(p?.storeId ?? stores[0]?.id ?? '')
   }
 
   const submit = async () => {
-    await save({ id: p?.id, name, phone }).unwrap()
+    await save({ id: p?.id, name, storeId }).unwrap()
     onClose()
   }
 
@@ -106,11 +123,11 @@ function PackerFormModal({ packer, onClose }: { packer: Packer | 'new' | null; o
       open={!!packer}
       onClose={onClose}
       title={isEdit ? 'Edit packer' : 'Add packer'}
-      description="Packers only need a name and phone number — no login."
+      description="Packers work at one dark store — no app login needed."
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit} loading={isLoading} disabled={!name.trim() || !phone.trim()}>
+          <Button onClick={submit} loading={isLoading} disabled={!name.trim() || !storeId}>
             {isEdit ? 'Save changes' : 'Add packer'}
           </Button>
         </>
@@ -118,7 +135,13 @@ function PackerFormModal({ packer, onClose }: { packer: Packer | 'new' | null; o
     >
       <div className="space-y-3">
         <Input label="Name" value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Bimala Thapa" autoFocus />
-        <Input label="Phone number" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="+977 98…" leftIcon={<Phone className="h-4 w-4" />} />
+        <Select
+          label="Dark store"
+          value={storeId}
+          onChange={(e) => setStoreId(e.target.value)}
+          placeholder="Select a dark store"
+          options={stores.map((s) => ({ label: s.name, value: s.id }))}
+        />
       </div>
     </Modal>
   )

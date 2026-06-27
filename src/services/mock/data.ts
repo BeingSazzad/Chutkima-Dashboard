@@ -252,6 +252,12 @@ export const orders: Order[] = [
   makeOrder('o14', '#GF-48215-NP', customers[6], [{ p: P('p12'), qty: 1 }, { p: P('p5'), qty: 2 }], 'confirmed', 'cod', null, 45, 15, '', daysAhead(1)),
 ]
 
+// Seed a busy packer (pk1 is packing o2) so the assign screen shows free-vs-busy.
+{
+  const o2 = orders.find((o) => o.id === 'o2')
+  if (o2) o2.packerId = 'pk1'
+}
+
 // Seed a couple of demo admin notes + a refund so the audit trails aren't empty.
 {
   const o5 = orders.find((o) => o.id === 'o5')
@@ -457,9 +463,10 @@ export const internalCounter = { next: internalOrders.length + 1 }
 
 // ── Packers (pick & pack staff) ─────────────────────────────────────────────
 export const packers: Packer[] = [
-  { id: 'pk1', name: 'Bimala Thapa', phone: '+977 9845000001', active: true, packedToday: 14, createdAt: daysAgo(120) },
-  { id: 'pk2', name: 'Gokul Magar', phone: '+977 9845000002', active: true, packedToday: 9, createdAt: daysAgo(80) },
-  { id: 'pk3', name: 'Sabina Rai', phone: '+977 9845000003', active: false, packedToday: 0, createdAt: daysAgo(40) },
+  { id: 'pk1', name: 'Bimala Thapa', phone: '+977 9845000001', active: true, storeId: 's1', createdAt: daysAgo(120) },
+  { id: 'pk2', name: 'Gokul Magar', phone: '+977 9845000002', active: true, storeId: 's1', createdAt: daysAgo(80) },
+  { id: 'pk3', name: 'Sabina Rai', phone: '+977 9845000003', active: true, storeId: 's2', createdAt: daysAgo(40) },
+  { id: 'pk4', name: 'Durga Lama', phone: '+977 9845000004', active: false, storeId: 's2', createdAt: daysAgo(25) },
 ]
 
 /** Social + app-store links shown in the customer app / website footer. */

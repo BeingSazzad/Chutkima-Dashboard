@@ -21,7 +21,7 @@ export function PackingCard({ order }: { order: Order }) {
   const closed = order.status === 'delivered' || order.status === 'cancelled'
 
   const notifyPacker = () => {
-    if (!assigned) return
+    if (!assigned?.phone) return
     const byProductId = new Map(products.map((p) => [p.id, p]))
     openWhatsApp(assigned.phone, buildPackerMessage(order, assigned, byProductId))
   }
@@ -38,11 +38,13 @@ export function PackingCard({ order }: { order: Order }) {
           <div className="flex items-center justify-between gap-2 rounded-xl bg-mint-50 px-3 py-2.5">
             <div className="min-w-0">
               <p className="text-sm font-semibold text-slate-800">{assigned.name}</p>
-              <p className="text-xs text-slate-400">{assigned.phone}</p>
+              <p className="text-xs text-slate-400">Assigned packer</p>
             </div>
-            <Button size="sm" variant="outline" leftIcon={<MessageCircle className="h-3.5 w-3.5" />} onClick={notifyPacker}>
-              WhatsApp pick-list
-            </Button>
+            {assigned.phone && (
+              <Button size="sm" variant="outline" leftIcon={<MessageCircle className="h-3.5 w-3.5" />} onClick={notifyPacker}>
+                WhatsApp pick-list
+              </Button>
+            )}
           </div>
         ) : (
           <p className="text-sm text-slate-400">No packer assigned.</p>

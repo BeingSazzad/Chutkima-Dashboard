@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
 import { StatCard } from '@/components/shared/StatCard'
+import { EntityLink } from '@/components/shared/EntityLink'
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { TXN_STATUS_META, TXN_TYPE_META } from '@/lib/constants'
 import { cn, formatDateTime, formatNPR } from '@/lib/utils'
@@ -74,7 +75,7 @@ export default function TransactionsPage() {
       header: 'Reference',
       cell: (t) => (
         <div>
-          <p className="font-semibold text-slate-800">{t.reference}</p>
+          <EntityLink kind="order" id={t.orderId} className="font-semibold text-slate-800">{t.reference}</EntityLink>
           <p className="text-xs text-slate-400">{formatDateTime(t.createdAt)}</p>
         </div>
       ),

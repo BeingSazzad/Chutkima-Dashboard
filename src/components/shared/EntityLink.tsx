@@ -16,17 +16,17 @@ interface EntityLinkProps {
   id?: string | null
   children: ReactNode
   className?: string
-  /** Open in a new browser tab instead of navigating in place. */
+  /** Open in a new browser tab (default). Pass false to navigate in place. */
   newTab?: boolean
   title?: string
 }
 
 /**
- * Clickable name / id that opens the customer, rider or order profile.
- * Safe inside clickable table rows — it stops click propagation. Falls back to
- * plain text when no id is available.
+ * Clickable name / id that opens the customer, rider or order profile in a new
+ * tab (the admin convention). Safe inside clickable table rows — it stops click
+ * propagation. Falls back to plain text when no id is available.
  */
-export function EntityLink({ kind, id, children, className, newTab, title }: EntityLinkProps) {
+export function EntityLink({ kind, id, children, className, newTab = true, title }: EntityLinkProps) {
   const navigate = useNavigate()
   if (!id) return <>{children}</>
   const path = toPath[kind](id)

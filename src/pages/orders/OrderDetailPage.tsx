@@ -205,12 +205,9 @@ export default function OrderDetailPage() {
                   {/* Rider-controlled step (full-width info box) */}
                   {nextStatus && nextActor === 'rider' && (
                     needsRider ? (
-                      <div className="rounded-xl bg-amber-50 px-3 py-3">
-                        <p className="text-sm font-medium text-amber-700">Assign a rider to begin delivery.</p>
-                        <Button className="mt-2" size="sm" variant="secondary" onClick={() => setAssignOpen(true)}>
-                          Assign rider
-                        </Button>
-                      </div>
+                      <p className="rounded-xl bg-amber-50 px-3 py-2.5 text-sm font-medium text-amber-700">
+                        Assign a rider in the <strong>Rider</strong> card below to begin delivery.
+                      </p>
                     ) : nextStatus === 'delivered' && ops?.multiRiderEnabled && order.assignments.length > 1 ? (
                       <div className="rounded-xl bg-violet-50 px-3 py-3 text-sm font-medium text-violet-700">
                         This is a team order — it’s marked Delivered once <strong>all {order.assignments.length} riders confirm</strong> in the Riders panel.
@@ -227,10 +224,10 @@ export default function OrderDetailPage() {
                     )
                   )}
 
-                  {/* Confirmed/packing: packing is owned by the Packing card below; rider is assigned in parallel. */}
+                  {/* Confirmed/packing: packing + rider cards sit directly below, in workflow order. */}
                   {(order.status === 'confirmed' || order.status === 'packing') && (
                     <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500">
-                      Assign a packer &amp; rider, then <strong>Mark ready for pickup</strong> in the Packing card below.
+                      Next: assign a <strong>packer</strong>, then a <strong>rider</strong> in the cards below.
                     </p>
                   )}
 
@@ -248,9 +245,11 @@ export default function OrderDetailPage() {
           </Card>
 
           <PackingCard order={order} />
+
+          <RiderCard order={order} onAssignPrimary={() => setAssignOpen(true)} />
         </div>
 
-        {/* Right: journey + people */}
+        {/* Right: read-only context (journey, tracking, customer, payment) */}
         <div className="space-y-4">
           <Card>
             <CardHeader
@@ -298,8 +297,6 @@ export default function OrderDetailPage() {
               )}
             </CardContent>
           </Card>
-
-          <RiderCard order={order} onAssignPrimary={() => setAssignOpen(true)} />
 
           <Card className="p-5">
             <p className="text-sm font-medium text-slate-400">Payment</p>

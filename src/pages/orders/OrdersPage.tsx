@@ -14,7 +14,7 @@ import { PaymentBadge } from '@/components/shared/StatusBadge'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
 import { OrderStatusSelect } from '@/components/orders/OrderStatusSelect'
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
-import { ORDER_STATUS_META, PAYMENT_META, ZONES } from '@/lib/constants'
+import { ORDER_STATUS_META, PAYMENT_META } from '@/lib/constants'
 import { awaitingRiderAcceptance } from '@/lib/orderStage'
 import { downloadCSV } from '@/lib/export'
 import { formatDateTime, formatNPR, openInNewTab, timeAgo } from '@/lib/utils'
@@ -24,6 +24,7 @@ import { useDebounce } from '@/hooks/useDebounce'
 import { useGetOrdersQuery, useUpdateOrderStatusMutation } from '@/services/endpoints/ordersApi'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
+import { useGetZonesQuery } from '@/services/endpoints/deliveryApi'
 import type { Order, OrderStatus, PaymentMethod } from '@/types/common.types'
 
 /** The three rider stages, grouped under one "In transit" tab. */
@@ -60,6 +61,7 @@ export default function OrdersPage() {
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [updateStatus, { isLoading: cancelling }] = useUpdateOrderStatusMutation()
   const { data: stores = [] } = useGetStoresQuery()
+  const { data: zones = [] } = useGetZonesQuery()
 
   /** Quick inline status change. Cancel needs a reason; pickup needs a rider; others confirm. */
   const changeStatus = (order: Order, status: OrderStatus) => {
@@ -355,7 +357,7 @@ export default function OrdersPage() {
           </div>
           <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
             <div className="w-full sm:w-40">
-              <Select value={zone} onChange={(e) => setZone(e.target.value)} placeholder="All zones" options={ZONES.map((z) => ({ label: z, value: z }))} />
+              <Select value={zone} onChange={(e) => setZone(e.target.value)} placeholder="All zones" options={zones.map((z) => ({ label: z.name, value: z.name }))} />
             </div>
             <div className="w-full sm:w-40">
               <Select

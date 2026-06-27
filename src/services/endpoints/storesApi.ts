@@ -1,5 +1,5 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { darkStores, drivers, orders } from '@/services/mock/data'
+import { darkStores, drivers, orders, zones } from '@/services/mock/data'
 import { allStoreFeaturesOn } from '@/lib/constants'
 import type { DarkStore } from '@/types/common.types'
 

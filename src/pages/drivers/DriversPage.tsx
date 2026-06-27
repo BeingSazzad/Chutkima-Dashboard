@@ -27,7 +27,7 @@ import {
 } from '@/services/endpoints/driversApi'
 import { useGetOrdersQuery } from '@/services/endpoints/ordersApi'
 import { ROUTES } from '@/constants/routes'
-import { ZONES } from '@/lib/constants'
+import { useGetZonesQuery } from '@/services/endpoints/deliveryApi'
 import type { Driver, DriverStatus } from '@/types/common.types'
 
 export default function DriversPage() {
@@ -251,10 +251,11 @@ const VEHICLE_TYPES = ['Scooter', 'Bike', 'Bicycle', 'EV Scooter']
 function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; onClose: () => void }) {
   const [save, { isLoading }] = useSaveDriverMutation()
   const { data: stores = [] } = useGetStoresQuery()
+  const { data: zones = [] } = useGetZonesQuery()
   const isEdit = driver && driver !== 'new'
   const d = isEdit ? (driver as Driver) : null
 
-  const empty = { name: '', phone: '', vehicleType: 'Scooter', plate: '', zone: ZONES[0] as string, licenseNo: '' }
+  const empty = { name: '', phone: '', vehicleType: 'Scooter', plate: '', zone: zones[0]?.name ?? '', licenseNo: '' }
   const [form, setForm] = useState(empty)
   const [storeIds, setStoreIds] = useState<string[]>([])
   const [photo, setPhoto] = useState('')
@@ -322,7 +323,7 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
           <Select label="Vehicle type" value={form.vehicleType} onChange={(e) => set('vehicleType', e.target.value)} options={VEHICLE_TYPES.map((v) => ({ label: v, value: v }))} />
           <Input label="Vehicle number (plate)" value={form.plate} onChange={(e) => set('plate', e.target.value)} placeholder="e.g. BA 24 PA 1290" />
           <Input label="License number" value={form.licenseNo} onChange={(e) => set('licenseNo', e.target.value)} placeholder="e.g. 03-06-074521" />
-          <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={ZONES.map((z) => ({ label: z, value: z }))} />
+          <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={zones.map((z) => ({ label: z.name, value: z.name }))} />
         </div>
         <div>
           <p className="mb-1.5 text-sm font-medium text-slate-700">Dark stores <span className="text-slate-400">(one or more)</span></p>

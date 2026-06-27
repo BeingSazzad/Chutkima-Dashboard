@@ -11,6 +11,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
 import { Avatar } from '@/components/shared/Avatar'
 import { Stars } from '@/components/shared/Stars'
+import { EntityLink } from '@/components/shared/EntityLink'
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { WarnRiderModal } from '@/components/drivers/WarnRiderModal'
 import { REPORT_REASON_META, REPORT_STATUS_META } from '@/lib/constants'
@@ -19,6 +20,7 @@ import { formatDateTime, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { useAuth } from '@/hooks/useAuth'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
+import { useGetOrdersQuery } from '@/services/endpoints/ordersApi'
 import {
   useAddReportNoteMutation,
   useGetReportsQuery,
@@ -74,12 +76,14 @@ function ReportsTable() {
   const { user } = useAuth()
   const { data: reports = [], isLoading } = useGetReportsQuery()
   const { data: drivers = [] } = useGetDriversQuery()
+  const { data: orders = [] } = useGetOrdersQuery()
   const [update, { isLoading: updating }] = useUpdateReportStatusMutation()
   const [auditFor, setAuditFor] = useState<DriverReport | null>(null)
   const [warnFor, setWarnFor] = useState<DriverReport | null>(null)
   const [from, setFrom] = useState('')
   const [to, setTo] = useState('')
   const driver = (id: string) => drivers.find((d) => d.id === id)
+  const orderByRef = (ref: string) => orders.find((o) => o.reference === ref)
   const adminName = user?.name ?? 'Admin'
   // Keep the open audit modal in sync with refetched data.
   const auditReport = auditFor ? reports.find((r) => r.id === auditFor.id) ?? auditFor : null
@@ -129,12 +133,15 @@ function ReportsTable() {
     {
       key: 'by',
       header: 'Reported by',
-      cell: (r) => (
-        <div>
-          <p className="font-medium text-slate-700">{r.customerName}</p>
-          <p className="text-xs text-slate-400">{r.orderId}</p>
-        </div>
-      ),
+      cell: (r) => {
+        const o = orderByRef(r.orderId)
+        return (
+          <div>
+            <EntityLink kind="customer" id={o?.customerId} className="font-medium text-slate-700">{r.customerName}</EntityLink>
+            <EntityLink kind="order" id={o?.id} className="block text-xs text-slate-400">{r.orderId}</EntityLink>
+          </div>
+        )
+      },
     },
     { key: 'status', header: 'Status', cell: (r) => <Badge tone={REPORT_STATUS_META[r.status].badge}>{REPORT_STATUS_META[r.status].label}</Badge> },
     { key: 'date', header: 'When', className: 'whitespace-nowrap', cell: (r) => <span className="text-slate-500">{timeAgo(r.createdAt)}</span> },
@@ -294,7 +301,9 @@ function ReviewsTable() {
   const navigate = useNavigate()
   const { data: reviews = [], isLoading } = useGetReviewsQuery()
   const { data: drivers = [] } = useGetDriversQuery()
+  const { data: orders = [] } = useGetOrdersQuery()
   const driver = (id: string) => drivers.find((d) => d.id === id)
+  const orderByRef = (ref: string) => orders.find((o) => o.reference === ref)
 
   const columns: Column<DriverReview>[] = [
     {
@@ -316,12 +325,15 @@ function ReviewsTable() {
     {
       key: 'by',
       header: 'By',
-      cell: (rv) => (
-        <div>
-          <p className="font-medium text-slate-700">{rv.customerName}</p>
-          <p className="text-xs text-slate-400">{rv.orderId}</p>
-        </div>
-      ),
+      cell: (rv) => {
+        const o = orderByRef(rv.orderId)
+        return (
+          <div>
+            <EntityLink kind="customer" id={o?.customerId} className="font-medium text-slate-700">{rv.customerName}</EntityLink>
+            <EntityLink kind="order" id={o?.id} className="block text-xs text-slate-400">{rv.orderId}</EntityLink>
+          </div>
+        )
+      },
     },
     { key: 'date', header: 'When', className: 'whitespace-nowrap', cell: (rv) => <span className="text-slate-500">{timeAgo(rv.createdAt)}</span> },
   ]

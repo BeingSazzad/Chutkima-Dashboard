@@ -18,7 +18,7 @@ import { useGetTrustConfigQuery } from '@/services/endpoints/settingsApi'
 import { usePermissions } from '@/hooks/usePermissions'
 import { formatDateTime, formatNPR, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
-import { ZONES } from '@/lib/constants'
+import { useGetZonesQuery } from '@/services/endpoints/deliveryApi'
 import { useDebounce } from '@/hooks/useDebounce'
 import {
   useBanCustomerMutation,
@@ -195,6 +195,7 @@ export default function CustomersPage() {
 
 function EditCustomerModal({ customer, onClose }: { customer: Customer | null; onClose: () => void }) {
   const [save, { isLoading }] = useSaveCustomerMutation()
+  const { data: zones = [] } = useGetZonesQuery()
   const [form, setForm] = useState<Customer | null>(null)
 
   useEffect(() => {
@@ -240,7 +241,7 @@ function EditCustomerModal({ customer, onClose }: { customer: Customer | null; o
         </div>
         <Input label="Address" value={form.address} onChange={(e) => set('address', e.target.value)} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={ZONES.map((z) => ({ label: z, value: z }))} />
+          <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={zones.map((z) => ({ label: z.name, value: z.name }))} />
           <Select
             label="Tier"
             value={form.tier}

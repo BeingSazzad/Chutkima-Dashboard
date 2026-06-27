@@ -140,19 +140,28 @@ export const categoryGroups: CategoryGroup[] = [
   { id: 'g3', name: 'Beauty & Personal Care', position: 3, active: true },
 ]
 
+// ── Delivery zones — SINGLE SOURCE OF TRUTH for zone -> dark store routing ─────
+export const zones: Zone[] = [
+  { id: 'z1', name: 'Traffic Chowk', etaMins: 10, areas: ['Traffic Chowk', 'Yogikuti', 'Hospital Line'], mapLink: 'https://maps.google.com/?q=Traffic+Chowk+Butwal', geofence: [[27.7075, 83.4445], [27.7095, 83.4525], [27.7025, 83.4565], [27.6965, 83.4515], [27.6985, 83.4435]], storeId: 's1', active: true },
+  { id: 'z2', name: 'Amarpath', etaMins: 12, areas: ['Amarpath', 'Buddha Marg', 'Devinagar'], mapLink: 'https://maps.google.com/?q=Amarpath+Butwal', geofence: [], storeId: 's1', active: true },
+  { id: 'z3', name: 'Milanchowk', etaMins: 14, areas: ['Milanchowk', 'Kalikanagar'], mapLink: '', geofence: [], storeId: 's1', active: true },
+  { id: 'z4', name: 'Golpark', etaMins: 13, areas: ['Golpark', 'Tinkune', 'Ramnagar'], mapLink: '', geofence: [], storeId: 's2', active: true },
+  { id: 'z5', name: 'Sukkhanagar', etaMins: 16, areas: ['Sukkhanagar', 'Fulbari'], mapLink: '', geofence: [], storeId: 's2', active: true },
+  { id: 'z6', name: 'Buddhanagar', etaMins: 18, areas: ['Buddhanagar', 'Manglapur'], mapLink: '', geofence: [], storeId: 's2', active: false },
+]
+
+/** Safe default store when a zone is unknown or has no store assigned. */
+const DEFAULT_STORE_ID = 's1'
+
 /**
- * Single source of truth for zone -> dark store routing. The zone config below
- * is seeded from this, and orders are auto-routed to a store by the customer's
- * zone (no manual store pick). Editing a zone's store in the admin updates the
- * live `zones` config used by `storeIdForZone`.
+ * Resolve the dark store that fulfils a zone, reading the LIVE `zones` config
+ * (matched by zone name or a covered area). THE single routing authority — editing
+ * a zone's store in the admin changes routing here. Falls back to the default store
+ * for an unknown/unassigned zone so every routed order always has a valid store.
  */
-const ZONE_STORE: Record<string, string> = {
-  'Traffic Chowk': 's1',
-  Amarpath: 's1',
-  Milanchowk: 's1',
-  Golpark: 's2',
-  Sukkhanagar: 's2',
-  Buddhanagar: 's2',
+export function storeIdForZone(zoneName: string): string {
+  const zone = zones.find((z) => z.name === zoneName || z.areas.includes(zoneName))
+  return zone?.storeId || DEFAULT_STORE_ID
 }
 
 // ── Orders ──────────────────────────────────────────────────────────────────
@@ -216,8 +225,8 @@ function makeOrder(
     assignments: driverId
       ? [{ driverId, note: '', confirmed: status === 'delivered' }]
       : [],
-    // Auto-route to the dark store that serves the customer's zone.
-    storeId: ZONE_STORE[cust.zone] ?? 's1',
+    // Auto-route to the dark store that serves the customer's zone (live zones config).
+    storeId: storeIdForZone(cust.zone),
     packerId: null,
     packed: ['packed', 'picked_up', 'on_the_way', 'arrived', 'delivered'].includes(status),
     // A rider on an in-transit order has already accepted; freshly-assigned ones await acceptance.
@@ -435,25 +444,7 @@ export const coupons: Coupon[] = [
   { id: 'cp4', code: 'CHUTKIMA20', description: '20% off snacks weekend', type: 'percent', value: 20, minOrder: 200, maxDiscount: 80, usageLimit: 800, used: 800, validUntil: daysAgo(2), active: false },
 ]
 
-// ── Delivery zones & fee config ─────────────────────────────────────────────
-export const zones: Zone[] = [
-  { id: 'z1', name: 'Traffic Chowk', etaMins: 10, areas: ['Traffic Chowk', 'Yogikuti', 'Hospital Line'], mapLink: 'https://maps.google.com/?q=Traffic+Chowk+Butwal', geofence: [[27.7075, 83.4445], [27.7095, 83.4525], [27.7025, 83.4565], [27.6965, 83.4515], [27.6985, 83.4435]], storeId: 's1', active: true },
-  { id: 'z2', name: 'Amarpath', etaMins: 12, areas: ['Amarpath', 'Buddha Marg', 'Devinagar'], mapLink: 'https://maps.google.com/?q=Amarpath+Butwal', geofence: [], storeId: 's1', active: true },
-  { id: 'z3', name: 'Milanchowk', etaMins: 14, areas: ['Milanchowk', 'Kalikanagar'], mapLink: '', geofence: [], storeId: 's1', active: true },
-  { id: 'z4', name: 'Golpark', etaMins: 13, areas: ['Golpark', 'Tinkune', 'Ramnagar'], mapLink: '', geofence: [], storeId: 's2', active: true },
-  { id: 'z5', name: 'Sukkhanagar', etaMins: 16, areas: ['Sukkhanagar', 'Fulbari'], mapLink: '', geofence: [], storeId: 's2', active: true },
-  { id: 'z6', name: 'Buddhanagar', etaMins: 18, areas: ['Buddhanagar', 'Manglapur'], mapLink: '', geofence: [], storeId: 's2', active: false },
-]
-
-/**
- * Auto-routing: resolve the dark store that serves a customer's zone, reading the
- * LIVE zone config (matches by zone name or a covered area). This is what a new
- * order would call to pick its store without manual intervention.
- */
-export function storeIdForZone(zoneName: string): string | undefined {
-  const zone = zones.find((z) => z.name === zoneName || z.areas.includes(zoneName))
-  return zone?.storeId ?? ZONE_STORE[zoneName]
-}
+// `zones` + `storeIdForZone` are defined near the top (single source of truth for routing).
 
 /** Dispatch / operations config. */
 export const opsConfig = {

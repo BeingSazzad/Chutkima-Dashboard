@@ -229,6 +229,7 @@ function makeOrder(
     notes: [],
     refunds: [],
     scheduledFor,
+    holdUntil: null,
   }
 }
 
@@ -256,6 +257,12 @@ export const orders: Order[] = [
 {
   const o2 = orders.find((o) => o.id === 'o2')
   if (o2) o2.packerId = 'pk1'
+}
+
+// Seed one order on hold (25-min countdown demo).
+{
+  const o7 = orders.find((o) => o.id === 'o7')
+  if (o7) o7.holdUntil = new Date(Date.now() + 25 * 60_000).toISOString()
 }
 
 // Seed a couple of demo admin notes + a refund so the audit trails aren't empty.

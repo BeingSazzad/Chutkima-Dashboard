@@ -329,6 +329,28 @@ export const ordersApi = api.injectEndpoints({
       },
       invalidatesTags: ['Order'],
     }),
+
+    holdOrder: build.mutation<Order, { orderId: string; minutes: number }>({
+      async queryFn({ orderId, minutes }) {
+        await mockDelay(200)
+        const order = orders.find((o) => o.id === orderId)
+        if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        order.holdUntil = new Date(Date.now() + minutes * 60_000).toISOString()
+        return { data: clone(order) }
+      },
+      invalidatesTags: ['Order'],
+    }),
+
+    releaseHold: build.mutation<Order, { orderId: string }>({
+      async queryFn({ orderId }) {
+        await mockDelay(150)
+        const order = orders.find((o) => o.id === orderId)
+        if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        order.holdUntil = null
+        return { data: clone(order) }
+      },
+      invalidatesTags: ['Order'],
+    }),
   }),
 })
 
@@ -349,4 +371,6 @@ export const {
   useAddOrderNoteMutation,
   useAddRefundMutation,
   useSubstituteItemMutation,
+  useHoldOrderMutation,
+  useReleaseHoldMutation,
 } = ordersApi

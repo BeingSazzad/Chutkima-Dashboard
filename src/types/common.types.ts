@@ -122,6 +122,8 @@ export interface Order {
   refunds: OrderRefund[]
   /** Pre-booked delivery time (after-hours scheduled order); null = deliver now. */
   scheduledFor: string | null
+  /** Admin hold: processing paused until this time; null = not on hold. */
+  holdUntil: string | null
   /** Delivery destination coordinates (for live rider tracking on the map). */
   lat?: number
   lng?: number

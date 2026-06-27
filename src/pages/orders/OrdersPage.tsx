@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, Bike, Check, Clock3, Download, Eye, Search, UserPlus } from 'lucide-react'
+import { AlertTriangle, Bike, Check, Clock3, Download, Eye, PauseCircle, Search, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -194,6 +194,11 @@ export default function OrdersPage() {
             </p>
           ) : (
             <p className="mt-0.5 text-xs text-slate-400">{timeAgo(o.placedAt)}</p>
+          )}
+          {o.holdUntil && Date.parse(o.holdUntil) > Date.now() && (
+            <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-amber-600">
+              <PauseCircle className="h-3 w-3" /> On hold
+            </p>
           )}
         </div>
       ),

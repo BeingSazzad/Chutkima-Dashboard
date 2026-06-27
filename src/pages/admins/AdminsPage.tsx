@@ -19,19 +19,22 @@ import {
   useToggleAdminMutation,
 } from '@/services/endpoints/adminsApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
-import type { AdminRole, AdminUser } from '@/types/common.types'
+import { useGetRolesQuery } from '@/services/endpoints/rolesApi'
+import type { AdminUser } from '@/types/common.types'
 
-const ROLE_META: Record<AdminRole, { label: string; tone: string; desc: string }> = {
-  admin: { label: 'Admin', tone: 'bg-brand-50 text-brand-700 ring-brand-600/15', desc: 'Full access to everything' },
-  manager: { label: 'Manager', tone: 'bg-blue-50 text-blue-700 ring-blue-600/15', desc: 'Catalog, orders & content' },
-  dispatcher: { label: 'Dispatcher', tone: 'bg-amber-50 text-amber-700 ring-amber-600/15', desc: 'Orders & driver assignment' },
+/** Badge tones for built-in roles; custom roles fall back to slate. */
+const ROLE_TONE: Record<string, string> = {
+  admin: 'bg-brand-50 text-brand-700 ring-brand-600/15',
+  manager: 'bg-blue-50 text-blue-700 ring-blue-600/15',
+  dispatcher: 'bg-amber-50 text-amber-700 ring-amber-600/15',
 }
-
-const ROLE_OPTIONS = (Object.keys(ROLE_META) as AdminRole[]).map((r) => ({ label: ROLE_META[r].label, value: r }))
+const roleTone = (id: string) => ROLE_TONE[id] ?? 'bg-slate-100 text-slate-600 ring-slate-500/15'
 
 export default function AdminsPage() {
   const { data: admins = [], isLoading } = useGetAdminsQuery()
   const { data: stores = [] } = useGetStoresQuery()
+  const { data: roles = [] } = useGetRolesQuery()
+  const roleName = (id: string) => roles.find((r) => r.id === id)?.name ?? id
   const [toggle] = useToggleAdminMutation()
   const [formFor, setFormFor] = useState<AdminUser | 'new' | null>(null)
   const [deleteFor, setDeleteFor] = useState<AdminUser | null>(null)
@@ -56,7 +59,7 @@ export default function AdminsPage() {
     {
       key: 'role',
       header: 'Role',
-      cell: (a) => <Badge tone={ROLE_META[a.role].tone}>{ROLE_META[a.role].label}</Badge>,
+      cell: (a) => <Badge tone={roleTone(a.role)}>{roleName(a.role)}</Badge>,
     },
     { key: 'store', header: 'Store', cell: (a) => <span className="text-slate-600">{storeName(a.storeId)}</span> },
     {
@@ -116,10 +119,11 @@ export default function AdminsPage() {
 
 function AdminFormModal({ admin, stores, onClose }: { admin: AdminUser | 'new' | null; stores: { id: string; name: string }[]; onClose: () => void }) {
   const [save, { isLoading }] = useSaveAdminMutation()
+  const { data: roles = [] } = useGetRolesQuery()
   const isEdit = admin && admin !== 'new'
   const a = isEdit ? (admin as AdminUser) : null
 
-  const empty = { name: '', email: '', phone: '', role: 'dispatcher' as AdminRole, storeId: '' }
+  const empty = { name: '', email: '', phone: '', role: 'dispatcher', storeId: '' }
   const [form, setForm] = useState(empty)
   const key = admin === 'new' ? 'new' : a?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
@@ -153,7 +157,7 @@ function AdminFormModal({ admin, stores, onClose }: { admin: AdminUser | 'new' |
         <Input label="Full name" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Prakash Thapa" autoFocus />
         <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="name@chutkima.com" leftIcon={<Mail className="h-4 w-4" />} />
         <Input label="Phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+977 98…" leftIcon={<Phone className="h-4 w-4" />} />
-        <Select label="Role" value={form.role} onChange={(e) => set('role', e.target.value)} options={ROLE_OPTIONS} />
+        <Select label="Role" value={form.role} onChange={(e) => set('role', e.target.value)} options={roles.map((r) => ({ label: r.name, value: r.id }))} />
         <Select
           label="Dark store"
           value={form.storeId}
@@ -161,9 +165,11 @@ function AdminFormModal({ admin, stores, onClose }: { admin: AdminUser | 'new' |
           placeholder="All stores (master admin)"
           options={stores.map((s) => ({ label: s.name, value: s.id }))}
         />
-        <p className="rounded-xl bg-mint-50 px-3 py-2.5 text-xs text-slate-500">
-          {ROLE_META[form.role].label}: {ROLE_META[form.role].desc}
-        </p>
+        {roles.find((r) => r.id === form.role)?.description && (
+          <p className="rounded-xl bg-mint-50 px-3 py-2.5 text-xs text-slate-500">
+            {roles.find((r) => r.id === form.role)!.description}
+          </p>
+        )}
       </div>
     </Modal>
   )

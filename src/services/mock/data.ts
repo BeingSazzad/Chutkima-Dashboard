@@ -24,11 +24,13 @@ import type {
   OrderStatus,
   Product,
   RiderDeposit,
+  Role,
   SearchKeyword,
   Transaction,
   Zone,
 } from '@/types/common.types'
 import { allStoreFeaturesOn } from '@/lib/constants'
+import { ROUTES } from '@/constants/routes'
 
 /**
  * In-memory seeded dataset for the Chutkima admin dashboard.
@@ -387,6 +389,17 @@ export const admins: AdminUser[] = [
   { id: 'a2', name: 'Prakash Thapa', email: 'prakash@chutkima.com', phone: '+977 9800000002', role: 'manager', avatar: avatar('a2'), active: true, storeId: 's1', lastActiveAt: minsAgo(40), createdAt: daysAgo(180) },
   { id: 'a3', name: 'Nisha Gurung', email: 'nisha@chutkima.com', phone: '+977 9800000003', role: 'dispatcher', avatar: avatar('a3'), active: true, storeId: 's1', lastActiveAt: minsAgo(12), createdAt: daysAgo(90) },
   { id: 'a4', name: 'Rojan Shrestha', email: 'rojan@chutkima.com', phone: '+977 9800000004', role: 'dispatcher', avatar: avatar('a4'), active: false, storeId: 's2', lastActiveAt: daysAgo(6), createdAt: daysAgo(60) },
+]
+
+// ── Roles & permissions (module access + export rights) ──────────────────────
+export const roles: Role[] = [
+  { id: 'admin', name: 'Super Admin', description: 'Full access to everything.', system: true, modules: ['*'], canExport: true, canExportCustomers: true },
+  { id: 'manager', name: 'Manager', description: 'Catalog, orders, content & reports.', system: true, modules: [ROUTES.dashboard, ROUTES.analytics, ROUTES.orders, ROUTES.products, ROUTES.categories, ROUTES.coupons, ROUTES.reports, ROUTES.homeFeed, ROUTES.banners, ROUTES.onboarding, ROUTES.content, ROUTES.customers], canExport: true, canExportCustomers: true },
+  { id: 'dispatcher', name: 'Dispatcher', description: 'Orders, riders & packers.', system: true, modules: [ROUTES.dashboard, ROUTES.orders, ROUTES.drivers, ROUTES.packers, ROUTES.delivery], canExport: false, canExportCustomers: false },
+  { id: 'customer_support', name: 'Customer Support', description: 'Orders, customers & complaints.', system: false, modules: [ROUTES.dashboard, ROUTES.orders, ROUTES.customers, ROUTES.reports], canExport: false, canExportCustomers: false },
+  { id: 'order_support', name: 'Order Support', description: 'Orders & transactions.', system: false, modules: [ROUTES.dashboard, ROUTES.orders, ROUTES.transactions], canExport: false, canExportCustomers: false },
+  { id: 'rider_support', name: 'Rider Support', description: 'Riders, packers & rider finance.', system: false, modules: [ROUTES.dashboard, ROUTES.drivers, ROUTES.packers, ROUTES.riderFinance, ROUTES.reports], canExport: false, canExportCustomers: false },
+  { id: 'darkstore_admin', name: 'Dark Store Admin', description: 'Runs one dark store. Cannot export customer data.', system: false, modules: [ROUTES.dashboard, ROUTES.orders, ROUTES.products, ROUTES.drivers, ROUTES.packers, ROUTES.delivery, ROUTES.stores], canExport: true, canExportCustomers: false },
 ]
 
 // ── Home feed sections ──────────────────────────────────────────────────────

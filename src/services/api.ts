@@ -35,6 +35,7 @@ export const api = createApi({
     'FaqSection',
     'Links',
     'Admin',
+    'Role',
     'HomeSection',
     'Coupon',
     'Zone',

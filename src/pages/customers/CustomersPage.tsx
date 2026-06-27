@@ -15,6 +15,7 @@ import { CustomerTrustBadge } from '@/components/shared/StatusBadge'
 import { downloadCSV } from '@/lib/export'
 import { deriveTrustBadge } from '@/lib/trust'
 import { useGetTrustConfigQuery } from '@/services/endpoints/settingsApi'
+import { usePermissions } from '@/hooks/usePermissions'
 import { formatDateTime, formatNPR, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
 import { ZONES } from '@/lib/constants'
@@ -119,6 +120,8 @@ export default function CustomersPage() {
     },
   ]
 
+  const { canExportCustomers } = usePermissions()
+
   const exportCsv = () => {
     downloadCSV(
       'chutkima-customers.csv',
@@ -153,9 +156,11 @@ export default function CustomersPage() {
         title="Customers"
         description="Everyone ordering from your Butwal store. Click a row for full history."
         actions={
-          <Button variant="outline" leftIcon={<Download className="h-4 w-4" />} onClick={exportCsv} disabled={customers.length === 0}>
-            Export CSV
-          </Button>
+          canExportCustomers && (
+            <Button variant="outline" leftIcon={<Download className="h-4 w-4" />} onClick={exportCsv} disabled={customers.length === 0}>
+              Export CSV
+            </Button>
+          )
         }
       />
 

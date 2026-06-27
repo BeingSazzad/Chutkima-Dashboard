@@ -450,7 +450,22 @@ export interface DarkStore {
   createdAt: string
 }
 
-export type AdminRole = 'admin' | 'manager' | 'dispatcher'
+export type AdminRole = string
+
+/** A role with module access + export permissions (Super Admin can create custom roles). */
+export interface Role {
+  id: ID
+  name: string
+  description: string
+  /** Built-in roles can't be deleted. */
+  system: boolean
+  /** Allowed module keys (nav route paths). ['*'] = full access. */
+  modules: string[]
+  /** May export data (CSV) at all. */
+  canExport: boolean
+  /** May export customer PII (names, phones, addresses). */
+  canExportCustomers: boolean
+}
 
 export interface AdminUser {
   id: ID

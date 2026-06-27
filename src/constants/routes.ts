@@ -27,6 +27,7 @@ export const ROUTES = {
   broadcast: '/broadcast',
   stores: '/stores',
   admins: '/admins',
+  roles: '/roles',
 
   // Content management
   homeFeed: '/home-feed',

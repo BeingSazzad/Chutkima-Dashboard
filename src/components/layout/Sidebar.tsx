@@ -6,17 +6,20 @@ import { Logo } from '@/components/shared/Logo'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { setSidebar } from '@/store/uiSlice'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
+import { usePermissions } from '@/hooks/usePermissions'
 import { NAV_SECTIONS, type NavSection } from './navConfig'
 
-/** Hide nav items whose module is disabled for the actively-managed store. */
+/** Hide nav items the current role can't access, or disabled for the active store. */
 function useVisibleSections(): NavSection[] {
   const activeStoreId = useAppSelector((s) => s.ui.activeStoreId)
   const { data: stores = [] } = useGetStoresQuery()
+  const perms = usePermissions()
   const active = activeStoreId ? stores.find((s) => s.id === activeStoreId) : null
-  if (!active) return NAV_SECTIONS // master view → everything visible
   return NAV_SECTIONS.map((section) => ({
     ...section,
-    items: section.items.filter((item) => !item.feature || active.features[item.feature]),
+    items: section.items.filter(
+      (item) => perms.allows(item.to) && (!active || !item.feature || active.features[item.feature]),
+    ),
   })).filter((section) => section.items.length > 0)
 }
 

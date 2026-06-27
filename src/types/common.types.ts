@@ -198,6 +198,8 @@ export interface Driver {
   status: DriverStatus
   /** Employment standing — defaults to active when unset. */
   accountStatus?: DriverAccountStatus
+  /** Dark stores this rider serves (one rider can cover several stores). */
+  storeIds: ID[]
   zone: string
   rating: number
   activeOrderId: ID | null

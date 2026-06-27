@@ -15,6 +15,7 @@ import { Avatar } from '@/components/shared/Avatar'
 import { StatCard } from '@/components/shared/StatCard'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
 import { openInNewTab } from '@/lib/utils'
+import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import { downloadCSV } from '@/lib/export'
 import { DRIVER_ACCOUNT_META, DRIVER_STATUS_META } from '@/lib/constants'
 import { useDebounce } from '@/hooks/useDebounce'
@@ -247,11 +248,13 @@ const VEHICLE_TYPES = ['Scooter', 'Bike', 'Bicycle', 'EV Scooter']
 
 function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; onClose: () => void }) {
   const [save, { isLoading }] = useSaveDriverMutation()
+  const { data: stores = [] } = useGetStoresQuery()
   const isEdit = driver && driver !== 'new'
   const d = isEdit ? (driver as Driver) : null
 
   const empty = { name: '', phone: '', vehicleType: 'Scooter', plate: '', zone: ZONES[0] as string, licenseNo: '' }
   const [form, setForm] = useState(empty)
+  const [storeIds, setStoreIds] = useState<string[]>([])
   const [photo, setPhoto] = useState('')
   const [licenseDoc, setLicenseDoc] = useState('')
   const [vehicleRegDoc, setVehicleRegDoc] = useState('')
@@ -262,17 +265,20 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
     if (d) {
       const [type, plate] = d.vehicle.split(' · ')
       setForm({ name: d.name, phone: d.phone, vehicleType: type || 'Scooter', plate: plate || '', zone: d.zone, licenseNo: d.licenseNo ?? '' })
+      setStoreIds(d.storeIds ?? [])
       setPhoto(d.avatar && !d.avatar.startsWith('https://i.pravatar') ? d.avatar : '')
       setLicenseDoc(d.licenseDoc ?? '')
       setVehicleRegDoc(d.vehicleRegDoc ?? '')
     } else {
       setForm(empty)
+      setStoreIds([])
       setPhoto('')
       setLicenseDoc('')
       setVehicleRegDoc('')
     }
   }
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const toggleStore = (id: string) => setStoreIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   const submit = async () => {
     const vehicle = form.plate.trim() ? `${form.vehicleType} · ${form.plate.trim()}` : form.vehicleType
@@ -281,6 +287,7 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
       name: form.name,
       phone: form.phone,
       vehicle,
+      storeIds,
       zone: form.zone,
       licenseNo: form.licenseNo,
       licenseDoc,
@@ -314,6 +321,24 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
           <Input label="Vehicle number (plate)" value={form.plate} onChange={(e) => set('plate', e.target.value)} placeholder="e.g. BA 24 PA 1290" />
           <Input label="License number" value={form.licenseNo} onChange={(e) => set('licenseNo', e.target.value)} placeholder="e.g. 03-06-074521" />
           <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={ZONES.map((z) => ({ label: z, value: z }))} />
+        </div>
+        <div>
+          <p className="mb-1.5 text-sm font-medium text-slate-700">Dark stores <span className="text-slate-400">(one or more)</span></p>
+          <div className="flex flex-wrap gap-2">
+            {stores.map((s) => {
+              const on = storeIds.includes(s.id)
+              return (
+                <button
+                  key={s.id}
+                  type="button"
+                  onClick={() => toggleStore(s.id)}
+                  className={`focus-ring rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${on ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  {on ? '✓ ' : ''}{s.name}
+                </button>
+              )
+            })}
+          </div>
         </div>
         <div>
           <p className="mb-2 text-sm font-semibold text-slate-700">Documents (KYC)</p>

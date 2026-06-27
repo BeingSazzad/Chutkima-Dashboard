@@ -14,6 +14,7 @@ import { EntityLink } from '@/components/shared/EntityLink'
 import { Stars } from '@/components/shared/Stars'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
 import { WarnRiderModal } from '@/components/drivers/WarnRiderModal'
+import { RiderLiveTrackingCard } from '@/components/drivers/RiderLiveTrackingCard'
 import { DRIVER_ACCOUNT_META, REPORT_REASON_META, REPORT_STATUS_META, WARNING_SEVERITY_META } from '@/lib/constants'
 import { formatDateTime, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
@@ -188,6 +189,8 @@ export default function DriverDetailPage() {
 
         {/* Feedback */}
         <div className="space-y-4 lg:col-span-2">
+          <RiderLiveTrackingCard driver={driver} />
+
           <Card>
             <CardHeader title="Recent deliveries" subtitle={`${deliveries.length} completed`} />
             <CardContent className="pt-2">

@@ -255,6 +255,7 @@ export const driversApi = api.injectEndpoints({
           vehicleRegDoc: payload.vehicleRegDoc ?? '',
           vehicle: payload.vehicle ?? 'Scooter',
           status: 'offline',
+          storeIds: payload.storeIds ?? [],
           zone: payload.zone ?? 'Traffic Chowk',
           rating: 5,
           activeOrderId: null,

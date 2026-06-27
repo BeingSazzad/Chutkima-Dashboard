@@ -442,7 +442,9 @@ export function storeIdForZone(zoneName: string): string | undefined {
 
 /** Dispatch / operations config. */
 export const opsConfig = {
-  multiRiderEnabled: true,
+  // One order = one rider by default (q-commerce norm). Turn on in Settings only
+  // for bulk orders that must be split across riders (adds portion notes + add-rider).
+  multiRiderEnabled: false,
   maxRiders: 3,
   /** NPR paid to riders per km (fuel allowance) — feature 91, configurable. */
   fuelRatePerKm: 4,

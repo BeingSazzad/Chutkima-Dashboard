@@ -436,6 +436,7 @@ export const storeSetup = {
   email: 'hello@chutkima.com',
   taxNumber: '601234567',
   vatPercent: 13,
+  invoiceSize: 'a4' as const,
 }
 
 // ── Internal billing (staff purchases / damaged / clearance) ────────────────

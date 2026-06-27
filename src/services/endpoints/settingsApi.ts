@@ -8,6 +8,7 @@ import {
   trustConfig,
 } from '@/services/mock/data'
 import type { TrustConfig } from '@/lib/trust'
+import type { InvoiceSize } from '@/types/common.types'
 
 /** Operating hours + scheduled delivery (section 2.1 / feature 113). */
 export interface OperatingConfig {
@@ -55,6 +56,8 @@ export interface StoreSetup {
   email: string
   taxNumber: string
   vatPercent: number
+  /** Default paper size for printed invoices. */
+  invoiceSize: InvoiceSize
 }
 
 export const settingsApi = api.injectEndpoints({

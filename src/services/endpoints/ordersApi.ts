@@ -1,7 +1,7 @@
 import { api, clone, mockDelay } from '@/services/api'
 import { orders, drivers, products, transactions } from '@/services/mock/data'
 import { PAYMENT_META, SUBSTITUTABLE_STATUSES } from '@/lib/constants'
-import type { Order, OrderStatus, PaymentMethod, RefundType } from '@/types/common.types'
+import type { Order, OrderStatus, PaymentMethod, RefundItem, RefundType } from '@/types/common.types'
 
 const uid = (prefix: string) => `${prefix}${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`
 
@@ -262,16 +262,31 @@ export const ordersApi = api.injectEndpoints({
     /** Process a full / partial refund, append to the order's refund history. */
     addRefund: build.mutation<
       Order,
-      { orderId: string; type: RefundType; amount: number; reason: string; comments: string; adminName: string }
+      { orderId: string; type: RefundType; amount: number; reason: string; comments: string; adminName: string; items?: RefundItem[] }
     >({
-      async queryFn({ orderId, type, amount, reason, comments, adminName }) {
+      async queryFn({ orderId, type, amount, reason, comments, adminName, items }) {
         await mockDelay(300)
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
         const alreadyRefunded = order.refunds.reduce((s, r) => s + r.amount, 0)
-        const refundAmount = type === 'full' ? order.grandTotal - alreadyRefunded : amount
+        const refundAmount =
+          type === 'full'
+            ? order.grandTotal - alreadyRefunded
+            : type === 'item'
+              ? (items ?? []).reduce((s, it) => s + it.amount, 0)
+              : amount
         const at = new Date().toISOString()
-        order.refunds.push({ id: uid('rf'), type, amount: refundAmount, reason, comments, adminName, at, status: 'processed' })
+        // Item-level refund → restock the returned units (inventory auto-adjust).
+        if (type === 'item' && items) {
+          for (const ri of items) {
+            const p = products.find((x) => x.id === ri.productId)
+            if (p) {
+              p.stock += ri.quantity
+              p.status = p.stock === 0 ? 'out_of_stock' : p.stock <= p.lowStockThreshold ? 'low_stock' : 'active'
+            }
+          }
+        }
+        order.refunds.push({ id: uid('rf'), type, amount: refundAmount, reason, comments, adminName, at, status: 'processed', items })
         // Mark fully refunded when the whole grand total is covered.
         if (alreadyRefunded + refundAmount >= order.grandTotal) order.paymentStatus = 'refunded'
         // Mirror into the finance transaction ledger.
@@ -288,7 +303,7 @@ export const ordersApi = api.injectEndpoints({
         })
         return { data: clone(order) }
       },
-      invalidatesTags: ['Order', 'Transaction'],
+      invalidatesTags: ['Order', 'Transaction', 'Product'],
     }),
 
     substituteItem: build.mutation<Order, { orderId: string; productId: string; newProductId: string }>({

@@ -167,6 +167,16 @@ function StoreSetupCard() {
           <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} />
           <Input label="PAN / VAT / TRN number" value={form.taxNumber} onChange={(e) => set('taxNumber', e.target.value)} />
           <Input label="VAT / Tax %" type="number" value={form.vatPercent} onChange={(e) => set('vatPercent', Number(e.target.value) || 0)} />
+          <Select
+            label="Default invoice size"
+            value={form.invoiceSize}
+            onChange={(e) => set('invoiceSize', e.target.value)}
+            options={[
+              { label: 'A4 sheet', value: 'a4' },
+              { label: 'Thermal 80mm', value: 'thermal80' },
+              { label: 'Thermal 57mm', value: 'thermal58' },
+            ]}
+          />
         </div>
         <div className="flex items-center justify-end gap-2">
           {saved && (

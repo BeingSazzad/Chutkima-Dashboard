@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Banknote, Clock, MapPin, MessageCircle, Phone, Printer, RotateCcw, StickyNote } from 'lucide-react'
+import { Banknote, ChevronDown, Clock, MapPin, MessageCircle, Phone, Printer, RotateCcw, StickyNote } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -38,9 +38,9 @@ import {
 import { awaitingRiderAcceptance } from '@/lib/orderStage'
 import { useGetDriverQuery } from '@/services/endpoints/driversApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
-import { useGetOpsConfigQuery, useGetStoreSetupQuery, useGetSystemControlsQuery } from '@/services/endpoints/settingsApi'
+import { useGetOpsConfigQuery, useGetStoreSetupQuery, useGetSystemControlsQuery, type StoreSetup } from '@/services/endpoints/settingsApi'
 import { useAuth } from '@/hooks/useAuth'
-import type { Order, OrderItem, OrderStatus, RefundType } from '@/types/common.types'
+import type { InvoiceSize, Order, OrderItem, OrderStatus, RefundType } from '@/types/common.types'
 
 export default function OrderDetailPage() {
   const { orderId = '' } = useParams()
@@ -97,9 +97,7 @@ export default function OrderDetailPage() {
                 Alert admin
               </Button>
             )}
-            <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />} onClick={() => printOrderInvoice(order, driver?.name, storeSetup)}>
-              Print invoice
-            </Button>
+            <PrintInvoiceMenu order={order} driverName={driver?.name} company={storeSetup} />
           </>
         }
       />
@@ -376,6 +374,46 @@ export default function OrderDetailPage() {
   )
 }
 
+const INVOICE_SIZES: { value: InvoiceSize; label: string }[] = [
+  { value: 'a4', label: 'A4 sheet' },
+  { value: 'thermal80', label: 'Thermal 80mm' },
+  { value: 'thermal58', label: 'Thermal 57mm' },
+]
+
+/** Print invoice with a paper-size picker (default comes from Store Setup). */
+function PrintInvoiceMenu({ order, driverName, company }: { order: Order; driverName?: string; company?: StoreSetup }) {
+  const [open, setOpen] = useState(false)
+  const def: InvoiceSize = company?.invoiceSize ?? 'a4'
+  const print = (size: InvoiceSize) => {
+    printOrderInvoice(order, driverName, company, size)
+    setOpen(false)
+  }
+  return (
+    <div className="relative">
+      <Button variant="outline" leftIcon={<Printer className="h-4 w-4" />} onClick={() => setOpen((o) => !o)}>
+        Print invoice <ChevronDown className="ml-1 h-4 w-4" />
+      </Button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} />
+          <div className="absolute right-0 z-20 mt-1 w-48 rounded-xl border border-slate-200 bg-white p-1 shadow-lg">
+            {INVOICE_SIZES.map((s) => (
+              <button
+                key={s.value}
+                onClick={() => print(s.value)}
+                className="focus-ring flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm text-slate-700 hover:bg-mint-50"
+              >
+                {s.label}
+                {s.value === def && <span className="text-xs font-semibold text-brand-600">default</span>}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
 /** Internal admin notes — append-only audit trail (multiple notes, never overwritten). */
 function OrderNotesCard({ order }: { order: Order }) {
   const { user } = useAuth()
@@ -427,26 +465,40 @@ function RefundCard({ order }: { order: Order }) {
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
   const [comments, setComments] = useState('')
+  const [itemQty, setItemQty] = useState<Record<string, number>>({})
 
   const refunded = order.refunds.reduce((s, r) => s + r.amount, 0)
   const remaining = Math.max(0, order.grandTotal - refunded)
   const partialAmount = Number(amount) || 0
-  const valid = reason.trim() && comments.trim() && (type === 'full' || (partialAmount > 0 && partialAmount <= remaining))
+  const refundItems = order.items
+    .map((it) => ({ productId: it.productId, name: it.name, quantity: itemQty[it.productId] ?? 0, amount: it.price * (itemQty[it.productId] ?? 0) }))
+    .filter((it) => it.quantity > 0)
+  const itemTotal = refundItems.reduce((s, it) => s + it.amount, 0)
+  const valid =
+    reason.trim() &&
+    comments.trim() &&
+    (type === 'full' ||
+      (type === 'partial' && partialAmount > 0 && partialAmount <= remaining) ||
+      (type === 'item' && itemTotal > 0 && itemTotal <= remaining))
+
+  const setQty = (id: string, max: number, v: number) => setItemQty((q) => ({ ...q, [id]: Math.max(0, Math.min(max, v)) }))
 
   const submit = async () => {
     await addRefund({
       orderId: order.id,
       type,
-      amount: type === 'full' ? remaining : partialAmount,
+      amount: type === 'full' ? remaining : type === 'item' ? itemTotal : partialAmount,
       reason: reason.trim(),
       comments: comments.trim(),
       adminName: user?.name ?? 'Admin',
+      items: type === 'item' ? refundItems : undefined,
     }).unwrap()
     setOpen(false)
     setType('full')
     setAmount('')
     setReason('')
     setComments('')
+    setItemQty({})
   }
 
   return (
@@ -486,6 +538,9 @@ function RefundCard({ order }: { order: Order }) {
                     <span className="text-sm font-bold text-amber-600">{formatNPR(r.amount)}</span>
                   </div>
                   <p className="text-xs text-slate-500">{r.reason} — {r.comments}</p>
+                  {r.items && r.items.length > 0 && (
+                    <p className="text-xs text-slate-400">{r.items.map((i) => `${i.name} ×${i.quantity}`).join(', ')} · restocked</p>
+                  )}
                   <p className="text-xs text-slate-400">{r.adminName} · {formatDateTime(r.at)}</p>
                 </div>
               </li>
@@ -514,11 +569,40 @@ function RefundCard({ order }: { order: Order }) {
             onChange={(e) => setType(e.target.value as RefundType)}
             options={[
               { label: `Full refund (${formatNPR(remaining)})`, value: 'full' },
-              { label: 'Partial refund', value: 'partial' },
+              { label: 'Partial refund (amount)', value: 'partial' },
+              { label: 'Per-item refund (restocks)', value: 'item' },
             ]}
           />
           {type === 'partial' && (
             <Input label={`Refund amount (max ${formatNPR(remaining)})`} type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+          )}
+          {type === 'item' && (
+            <div className="rounded-xl border border-slate-200 p-2">
+              <p className="px-1 pb-1.5 text-xs font-medium text-slate-500">Pick items &amp; quantities to refund — stock is added back automatically.</p>
+              <div className="space-y-1">
+                {order.items.map((it) => {
+                  const qty = itemQty[it.productId] ?? 0
+                  return (
+                    <div key={it.productId} className="flex items-center gap-2 rounded-lg px-1 py-1.5">
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-slate-700">{it.name}</p>
+                        <p className="text-xs text-slate-400">{formatNPR(it.price)} · ordered {it.quantity}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button type="button" onClick={() => setQty(it.productId, it.quantity, qty - 1)} className="focus-ring h-7 w-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">−</button>
+                        <span className="w-6 text-center text-sm font-semibold tabular-nums">{qty}</span>
+                        <button type="button" onClick={() => setQty(it.productId, it.quantity, qty + 1)} className="focus-ring h-7 w-7 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50">+</button>
+                      </div>
+                      <span className="w-16 text-right text-sm font-semibold text-slate-800">{formatNPR(it.price * qty)}</span>
+                    </div>
+                  )
+                })}
+              </div>
+              <div className="mt-1 flex justify-between border-t border-slate-100 px-1 pt-2 text-sm font-bold text-slate-800">
+                <span>Refund total</span>
+                <span>{formatNPR(itemTotal)}</span>
+              </div>
+            </div>
           )}
           <Input label="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Damaged item / missing product" />
           <Textarea label="Comments (required)" value={comments} onChange={(e) => setComments(e.target.value)} rows={2} placeholder="Internal notes for the audit trail" />

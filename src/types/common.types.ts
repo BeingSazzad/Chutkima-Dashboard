@@ -50,7 +50,15 @@ export interface OrderNote {
 }
 
 /** Refund type — full or partial. */
-export type RefundType = 'full' | 'partial'
+export type RefundType = 'full' | 'partial' | 'item'
+
+/** A single line refunded in an item-level refund. */
+export interface RefundItem {
+  productId: ID
+  name: string
+  quantity: number
+  amount: number
+}
 
 /** One refund record against an order (audit trail). */
 export interface OrderRefund {
@@ -62,7 +70,12 @@ export interface OrderRefund {
   adminName: string
   at: string
   status: 'processed'
+  /** Lines refunded when type === 'item' (inventory is restocked for these). */
+  items?: RefundItem[]
 }
+
+/** Paper size for printed invoices. */
+export type InvoiceSize = 'a4' | 'thermal80' | 'thermal58'
 
 export interface Order {
   id: ID

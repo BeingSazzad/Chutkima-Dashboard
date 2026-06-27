@@ -1,6 +1,6 @@
 import { formatDateTime, formatNPR } from './utils'
 import { BRAND, PAYMENT_META } from './constants'
-import type { Order } from '@/types/common.types'
+import type { InvoiceSize, Order } from '@/types/common.types'
 
 /** Escape a value for CSV (wrap in quotes, double internal quotes). */
 function csvCell(value: unknown): string {
@@ -41,8 +41,57 @@ export interface InvoiceCompany {
   vatPercent: number
 }
 
-/** Open a clean, printable invoice for an order in a new window. */
-export function printOrderInvoice(order: Order, driverName?: string, company?: InvoiceCompany) {
+/** Compact thermal-receipt invoice (80mm or 57mm roll printers). */
+function thermalInvoiceHtml(order: Order, co: InvoiceCompany, driverName: string | undefined, vatIncl: number, size: InvoiceSize): string {
+  const widthMm = size === 'thermal58' ? 58 : 80
+  const base = size === 'thermal58' ? 10 : 11
+  const items = order.items
+    .map(
+      (it) => `<div class="it">
+        <div class="nm">${it.name}</div>
+        <div class="ln"><span>${it.quantity} × ${formatNPR(it.price)}</span><span>${formatNPR(it.price * it.quantity)}</span></div>
+      </div>`,
+    )
+    .join('')
+  return `<!doctype html><html><head><meta charset="utf-8" /><title>Invoice ${order.reference}</title>
+    <style>
+      @page { size: ${widthMm}mm auto; margin: 3mm; }
+      * { font-family: 'Courier New', ui-monospace, monospace; color: #000; }
+      body { width: ${widthMm - 6}mm; margin: 0 auto; font-size: ${base}px; line-height: 1.35; }
+      .center { text-align: center; }
+      .b { font-weight: 700; }
+      .sep { border-top: 1px dashed #000; margin: 6px 0; }
+      .ln { display: flex; justify-content: space-between; gap: 8px; }
+      .nm { font-weight: 600; }
+      .it { margin-bottom: 3px; }
+      .grand { font-weight: 800; font-size: ${base + 2}px; }
+      @media print { body { width: ${widthMm - 6}mm; } }
+    </style></head>
+    <body>
+      <div class="center b" style="font-size:${base + 4}px">${co.companyName}</div>
+      ${co.address ? `<div class="center">${co.address}</div>` : ''}
+      ${co.phone ? `<div class="center">${co.phone}</div>` : ''}
+      ${co.taxNumber ? `<div class="center">PAN/VAT: ${co.taxNumber}</div>` : ''}
+      <div class="sep"></div>
+      <div class="ln"><span class="b">${order.reference}</span><span>${formatDateTime(order.placedAt)}</span></div>
+      <div>${order.customerName} · ${order.customerPhone}</div>
+      <div>${order.address}</div>
+      ${driverName ? `<div>Rider: ${driverName}</div>` : ''}
+      <div class="sep"></div>
+      ${items}
+      <div class="sep"></div>
+      <div class="ln"><span>Subtotal</span><span>${formatNPR(order.subtotal)}</span></div>
+      <div class="ln"><span>Delivery</span><span>${order.deliveryFee === 0 ? 'FREE' : formatNPR(order.deliveryFee)}</span></div>
+      <div class="ln grand"><span>TOTAL</span><span>${formatNPR(order.grandTotal)}</span></div>
+      ${vatIncl > 0 ? `<div class="ln"><span>Incl. VAT ${co.vatPercent}%</span><span>${formatNPR(vatIncl)}</span></div>` : ''}
+      <div class="ln"><span>Payment</span><span>${PAYMENT_META[order.paymentMethod].label}</span></div>
+      <div class="sep"></div>
+      <div class="center">Thank you for ordering with ${co.companyName}!</div>
+    </body></html>`
+}
+
+/** Open a clean, printable invoice for an order in a new window (A4 or thermal). */
+export function printOrderInvoice(order: Order, driverName?: string, company?: InvoiceCompany, size: InvoiceSize = 'a4') {
   const co: InvoiceCompany = company ?? {
     companyName: BRAND.name,
     address: BRAND.city,
@@ -52,6 +101,12 @@ export function printOrderInvoice(order: Order, driverName?: string, company?: I
     vatPercent: 0,
   }
   const vatIncl = co.vatPercent > 0 ? Math.round(order.grandTotal - order.grandTotal / (1 + co.vatPercent / 100)) : 0
+
+  if (size !== 'a4') {
+    openPrintWindow(thermalInvoiceHtml(order, co, driverName, vatIncl, size), size)
+    return
+  }
+
   const rows = order.items
     .map(
       (it) => `<tr>
@@ -78,6 +133,7 @@ export function printOrderInvoice(order: Order, driverName?: string, company?: I
       .grand { font-weight: 800; font-size: 16px; border-top: 2px solid #0f172a; padding-top: 8px; }
       .row { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 20px; gap: 24px; }
       .box { background: #f1f5f9; border-radius: 12px; padding: 12px 14px; font-size: 13px; flex: 1; }
+      @page { size: A4; margin: 14mm; }
       @media print { body { padding: 0; } }
     </style></head>
     <body>
@@ -124,7 +180,13 @@ export function printOrderInvoice(order: Order, driverName?: string, company?: I
       <p class="muted" style="margin-top:32px;text-align:center">Thank you for ordering with ${co.companyName}!</p>
     </body></html>`
 
-  const win = window.open('', '_blank', 'width=820,height=900')
+  openPrintWindow(html, 'a4')
+}
+
+/** Open an invoice HTML doc in a new window sized for the chosen paper and print it. */
+function openPrintWindow(html: string, size: InvoiceSize) {
+  const width = size === 'a4' ? 820 : size === 'thermal58' ? 320 : 400
+  const win = window.open('', '_blank', `width=${width},height=900`)
   if (!win) return
   win.document.write(html)
   win.document.close()

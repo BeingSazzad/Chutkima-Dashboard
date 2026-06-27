@@ -20,6 +20,7 @@ import { Select } from '@/components/ui/Select'
 import { Spinner } from '@/components/ui/Spinner'
 import { ProductThumb } from '@/components/shared/ProductThumb'
 import { Avatar } from '@/components/shared/Avatar'
+import { EntityLink } from '@/components/shared/EntityLink'
 import { OrderStatusBadge } from '@/components/shared/StatusBadge'
 import { formatCompact, formatNPR, timeAgo } from '@/lib/utils'
 import { ROUTES } from '@/constants/routes'
@@ -229,7 +230,7 @@ export default function DashboardPage() {
                   <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full bg-brand-500 ring-2 ring-white" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-semibold text-slate-800">{d.name}</p>
+                  <EntityLink kind="driver" id={d.id} className="block text-sm font-semibold text-slate-800">{d.name}</EntityLink>
                   <p className="truncate text-xs text-slate-400">{d.zone} · {d.vehicle.split('·')[0]}</p>
                 </div>
                 <Bike className="h-4 w-4 text-brand-500" />

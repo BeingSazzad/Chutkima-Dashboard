@@ -82,6 +82,12 @@ export const ORDER_JOURNEY: OrderStatus[] = [
 ]
 
 /**
+ * Stages where item substitution is still allowed — only before the rider has
+ * the order (out-for-delivery onward is locked). Client-configurable cutoff.
+ */
+export const SUBSTITUTABLE_STATUSES: OrderStatus[] = ['pending', 'confirmed', 'packing', 'packed']
+
+/**
  * Who normally performs each status transition (Blinkit-style flow):
  * - system: automatic when the customer places/pays
  * - store:  dark-store staff / admin accept & pack

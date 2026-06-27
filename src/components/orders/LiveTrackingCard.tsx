@@ -3,6 +3,7 @@ import { Navigation, Radio } from 'lucide-react'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Badge } from '@/components/ui/Badge'
 import { Spinner } from '@/components/ui/Spinner'
+import { EtaCountdown } from './EtaCountdown'
 import { distanceKm } from '@/lib/utils'
 import type { DarkStore, Driver, Order } from '@/types/common.types'
 
@@ -34,7 +35,7 @@ export function LiveTrackingCard({ order, driver, store }: { order: Order; drive
         action={
           inTransit ? (
             <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15" dot="bg-brand-500">
-              <Navigation className="h-3 w-3" /> ETA {order.etaMinutes}m
+              <Navigation className="h-3 w-3" /> ETA <EtaCountdown placedAt={order.placedAt} etaMinutes={order.etaMinutes} />
             </Badge>
           ) : undefined
         }

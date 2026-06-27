@@ -1,6 +1,6 @@
 import { api, clone, mockDelay } from '@/services/api'
 import { orders, drivers, products, transactions } from '@/services/mock/data'
-import { PAYMENT_META } from '@/lib/constants'
+import { PAYMENT_META, SUBSTITUTABLE_STATUSES } from '@/lib/constants'
 import type { Order, OrderStatus, PaymentMethod, RefundType } from '@/types/common.types'
 
 const uid = (prefix: string) => `${prefix}${Date.now().toString(36)}${Math.floor(Math.random() * 1e4)}`
@@ -296,6 +296,8 @@ export const ordersApi = api.injectEndpoints({
         await mockDelay(300)
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        if (!SUBSTITUTABLE_STATUSES.includes(order.status))
+          return { error: { status: 409, data: 'Substitution is only allowed before the order is picked up' } as never }
         const item = order.items.find((it) => it.productId === productId)
         const replacement = products.find((p) => p.id === newProductId)
         if (!item || !replacement) return { error: { status: 404, data: 'Not found' } as never }

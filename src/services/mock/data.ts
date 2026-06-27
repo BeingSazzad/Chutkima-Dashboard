@@ -235,9 +235,9 @@ function makeOrder(
 const P = (id: string) => products.find((p) => p.id === id)!
 
 export const orders: Order[] = [
-  makeOrder('o1', '#GF-48202-NP', customers[3], [{ p: P('p1'), qty: 3 }, { p: P('p7'), qty: 2 }], 'on_the_way', 'esewa', 'd1', 9, 6, 'Call on arrival — 3rd floor, blue gate.'),
+  makeOrder('o1', '#GF-48202-NP', customers[3], [{ p: P('p1'), qty: 3 }, { p: P('p7'), qty: 2 }], 'on_the_way', 'esewa', 'd1', 3, 8, 'Call on arrival — 3rd floor, blue gate.'),
   makeOrder('o2', '#GF-48203-NP', customers[0], [{ p: P('p2'), qty: 1 }, { p: P('p3'), qty: 1 }, { p: P('p9'), qty: 1 }], 'packing', 'khalti', null, 4, 14, 'Leave at the door if no answer.'),
-  makeOrder('o3', '#GF-48204-NP', customers[1], [{ p: P('p11'), qty: 2 }, { p: P('p12'), qty: 1 }], 'pending', 'cod', null, 2, 15),
+  makeOrder('o3', '#GF-48204-NP', customers[1], [{ p: P('p11'), qty: 2 }, { p: P('p12'), qty: 1 }], 'pending', 'cod', null, 0, 15),
   makeOrder('o4', '#GF-48205-NP', customers[5], [{ p: P('p5'), qty: 2 }, { p: P('p8'), qty: 1 }], 'picked_up', 'connectips', 'd4', 7, 8),
   makeOrder('o5', '#GF-48206-NP', customers[2], [{ p: P('p1'), qty: 5 }], 'delivered', 'esewa', 'd5', 55, 0),
   makeOrder('o6', '#GF-48207-NP', customers[7], [{ p: P('p4'), qty: 1 }, { p: P('p5'), qty: 1 }], 'delivered', 'khalti', 'd2', 80, 0),

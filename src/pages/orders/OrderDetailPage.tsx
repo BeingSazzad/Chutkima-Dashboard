@@ -16,14 +16,16 @@ import { OrderStatusBadge, PaymentBadge } from '@/components/shared/StatusBadge'
 import { OrderJourney } from '@/components/orders/OrderJourney'
 import { LiveTrackingCard } from '@/components/orders/LiveTrackingCard'
 import { PackingCard } from '@/components/orders/PackingCard'
+import { PendingConfirm } from '@/components/orders/PendingConfirm'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
 import { RiderCard } from '@/components/orders/RiderCard'
 import { SubstituteModal } from '@/components/orders/SubstituteModal'
-import { ORDER_JOURNEY, ORDER_STAGE_ACTOR, ORDER_STATUS_META, PAYMENT_META } from '@/lib/constants'
+import { ORDER_JOURNEY, ORDER_STAGE_ACTOR, ORDER_STATUS_META, PAYMENT_META, SUBSTITUTABLE_STATUSES } from '@/lib/constants'
 import { printOrderInvoice } from '@/lib/export'
 import { deliveryTiming } from '@/lib/orderTiming'
 import { buildAdminOrderAlert, openWhatsApp } from '@/lib/whatsapp'
 import { formatDateTime, formatNPR } from '@/lib/utils'
+import { EntityLink } from '@/components/shared/EntityLink'
 import { ROUTES } from '@/constants/routes'
 import {
   useGetOrderQuery,
@@ -71,6 +73,7 @@ export default function OrderDetailPage() {
   const currentIndex = ORDER_JOURNEY.indexOf(order.status)
   const nextStatus = ORDER_JOURNEY[currentIndex + 1] as OrderStatus | undefined
   const isClosed = order.status === 'delivered' || order.status === 'cancelled'
+  const canSubstitute = SUBSTITUTABLE_STATUSES.includes(order.status)
   const nextActor = nextStatus ? ORDER_STAGE_ACTOR[nextStatus] : null
   const timing = deliveryTiming(order)
   const nextLabel = nextStatus ? ORDER_STATUS_META[nextStatus].label : ''
@@ -130,7 +133,7 @@ export default function OrderDetailPage() {
                     </p>
                   </div>
                   <span className="font-bold text-slate-800">{formatNPR(it.price * it.quantity)}</span>
-                  {!isClosed && (
+                  {canSubstitute && (
                     <button
                       onClick={() => setSubstituteFor(it)}
                       className="focus-ring rounded-lg px-2 py-1 text-xs font-semibold text-brand-600 hover:bg-brand-50"
@@ -178,14 +181,9 @@ export default function OrderDetailPage() {
                 )
               ) : (
                 <>
-                  {/* Pending → one-click confirm (then dispatch to packer + rider). */}
+                  {/* Pending → 15s cancellation window + auto-confirm (admin can override). */}
                   {order.status === 'pending' && (
-                    <div className="rounded-xl bg-blue-50 px-3 py-3">
-                      <p className="text-sm font-medium text-blue-700">New order — confirm to dispatch to packer &amp; rider.</p>
-                      <Button className="mt-2" loading={updating} onClick={() => updateStatus({ orderId: order.id, status: 'confirmed' })}>
-                        Confirm order
-                      </Button>
-                    </div>
+                    <PendingConfirm order={order} confirm={() => updateStatus({ orderId: order.id, status: 'confirmed' })} confirming={updating} />
                   )}
 
                   {/* Rider assigned but not yet accepted — admin can mark accepted or reassign. */}
@@ -281,7 +279,7 @@ export default function OrderDetailPage() {
               <div className="flex items-center gap-3">
                 <Avatar name={order.customerName} />
                 <div className="min-w-0">
-                  <p className="font-semibold text-slate-800">{order.customerName}</p>
+                  <EntityLink kind="customer" id={order.customerId} className="font-semibold text-slate-800">{order.customerName}</EntityLink>
                   <p className="flex items-center gap-1 text-xs text-slate-400">
                     <Phone className="h-3 w-3" /> {order.customerPhone}
                   </p>

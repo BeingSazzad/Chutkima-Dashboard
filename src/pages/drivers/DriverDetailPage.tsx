@@ -10,6 +10,7 @@ import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
 import { EmptyState } from '@/components/ui/EmptyState'
 import { Avatar } from '@/components/shared/Avatar'
+import { EntityLink } from '@/components/shared/EntityLink'
 import { Stars } from '@/components/shared/Stars'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
 import { WarnRiderModal } from '@/components/drivers/WarnRiderModal'
@@ -196,9 +197,11 @@ export default function DriverDetailPage() {
                 <div className="divide-y divide-slate-50">
                   {deliveries.map((o) => (
                     <div key={o.id} className="flex items-center justify-between py-2.5">
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">{o.reference}</p>
-                        <p className="text-xs text-slate-400">{o.customerName} · {o.zone} · {timeAgo(o.placedAt)}</p>
+                      <div className="min-w-0">
+                        <EntityLink kind="order" id={o.id} newTab className="block text-sm font-semibold text-slate-800">{o.reference}</EntityLink>
+                        <p className="truncate text-xs text-slate-400">
+                          <EntityLink kind="customer" id={o.customerId} className="hover:text-brand-600">{o.customerName}</EntityLink> · {o.zone} · {timeAgo(o.placedAt)}
+                        </p>
                       </div>
                       <span className="text-sm font-bold text-slate-800">{formatNPR(o.grandTotal)}</span>
                     </div>

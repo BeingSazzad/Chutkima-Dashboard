@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/Textarea'
 import { StatCard } from '@/components/shared/StatCard'
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { Avatar } from '@/components/shared/Avatar'
+import { EntityLink } from '@/components/shared/EntityLink'
 import { FUEL_RATE_PER_KM } from '@/lib/constants'
 import { cn, formatDateTime, formatNPR } from '@/lib/utils'
 import { downloadCSV } from '@/lib/export'
@@ -112,7 +113,7 @@ export default function RiderFinancePage() {
         <div className="flex items-center gap-3">
           <Avatar name={r.name} />
           <div>
-            <p className="font-semibold text-slate-800">{r.name}</p>
+            <EntityLink kind="driver" id={r.driverId} className="font-semibold text-slate-800">{r.name}</EntityLink>
             <p className="text-xs text-slate-400">{r.deliveriesToday} deliveries</p>
           </div>
         </div>

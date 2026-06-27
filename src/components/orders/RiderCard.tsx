@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
 import { Badge } from '@/components/ui/Badge'
 import { Avatar } from '@/components/shared/Avatar'
+import { EntityLink } from '@/components/shared/EntityLink'
+import { EtaCountdown } from './EtaCountdown'
 import { AssignDriverModal } from './AssignDriverModal'
 import { buildRiderPickupMessage, openWhatsApp } from '@/lib/whatsapp'
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
@@ -60,13 +62,13 @@ export function RiderCard({ order, onAssignPrimary }: { order: Order; onAssignPr
                 <div className="flex items-center gap-3">
                   <Avatar name={d?.name ?? 'Rider'} src={d?.avatar} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-semibold text-slate-800">{d?.name ?? 'Rider'}</p>
+                    <EntityLink kind="driver" id={a.driverId} className="block font-semibold text-slate-800">{d?.name ?? 'Rider'}</EntityLink>
                     <p className="truncate text-xs text-slate-400">{d?.vehicle}</p>
                   </div>
                   {a.confirmed ? (
                     <Badge tone="bg-green-50 text-green-700 ring-green-600/15"><Check className="h-3 w-3" /> Confirmed</Badge>
                   ) : (
-                    <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15"><Bike className="h-3 w-3" /> ETA {order.etaMinutes}m</Badge>
+                    <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15"><Bike className="h-3 w-3" /> ETA <EtaCountdown placedAt={order.placedAt} etaMinutes={order.etaMinutes} /></Badge>
                   )}
                   {!closed && (
                     <button onClick={() => removeRider({ orderId: order.id, driverId: a.driverId })} className="focus-ring rounded-lg p-1.5 text-slate-400 hover:bg-red-50 hover:text-danger" aria-label="Remove rider">

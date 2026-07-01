@@ -22,6 +22,7 @@ import {
   Store,
   ClipboardList,
   Factory,
+  Activity,
   type LucideIcon,
 } from 'lucide-react'
 import { ROUTES } from '@/constants/routes'
@@ -52,6 +53,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Dashboard', to: ROUTES.dashboard, icon: LayoutDashboard, end: true },
       { label: 'Analytics', to: ROUTES.analytics, icon: BarChart3, feature: 'reports' },
+      { label: 'Activity', to: ROUTES.activity, icon: Activity },
     ],
   },
   {

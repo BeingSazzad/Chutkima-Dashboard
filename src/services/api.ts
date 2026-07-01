@@ -56,6 +56,7 @@ export const api = createApi({
     'InternalOrder',
     'Supplier',
     'SupplierReturn',
+    'Activity',
   ],
   endpoints: () => ({}),
 })

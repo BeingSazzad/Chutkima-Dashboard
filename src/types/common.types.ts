@@ -672,6 +672,21 @@ export interface InternalOrder {
   createdAt: string
 }
 
+/** Category of a dashboard activity-feed event. */
+export type ActivityType = 'order' | 'payment' | 'stock' | 'rider' | 'return' | 'customer' | 'review'
+
+/** One entry in the "View all activity" feed. */
+export interface ActivityEvent {
+  id: ID
+  type: ActivityType
+  title: string
+  desc: string
+  /** ISO timestamp the event happened. */
+  at: string
+  /** Route opened when the entry is clicked. */
+  to: string
+}
+
 export interface KpiSummary {
   revenueToday: number
   revenueChange: number

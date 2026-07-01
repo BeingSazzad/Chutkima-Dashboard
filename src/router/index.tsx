@@ -6,6 +6,7 @@ import { ROUTES } from '@/constants/routes'
 import LoginPage from '@/pages/auth/LoginPage'
 import DashboardPage from '@/pages/dashboard/DashboardPage'
 import AnalyticsPage from '@/pages/dashboard/AnalyticsPage'
+import ActivityPage from '@/pages/activity/ActivityPage'
 import OrdersPage from '@/pages/orders/OrdersPage'
 import OrderDetailPage from '@/pages/orders/OrderDetailPage'
 import ProductsPage from '@/pages/products/ProductsPage'
@@ -45,6 +46,7 @@ export const router = createBrowserRouter([
         children: [
           { path: ROUTES.dashboard, element: <DashboardPage /> },
           { path: ROUTES.analytics, element: <AnalyticsPage /> },
+          { path: ROUTES.activity, element: <ActivityPage /> },
           { path: ROUTES.orders, element: <OrdersPage /> },
           { path: ROUTES.orderDetail(), element: <OrderDetailPage /> },
           { path: ROUTES.products, element: <ProductsPage /> },

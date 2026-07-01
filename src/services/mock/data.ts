@@ -1,4 +1,5 @@
 import type {
+  ActivityEvent,
   AdminUser,
   Banner,
   Category,
@@ -522,6 +523,26 @@ export const supplierReturns: SupplierReturn[] = [
 ]
 
 export const returnCounter = { next: supplierReturns.length + 1 }
+
+// ── Activity feed ("View all activity") ─────────────────────────────────────
+export const activityFeed: ActivityEvent[] = [
+  { id: 'a1', type: 'order', title: 'New order #GF-48213-NP', desc: 'Bishnu Pokharel · NPR 390 · COD', at: minsAgo(2), to: ROUTES.orders },
+  { id: 'a2', type: 'stock', title: 'Low stock: Choco Delight Chocolate Drink', desc: 'Only 12 units left — reorder soon', at: minsAgo(15), to: ROUTES.products },
+  { id: 'a3', type: 'rider', title: 'Rider went offline', desc: 'Anil Karki ended his shift', at: minsAgo(60), to: ROUTES.drivers },
+  { id: 'a4', type: 'payment', title: 'Payment received', desc: 'eSewa · NPR 495', at: minsAgo(120), to: ROUTES.transactions },
+  { id: 'a5', type: 'order', title: 'Order delivered #GF-48197-NP', desc: 'Sita Sharma · NPR 1,240', at: minsAgo(140), to: ROUTES.orders },
+  { id: 'a6', type: 'return', title: 'Returned to supplier · RET-000002', desc: 'Current Tomato Ketchup 500g · 5 units · Damaged', at: minsAgo(180), to: ROUTES.suppliers },
+  { id: 'a7', type: 'stock', title: 'Out of stock: Mixed Fruit Juice 1L', desc: 'Hidden from the catalog automatically', at: minsAgo(220), to: ROUTES.products },
+  { id: 'a8', type: 'customer', title: 'New customer joined', desc: 'Ramesh Adhikari · Traffic Chowk', at: minsAgo(300), to: ROUTES.customers },
+  { id: 'a9', type: 'payment', title: 'Refund processed', desc: 'Khalti · NPR 250 · order #GF-48120-NP', at: minsAgo(360), to: ROUTES.transactions },
+  { id: 'a10', type: 'review', title: 'New rider review · ★ 5', desc: '“Super fast delivery!” — for Dipesh Shrestha', at: minsAgo(420), to: ROUTES.reports },
+  { id: 'a11', type: 'rider', title: 'Rider came online', desc: 'Suresh Gurung started his shift', at: minsAgo(500), to: ROUTES.drivers },
+  { id: 'a12', type: 'order', title: 'New order #GF-48180-NP', desc: 'Gita Thapa · NPR 720 · eSewa', at: daysAgo(1), to: ROUTES.orders },
+  { id: 'a13', type: 'return', title: 'Returned to supplier · RET-000001', desc: "Nature's Pride Mixed Fruit Juice 1L · 12 units · Expired", at: daysAgo(1), to: ROUTES.suppliers },
+  { id: 'a14', type: 'stock', title: 'Low stock: Tomato Ketchup 500g', desc: 'Only 9 units left', at: daysAgo(2), to: ROUTES.products },
+  { id: 'a15', type: 'customer', title: 'Customer flagged red', desc: 'Repeated COD cancellations — trust dropped', at: daysAgo(2), to: ROUTES.customers },
+  { id: 'a16', type: 'payment', title: 'Rider deposit collected', desc: 'Manoj Thapa · NPR 3,450 cash', at: daysAgo(3), to: ROUTES.riderFinance },
+]
 
 /** Social + app-store links shown in the customer app / website footer. */
 export const linksConfig = {

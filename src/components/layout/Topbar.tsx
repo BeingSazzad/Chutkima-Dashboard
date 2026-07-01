@@ -39,7 +39,7 @@ const INITIAL_NOTIFS: Notification[] = [
   { id: 'n1', icon: ShoppingBag, iconClass: 'bg-brand-50 text-brand-600', title: 'New order #GF-48213-NP', desc: 'Bishnu Pokharel · NPR 390 · COD', time: '2m', unread: true, to: ROUTES.orders },
   { id: 'n2', icon: AlertTriangle, iconClass: 'bg-amber-50 text-amber-600', title: 'Low stock: Choco Delight', desc: 'Only 12 units left', time: '15m', unread: true, to: ROUTES.products },
   { id: 'n3', icon: Bike, iconClass: 'bg-violet-50 text-violet-600', title: 'Rider went offline', desc: 'Anil Karki ended his shift', time: '1h', unread: true, to: ROUTES.drivers },
-  { id: 'n4', icon: CreditCard, iconClass: 'bg-green-50 text-green-600', title: 'Payment received', desc: 'eSewa · NPR 495', time: '2h', unread: false, to: ROUTES.orders },
+  { id: 'n4', icon: CreditCard, iconClass: 'bg-green-50 text-green-600', title: 'Payment received', desc: 'eSewa · NPR 495', time: '2h', unread: false, to: ROUTES.transactions },
 ]
 
 /** Pick which dark store you're managing; "All stores" = master view. */
@@ -207,7 +207,7 @@ export function Topbar() {
                 <button
                   onClick={() => {
                     setNotifOpen(false)
-                    navigate(ROUTES.orders)
+                    navigate(ROUTES.activity)
                   }}
                   className="block w-full border-t border-slate-100 py-2.5 text-center text-xs font-semibold text-brand-600 hover:bg-slate-50"
                 >

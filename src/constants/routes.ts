@@ -7,6 +7,7 @@ export const ROUTES = {
 
   dashboard: '/',
   analytics: '/analytics',
+  activity: '/activity',
 
   orders: '/orders',
   orderDetail: (id = ':orderId') => `/orders/${id}`,

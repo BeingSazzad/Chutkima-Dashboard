@@ -26,6 +26,8 @@ import type {
   RiderDeposit,
   Role,
   SearchKeyword,
+  Supplier,
+  SupplierReturn,
   Transaction,
   Zone,
 } from '@/types/common.types'
@@ -493,6 +495,33 @@ export const packers: Packer[] = [
   { id: 'pk3', name: 'Sabina Rai', phone: '+977 9845000003', active: true, storeId: 's2', createdAt: daysAgo(40) },
   { id: 'pk4', name: 'Durga Lama', phone: '+977 9845000004', active: false, storeId: 's2', createdAt: daysAgo(25) },
 ]
+
+// ── Suppliers (goods vendors) ───────────────────────────────────────────────
+export const suppliers: Supplier[] = [
+  { id: 'sup1', code: 'SUP-001', name: 'Chaudhary Group Distribution', contactPerson: 'Rajan Chaudhary', phone: '+977 9851000101', email: 'orders@cgfoods.com.np', address: 'Sanepa, Lalitpur', panNo: '301245678', productsSupplied: 'Wai Wai noodles, snacks, beverages', notes: 'Delivers Tue & Fri. 30-day credit.', active: true, createdAt: daysAgo(300) },
+  { id: 'sup2', code: 'SUP-002', name: "Nature's Fresh Foods Pvt. Ltd.", contactPerson: 'Sunita Adhikari', phone: '+977 9851000102', email: 'supply@naturesfresh.com.np', address: 'Butwal Industrial Area', panNo: '502987341', productsSupplied: 'Cooking oil, juices, packaged foods', notes: '', active: true, createdAt: daysAgo(220) },
+  { id: 'sup3', code: 'SUP-003', name: 'Heritage Grains & Staples', contactPerson: 'Bishnu Poudel', phone: '+977 9851000103', email: 'sales@heritagegrains.com.np', address: 'Traffic Chowk, Butwal', panNo: '408112990', productsSupplied: 'Rice, daal, biscuits, staples', notes: 'Best rates on bulk rice.', active: true, createdAt: daysAgo(160) },
+  { id: 'sup4', code: 'SUP-004', name: 'Gokul Dairy Suppliers', contactPerson: 'Hari Bhattarai', phone: '+977 9851000104', email: 'gokuldairy@gmail.com', address: 'Bhairahawa', panNo: '609334215', productsSupplied: 'Milk, dairy, health drinks', notes: 'Daily fresh milk delivery.', active: false, createdAt: daysAgo(90) },
+]
+
+/** Seed a few product ↔ supplier links for the demo dataset. */
+products.forEach((p) => {
+  const map: Record<string, string> = {
+    'Wai Wai': 'sup1', Lays: 'sup1', 'Coca-Cola': 'sup1',
+    "Nature's": 'sup2', Current: 'sup2',
+    Heritage: 'sup3', Mustang: 'sup3', Tokla: 'sup3', Nutri: 'sup3',
+    Gokul: 'sup4',
+  }
+  p.supplierId = map[p.brand] ?? null
+})
+
+// ── Returns to supplier (inventory management) ──────────────────────────────
+export const supplierReturns: SupplierReturn[] = [
+  { id: 'ret1', reference: 'RET-000001', productId: 'p6', productName: "Nature's Pride Mixed Fruit Juice 1L", sku: 'NJ-410', supplierId: 'sup2', supplierName: "Nature's Fresh Foods Pvt. Ltd.", quantity: 12, reason: 'expired', comments: 'Past best-before date on the shelf.', adminName: 'Kiran Chetri', createdAt: daysAgo(6) },
+  { id: 'ret2', reference: 'RET-000002', productId: 'p10', productName: 'Current Tomato Ketchup 500g', sku: 'CK-330', supplierId: 'sup2', supplierName: "Nature's Fresh Foods Pvt. Ltd.", quantity: 5, reason: 'damaged', comments: 'Leaking bottles in the last consignment.', adminName: 'Kiran Chetri', createdAt: daysAgo(2) },
+]
+
+export const returnCounter = { next: supplierReturns.length + 1 }
 
 /** Social + app-store links shown in the customer app / website footer. */
 export const linksConfig = {

@@ -29,6 +29,7 @@ import {
   useUpdateStockMutation,
 } from '@/services/endpoints/productsApi'
 import { useGetCategoriesQuery, useGetCategoryGroupsQuery } from '@/services/endpoints/categoriesApi'
+import { useGetSuppliersQuery } from '@/services/endpoints/suppliersApi'
 import type { Product } from '@/types/common.types'
 
 export default function ProductsPage() {
@@ -188,13 +189,14 @@ export default function ProductsPage() {
 function ProductFormModal({ product, onClose }: { product: Product | 'new' | null; onClose: () => void }) {
   const [save, { isLoading }] = useSaveProductMutation()
   const { data: categories = [] } = useGetCategoriesQuery()
+  const { data: suppliers = [] } = useGetSuppliersQuery()
   const isEdit = product && product !== 'new'
   const p = isEdit ? (product as Product) : null
 
   const empty = {
     sku: '', name: '', description: '', brand: '', category: '',
     price: '', mrp: '', stock: '', unit: '', shelfNo: '', lowStockThreshold: '15',
-    onClearance: false,
+    onClearance: false, supplierId: '',
   }
   const [form, setForm] = useState(empty)
   const [images, setImages] = useState<string[]>([])
@@ -209,6 +211,7 @@ function ProductFormModal({ product, onClose }: { product: Product | 'new' | nul
             sku: p.sku, name: p.name, description: p.description ?? '', brand: p.brand, category: p.category,
             price: String(p.price), mrp: p.mrp ? String(p.mrp) : '', stock: String(p.stock), unit: p.unit,
             shelfNo: p.shelfNo, lowStockThreshold: String(p.lowStockThreshold), onClearance: p.onClearance,
+            supplierId: p.supplierId ?? '',
           }
         : empty,
     )
@@ -235,6 +238,7 @@ function ProductFormModal({ product, onClose }: { product: Product | 'new' | nul
       lowStockThreshold: Number(form.lowStockThreshold) || 15,
       images,
       onClearance: form.onClearance,
+      supplierId: form.supplierId || null,
     }).unwrap()
     onClose()
   }
@@ -270,6 +274,13 @@ function ProductFormModal({ product, onClose }: { product: Product | 'new' | nul
           <Input label="Unit / size" value={form.unit} onChange={(e) => set('unit', e.target.value)} placeholder="e.g. 84g, 1L" />
           <Input label="SKU" value={form.sku} onChange={(e) => set('sku', e.target.value)} placeholder="e.g. WW-001" className="font-mono" />
           <Input label="Shelf number" value={form.shelfNo} onChange={(e) => set('shelfNo', e.target.value)} placeholder="e.g. A-3" />
+          <Select
+            label="Supplier"
+            value={form.supplierId}
+            onChange={(e) => set('supplierId', e.target.value)}
+            placeholder="Select a supplier"
+            options={suppliers.map((s) => ({ label: `${s.name} (${s.code})`, value: s.id }))}
+          />
         </div>
         <Textarea
           label="Description"

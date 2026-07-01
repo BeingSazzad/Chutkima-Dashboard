@@ -183,7 +183,7 @@ export default function DriversPage() {
   return (
     <>
       <PageHeader
-        title="Drivers"
+        title="Riders"
         description="Your delivery fleet across Butwal. Assign riders from the Orders board."
         actions={
           <>

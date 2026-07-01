@@ -85,7 +85,7 @@ export default function DriverDetailPage() {
       <PageHeader
         title={driver.name}
         backTo={ROUTES.drivers}
-        breadcrumbs={[{ label: 'Drivers', to: ROUTES.drivers }, { label: driver.name }]}
+        breadcrumbs={[{ label: 'Riders', to: ROUTES.drivers }, { label: driver.name }]}
         actions={
           <>
             {accountStatus === 'active' ? (

@@ -104,6 +104,7 @@ export const productsApi = api.injectEndpoints({
           status: deriveStatus(stock, threshold),
           deliveryMins: payload.deliveryMins ?? 15,
           sold: 0,
+          supplierId: payload.supplierId ?? null,
         }
         products.unshift(created)
         return { data: clone(created) }

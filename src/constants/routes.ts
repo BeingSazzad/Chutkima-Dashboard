@@ -13,6 +13,7 @@ export const ROUTES = {
 
   products: '/products',
   categories: '/categories',
+  suppliers: '/suppliers',
 
   drivers: '/drivers',
   driverDetail: (id = ':driverId') => `/drivers/${id}`,

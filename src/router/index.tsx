@@ -10,6 +10,7 @@ import OrdersPage from '@/pages/orders/OrdersPage'
 import OrderDetailPage from '@/pages/orders/OrderDetailPage'
 import ProductsPage from '@/pages/products/ProductsPage'
 import CategoriesPage from '@/pages/categories/CategoriesPage'
+import SuppliersPage from '@/pages/suppliers/SuppliersPage'
 import DriversPage from '@/pages/drivers/DriversPage'
 import DriverDetailPage from '@/pages/drivers/DriverDetailPage'
 import ReportsPage from '@/pages/operations/ReportsPage'
@@ -48,6 +49,7 @@ export const router = createBrowserRouter([
           { path: ROUTES.orderDetail(), element: <OrderDetailPage /> },
           { path: ROUTES.products, element: <ProductsPage /> },
           { path: ROUTES.categories, element: <CategoriesPage /> },
+          { path: ROUTES.suppliers, element: <SuppliersPage /> },
           { path: ROUTES.drivers, element: <DriversPage /> },
           { path: ROUTES.driverDetail(), element: <DriverDetailPage /> },
           { path: ROUTES.reports, element: <ReportsPage /> },

@@ -54,6 +54,8 @@ export const api = createApi({
     'OperatingConfig',
     'Store',
     'InternalOrder',
+    'Supplier',
+    'SupplierReturn',
   ],
   endpoints: () => ({}),
 })

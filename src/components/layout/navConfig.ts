@@ -21,6 +21,7 @@ import {
   Fuel,
   Store,
   ClipboardList,
+  Factory,
   type LucideIcon,
 } from 'lucide-react'
 import { ROUTES } from '@/constants/routes'
@@ -57,7 +58,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Operations',
     items: [
       { label: 'Orders', to: ROUTES.orders, icon: ShoppingBag, feature: 'orders' },
-      { label: 'Drivers', to: ROUTES.drivers, icon: Bike, feature: 'delivery' },
+      { label: 'Riders', to: ROUTES.drivers, icon: Bike, feature: 'delivery' },
       { label: 'Packers', to: ROUTES.packers, icon: PackageCheck, feature: 'staff' },
       { label: 'Reports & Reviews', to: ROUTES.reports, icon: MessageSquareWarning, feature: 'reports' },
       { label: 'Delivery & Zones', to: ROUTES.delivery, icon: Truck, feature: 'delivery' },
@@ -76,6 +77,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { label: 'Products', to: ROUTES.products, icon: Package, feature: 'products' },
       { label: 'Categories', to: ROUTES.categories, icon: LayoutGrid, feature: 'products' },
+      { label: 'Suppliers', to: ROUTES.suppliers, icon: Factory, feature: 'products' },
       { label: 'Coupons', to: ROUTES.coupons, icon: TicketPercent, feature: 'promotions' },
     ],
   },

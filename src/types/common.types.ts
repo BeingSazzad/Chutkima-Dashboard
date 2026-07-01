@@ -160,6 +160,56 @@ export interface Product {
   status: ProductStatus
   deliveryMins: number
   sold: number
+  /** Supplier this product is sourced from (links to a Supplier). */
+  supplierId?: ID | null
+}
+
+/** A goods supplier / vendor the dark store buys stock from. */
+export interface Supplier {
+  id: ID
+  /** Short supplier code shown alongside the name, e.g. "SUP-001". */
+  code: string
+  /** Company / supplier name. */
+  name: string
+  /** Primary contact person at the company. */
+  contactPerson: string
+  phone: string
+  email: string
+  address: string
+  /** VAT / PAN registration number (Nepal). */
+  panNo: string
+  /** What they supply — free-text list of goods / categories. */
+  productsSupplied: string
+  /** Optional internal notes. */
+  notes: string
+  active: boolean
+  createdAt: string
+}
+
+/** Why stock is being sent back to the supplier. */
+export type ReturnReason = 'expired' | 'slow_moving' | 'damaged'
+
+/**
+ * One "Return to Supplier" record — stock sent back for being expired,
+ * slow-moving or damaged. Processing it decrements inventory (audit trail).
+ */
+export interface SupplierReturn {
+  id: ID
+  /** Separate series, e.g. "RET-000001". */
+  reference: string
+  productId: ID
+  productName: string
+  sku: string
+  supplierId: ID | null
+  supplierName: string
+  /** Units returned to the supplier. */
+  quantity: number
+  reason: ReturnReason
+  comments: string
+  /** Admin who processed the return. */
+  adminName: string
+  /** Date the return was processed. */
+  createdAt: string
 }
 
 /** A top-level grouping of categories (e.g. "Grocery & Kitchen"). */

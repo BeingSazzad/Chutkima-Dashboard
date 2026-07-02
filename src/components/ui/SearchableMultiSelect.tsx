@@ -42,27 +42,26 @@ export function SearchableMultiSelect({
       <label className="mb-1.5 block text-sm font-semibold text-slate-700">{label}</label>
 
       {/* Selected tags */}
-      <div className="flex flex-wrap gap-1.5 mb-2">
-        {selectedOptions.map((o) => (
-          <span
-            key={o.value}
-            className="inline-flex items-center gap-1 rounded-lg border border-brand-100 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700"
-          >
-            {o.label}
-            <button
-              type="button"
-              onClick={() => removeValue(o.value)}
-              className="text-brand-400 hover:text-brand-600 focus:outline-none ml-1 text-sm font-bold"
-              aria-label={`Remove ${o.label}`}
+      {selectedOptions.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {selectedOptions.map((o) => (
+            <span
+              key={o.value}
+              className="inline-flex items-center gap-1 rounded-lg border border-brand-100 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700"
             >
-              ×
-            </button>
-          </span>
-        ))}
-        {selectedOptions.length === 0 && (
-          <span className="text-xs text-slate-400 italic">None selected</span>
-        )}
-      </div>
+              {o.label}
+              <button
+                type="button"
+                onClick={() => removeValue(o.value)}
+                className="text-brand-400 hover:text-brand-600 focus:outline-none ml-1 text-sm font-bold"
+                aria-label={`Remove ${o.label}`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* Selector Trigger */}
       <button

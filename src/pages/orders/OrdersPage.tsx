@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { AlertTriangle, Bike, Check, Clock3, Download, Eye, PauseCircle, Search, UserPlus } from 'lucide-react'
+import { AlertTriangle, Bike, Check, Clock3, Download, PauseCircle, Search, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -373,29 +373,6 @@ export default function OrdersPage() {
       header: 'Status',
       className: 'whitespace-nowrap',
       cell: (o) => <OrderStatusSelect status={o.status} loading={pendingId === o.id} onChange={(status) => changeStatus(o, status)} />,
-    },
-    {
-      key: 'action',
-      header: '',
-      headerClassName: 'text-right',
-      className: 'whitespace-nowrap text-right',
-      cell: (o) => (
-        <div className="flex items-center justify-end gap-1.5">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="px-2"
-            onClick={(e) => {
-              e.stopPropagation()
-              openInNewTab(ROUTES.orderDetail(o.id))
-            }}
-            aria-label="Open in new tab"
-            title="Open in new tab"
-          >
-            <Eye className="h-4 w-4" />
-          </Button>
-        </div>
-      ),
     },
   ]
 

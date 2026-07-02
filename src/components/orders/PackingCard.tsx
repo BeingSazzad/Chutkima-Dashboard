@@ -72,11 +72,6 @@ export function PackingCard({ order }: { order: Order }) {
         ) : (
           !closed && (
             <div className="flex flex-col gap-2 sm:flex-row">
-              {!order.packed && (
-                <Button variant="primary" className="flex-1" loading={marking} leftIcon={<PackageCheck className="h-4 w-4" />} onClick={() => markPacked(order.id)}>
-                  Mark ready for pickup
-                </Button>
-              )}
               {assigned && (
                 <Button
                   variant="outline"
@@ -85,6 +80,11 @@ export function PackingCard({ order }: { order: Order }) {
                   onClick={() => setAssignOpen(true)}
                 >
                   Reassign packer
+                </Button>
+              )}
+              {!order.packed && (
+                <Button variant="primary" className="flex-1" loading={marking} leftIcon={<PackageCheck className="h-4 w-4" />} onClick={() => markPacked(order.id)}>
+                  Mark ready for pickup
                 </Button>
               )}
             </div>

@@ -30,6 +30,7 @@ export interface OrderItem {
   /** Set when admin swapped this for an out-of-stock item. */
   substituted?: boolean
   originalName?: string
+  originalPrice?: number
 }
 
 /** One rider assigned to an order (multi-rider supports up to 3). */
@@ -72,6 +73,7 @@ export interface OrderRefund {
   status: 'processed'
   /** Lines refunded when type === 'item' (inventory is restocked for these). */
   items?: RefundItem[]
+  method?: 'cash' | 'qr' | 'wallet'
 }
 
 /** Paper size for printed invoices. */
@@ -251,6 +253,7 @@ export interface Driver {
   /** Dark stores this rider serves (one rider can cover several stores). */
   storeIds: ID[]
   zone: string
+  zones?: string[]
   rating: number
   activeOrderId: ID | null
   deliveriesToday: number

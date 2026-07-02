@@ -14,6 +14,8 @@ import { cn, formatDateTime, formatNPR } from '@/lib/utils'
 import { downloadCSV } from '@/lib/export'
 import { useDebounce } from '@/hooks/useDebounce'
 import { useGetTransactionsQuery } from '@/services/endpoints/transactionsApi'
+import { useGetOrdersQuery } from '@/services/endpoints/ordersApi'
+import { useGetDriversQuery } from '@/services/endpoints/driversApi'
 import type { Transaction, TransactionStatus, TransactionType } from '@/types/common.types'
 
 export default function TransactionsPage() {
@@ -27,6 +29,24 @@ export default function TransactionsPage() {
 
   const { data: raw = [], isLoading } = useGetTransactionsQuery({ type, search: debounced || undefined })
   const { data: all = [] } = useGetTransactionsQuery()
+  const { data: orders = [] } = useGetOrdersQuery()
+  const { data: drivers = [] } = useGetDriversQuery()
+
+  const getPartyLink = (t: Transaction) => {
+    if (['order_payment', 'refund', 'cod_collection'].includes(t.type)) {
+      const orderObj = orders.find((o) => o.id === t.orderId || o.reference === t.reference)
+      if (orderObj) {
+        return { kind: 'customer' as const, id: orderObj.customerId }
+      }
+    }
+    if (['payout', 'rider_deposit'].includes(t.type)) {
+      const driverObj = drivers.find((d) => d.name === t.party)
+      if (driverObj) {
+        return { kind: 'driver' as const, id: driverObj.id }
+      }
+    }
+    return null
+  }
 
   const methods = Array.from(new Set(all.map((t) => t.method)))
   const txns = raw.filter((t) => {
@@ -81,7 +101,20 @@ export default function TransactionsPage() {
       ),
     },
     { key: 'type', header: 'Type', cell: (t) => <Badge tone={TXN_TYPE_META[t.type].badge}>{TXN_TYPE_META[t.type].label}</Badge> },
-    { key: 'party', header: 'Party', cell: (t) => <span className="text-slate-700">{t.party}</span> },
+    {
+      key: 'party',
+      header: 'Party',
+      cell: (t) => {
+        const link = getPartyLink(t)
+        return link ? (
+          <EntityLink kind={link.kind} id={link.id} className="font-semibold text-slate-800">
+            {t.party}
+          </EntityLink>
+        ) : (
+          <span className="text-slate-700">{t.party}</span>
+        )
+      }
+    },
     { key: 'method', header: 'Method', cell: (t) => <span className="text-slate-500">{t.method}</span> },
     {
       key: 'amount',

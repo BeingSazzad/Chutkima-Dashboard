@@ -35,42 +35,59 @@ export function PackingCard({ order }: { order: Order }) {
       />
       <CardContent className="space-y-3 pt-2">
         {assigned ? (
-          <div className="flex items-center justify-between gap-2 rounded-xl bg-mint-50 px-3 py-2.5">
-            <div className="min-w-0">
-              <p className="text-sm font-semibold text-slate-800">{assigned.name}</p>
-              <p className="text-xs text-slate-400">Assigned packer</p>
+          <div className="flex flex-col gap-2 rounded-xl bg-mint-50 p-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-slate-400">Assigned Packer</p>
+                <p className="text-sm font-bold text-slate-800">{assigned.name}</p>
+              </div>
+              {assigned.phone && (
+                <button
+                  onClick={notifyPacker}
+                  className="flex items-center gap-1.5 text-sm font-semibold text-brand-600 hover:underline"
+                >
+                  <MessageCircle className="h-4 w-4" /> WhatsApp pick-list
+                </button>
+              )}
             </div>
-            {assigned.phone && (
-              <Button size="sm" variant="outline" leftIcon={<MessageCircle className="h-3.5 w-3.5" />} onClick={notifyPacker}>
-                WhatsApp pick-list
+          </div>
+        ) : (
+          <div className="flex items-center justify-between rounded-xl bg-slate-50 p-3">
+            <p className="text-sm text-slate-400">No packer assigned.</p>
+            {!closed && order.status !== 'pending' && (
+              <Button
+                variant="secondary"
+                size="sm"
+                leftIcon={<UserPlus className="h-3.5 w-3.5" />}
+                onClick={() => setAssignOpen(true)}
+              >
+                Assign packer
               </Button>
             )}
           </div>
-        ) : (
-          <p className="text-sm text-slate-400">No packer assigned.</p>
         )}
 
         {order.status === 'pending' ? (
           <p className="rounded-xl bg-slate-50 px-3 py-2.5 text-sm text-slate-500">Confirm the order first, then assign a packer or mark it ready.</p>
         ) : (
           !closed && (
-            <>
-              {/* Packer is optional — admin can mark ready for pickup with or without one. */}
+            <div className="flex flex-col gap-2 sm:flex-row">
               {!order.packed && (
-                <Button variant="primary" className="w-full" loading={marking} leftIcon={<PackageCheck className="h-4 w-4" />} onClick={() => markPacked(order.id)}>
+                <Button variant="primary" className="flex-1" loading={marking} leftIcon={<PackageCheck className="h-4 w-4" />} onClick={() => markPacked(order.id)}>
                   Mark ready for pickup
                 </Button>
               )}
-
-              <Button
-                variant="secondary"
-                className="w-full"
-                leftIcon={<UserPlus className="h-4 w-4" />}
-                onClick={() => setAssignOpen(true)}
-              >
-                {order.packerId ? 'Reassign packer' : 'Assign packer'}
-              </Button>
-            </>
+              {assigned && (
+                <Button
+                  variant="outline"
+                  className={order.packed ? 'w-full' : 'flex-1'}
+                  leftIcon={<UserPlus className="h-4 w-4" />}
+                  onClick={() => setAssignOpen(true)}
+                >
+                  Reassign packer
+                </Button>
+              )}
+            </div>
           )
         )}
       </CardContent>

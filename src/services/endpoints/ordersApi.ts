@@ -1,5 +1,5 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { orders, drivers, products, transactions } from '@/services/mock/data'
+import { orders, drivers, products, transactions, customers } from '@/services/mock/data'
 import { PAYMENT_META, SUBSTITUTABLE_STATUSES } from '@/lib/constants'
 import type { Order, OrderStatus, PaymentMethod, RefundItem, RefundType } from '@/types/common.types'
 
@@ -269,9 +269,9 @@ export const ordersApi = api.injectEndpoints({
     /** Process a full / partial refund, append to the order's refund history. */
     addRefund: build.mutation<
       Order,
-      { orderId: string; type: RefundType; amount: number; reason: string; comments: string; adminName: string; items?: RefundItem[] }
+      { orderId: string; type: RefundType; amount: number; reason: string; comments: string; adminName: string; items?: RefundItem[]; method: 'cash' | 'qr' | 'wallet' }
     >({
-      async queryFn({ orderId, type, amount, reason, comments, adminName, items }) {
+      async queryFn({ orderId, type, amount, reason, comments, adminName, items, method }) {
         await mockDelay(300)
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
@@ -293,9 +293,29 @@ export const ordersApi = api.injectEndpoints({
             }
           }
         }
-        order.refunds.push({ id: uid('rf'), type, amount: refundAmount, reason, comments, adminName, at, status: 'processed', items })
+        order.refunds.push({ id: uid('rf'), type, amount: refundAmount, reason, comments, adminName, at, status: 'processed', items, method })
         // Mark fully refunded when the whole grand total is covered.
         if (alreadyRefunded + refundAmount >= order.grandTotal) order.paymentStatus = 'refunded'
+        
+        // If refund method is wallet, credit the customer
+        if (method === 'wallet') {
+          const customer = customers.find((c) => c.id === order.customerId)
+          if (customer) {
+            customer.walletBalance += refundAmount
+            customer.credits.push({
+              id: uid('cc'),
+              amount: refundAmount,
+              type: type === 'full' ? 'refund' : 'partial_refund',
+              reason: reason || 'Order refund',
+              orderId: order.id,
+              adminName,
+              at,
+            })
+          }
+        }
+
+        const refundMethodLabel = method === 'cash' ? 'Cash Refund' : method === 'qr' ? 'QR Refund' : 'Wallet Credit'
+
         // Mirror into the finance transaction ledger.
         transactions.unshift({
           id: uid('t'),
@@ -303,14 +323,14 @@ export const ordersApi = api.injectEndpoints({
           reference: order.reference,
           party: order.customerName,
           amount: refundAmount,
-          method: PAYMENT_META[order.paymentMethod].label,
+          method: refundMethodLabel,
           status: 'success',
           orderId: order.id,
           createdAt: at,
         })
         return { data: clone(order) }
       },
-      invalidatesTags: ['Order', 'Transaction', 'Product'],
+      invalidatesTags: ['Order', 'Transaction', 'Product', 'Customer'],
     }),
 
     substituteItem: build.mutation<Order, { orderId: string; productId: string; newProductId: string }>({
@@ -324,6 +344,7 @@ export const ordersApi = api.injectEndpoints({
         const replacement = products.find((p) => p.id === newProductId)
         if (!item || !replacement) return { error: { status: 404, data: 'Not found' } as never }
         item.originalName = item.name
+        item.originalPrice = item.price
         item.substituted = true
         item.productId = replacement.id
         item.name = replacement.name

@@ -25,7 +25,7 @@ import { ORDER_JOURNEY, ORDER_STAGE_ACTOR, ORDER_STATUS_META, PAYMENT_META, SUBS
 import { printOrderInvoice } from '@/lib/export'
 import { deliveryTiming } from '@/lib/orderTiming'
 import { buildAdminOrderAlert, openWhatsApp } from '@/lib/whatsapp'
-import { formatDateTime, formatNPR } from '@/lib/utils'
+import { cn, formatDateTime, formatNPR } from '@/lib/utils'
 import { EntityLink } from '@/components/shared/EntityLink'
 import { ROUTES } from '@/constants/routes'
 import {
@@ -161,6 +161,28 @@ export default function OrderDetailPage() {
                   <span>Grand total</span>
                   <span>{formatNPR(order.grandTotal)}</span>
                 </div>
+                {(() => {
+                  const diff = order.items.reduce((sum, item) => {
+                    if (item.substituted && item.originalPrice !== undefined) {
+                      return sum + (item.price - item.originalPrice) * item.quantity
+                    }
+                    return sum
+                  }, 0)
+                  if (diff === 0) return null
+                  return (
+                    <div className={cn(
+                      'mt-3 p-3 rounded-xl border text-sm font-semibold flex items-center justify-between',
+                      diff < 0 ? 'bg-green-50 border-green-100 text-green-800' : 'bg-amber-50 border-amber-100 text-amber-800'
+                    )}>
+                      <span>
+                        {diff < 0 ? 'Excess Cash (cheaper substitution)' : 'Short Cash (more expensive substitution)'}
+                      </span>
+                      <span className="font-extrabold">
+                        {formatNPR(Math.abs(diff))}
+                      </span>
+                    </div>
+                  )
+                })()}
               </div>
             </CardContent>
           </Card>
@@ -462,6 +484,7 @@ function RefundCard({ order }: { order: Order }) {
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
   const [comments, setComments] = useState('')
+  const [method, setMethod] = useState<'cash' | 'qr' | 'wallet' | ''>('')
   const [itemQty, setItemQty] = useState<Record<string, number>>({})
 
   const refunded = order.refunds.reduce((s, r) => s + r.amount, 0)
@@ -474,6 +497,7 @@ function RefundCard({ order }: { order: Order }) {
   const valid =
     reason.trim() &&
     comments.trim() &&
+    method !== '' &&
     (type === 'full' ||
       (type === 'partial' && partialAmount > 0 && partialAmount <= remaining) ||
       (type === 'item' && itemTotal > 0 && itemTotal <= remaining))
@@ -489,12 +513,14 @@ function RefundCard({ order }: { order: Order }) {
       comments: comments.trim(),
       adminName: user?.name ?? 'Admin',
       items: type === 'item' ? refundItems : undefined,
+      method: method as 'cash' | 'qr' | 'wallet',
     }).unwrap()
     setOpen(false)
     setType('full')
     setAmount('')
     setReason('')
     setComments('')
+    setMethod('')
     setItemQty({})
   }
 
@@ -601,6 +627,41 @@ function RefundCard({ order }: { order: Order }) {
               </div>
             </div>
           )}
+          <div>
+            <p className="mb-1.5 text-sm font-semibold text-slate-700">Refund method <span className="text-red-500">*</span></p>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setMethod('cash')}
+                className={cn(
+                  'flex-1 py-2 px-3 border rounded-xl font-bold text-center text-sm transition-colors focus-ring',
+                  method === 'cash' ? 'border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                )}
+              >
+                CASH
+              </button>
+              <button
+                type="button"
+                onClick={() => setMethod('qr')}
+                className={cn(
+                  'flex-1 py-2 px-3 border rounded-xl font-bold text-center text-sm transition-colors focus-ring',
+                  method === 'qr' ? 'border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                )}
+              >
+                QR
+              </button>
+              <button
+                type="button"
+                onClick={() => setMethod('wallet')}
+                className={cn(
+                  'flex-1 py-2 px-3 border rounded-xl font-bold text-center text-sm transition-colors focus-ring',
+                  method === 'wallet' ? 'border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
+                )}
+              >
+                ADD CREDIT
+              </button>
+            </div>
+          </div>
           <Input label="Reason (required)" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Damaged item / missing product" />
           <Textarea label="Comments (required)" value={comments} onChange={(e) => setComments(e.target.value)} rows={2} placeholder="Internal notes for the audit trail" />
         </div>

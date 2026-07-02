@@ -14,7 +14,7 @@ import { ImageUpload } from '@/components/ui/ImageUpload'
 import { Avatar } from '@/components/shared/Avatar'
 import { StatCard } from '@/components/shared/StatCard'
 import { DriverStatusBadge } from '@/components/shared/StatusBadge'
-import { openInNewTab } from '@/lib/utils'
+import { cn, openInNewTab } from '@/lib/utils'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import { downloadCSV } from '@/lib/export'
 import { DRIVER_ACCOUNT_META, DRIVER_STATUS_META } from '@/lib/constants'
@@ -28,6 +28,117 @@ import {
 import { useGetOrdersQuery } from '@/services/endpoints/ordersApi'
 import { ROUTES } from '@/constants/routes'
 import { useGetZonesQuery } from '@/services/endpoints/deliveryApi'
+
+interface MultiSelectProps {
+  label: string
+  placeholder?: string
+  options: { label: string; value: string }[]
+  selectedValues: string[]
+  onChange: (values: string[]) => void
+}
+
+function SearchableMultiSelect({ label, placeholder = 'Search...', options, selectedValues, onChange }: MultiSelectProps) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const toggleValue = (val: string) => {
+    if (selectedValues.includes(val)) {
+      onChange(selectedValues.filter((v) => v !== val))
+    } else {
+      onChange([...selectedValues, val])
+    }
+  }
+
+  const removeValue = (val: string) => {
+    onChange(selectedValues.filter((v) => v !== val))
+  }
+
+  const filtered = options.filter((o) =>
+    o.label.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const selectedOptions = options.filter((o) => selectedValues.includes(o.value))
+
+  return (
+    <div className="relative">
+      <label className="mb-1.5 block text-sm font-semibold text-slate-700">{label}</label>
+      
+      {/* Selected tags */}
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {selectedOptions.map((o) => (
+          <span
+            key={o.value}
+            className="inline-flex items-center gap-1 rounded-lg border border-brand-100 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700"
+          >
+            {o.label}
+            <button
+              type="button"
+              onClick={() => removeValue(o.value)}
+              className="text-brand-400 hover:text-brand-600 focus:outline-none ml-1 text-sm font-bold"
+              aria-label={`Remove ${o.label}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {selectedOptions.length === 0 && (
+          <span className="text-xs text-slate-400 italic">None selected</span>
+        )}
+      </div>
+
+      {/* Selector Trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-left text-sm text-slate-700 shadow-sm focus-ring hover:bg-slate-50"
+      >
+        <span className="truncate text-slate-500">
+          {selectedValues.length > 0 ? `${selectedValues.length} selected` : placeholder}
+        </span>
+        <span className="text-slate-400 text-xs">▼</span>
+      </button>
+
+      {/* Dropdown Menu */}
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 z-30 mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 shadow-lg max-h-60 flex flex-col">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search..."
+              className="mb-2 h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs focus-ring"
+              autoFocus
+            />
+            <div className="flex-1 overflow-y-auto space-y-0.5">
+              {filtered.map((o) => {
+                const isSelected = selectedValues.includes(o.value)
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => toggleValue(o.value)}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors',
+                      isSelected ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                    )}
+                  >
+                    <span>{o.label}</span>
+                    {isSelected && <span className="text-brand-600 font-bold">✓</span>}
+                  </button>
+                )
+              })}
+              {filtered.length === 0 && (
+                <p className="py-3 text-center text-xs text-slate-400">No options found</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 import type { Driver, DriverStatus } from '@/types/common.types'
 
 export default function DriversPage() {
@@ -255,9 +366,10 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
   const isEdit = driver && driver !== 'new'
   const d = isEdit ? (driver as Driver) : null
 
-  const empty = { name: '', phone: '', vehicleType: 'Scooter', plate: '', zone: zones[0]?.name ?? '', licenseNo: '' }
+  const empty = { name: '', phone: '', vehicleType: 'Scooter', plate: '', licenseNo: '' }
   const [form, setForm] = useState(empty)
   const [storeIds, setStoreIds] = useState<string[]>([])
+  const [selectedZones, setSelectedZones] = useState<string[]>([])
   const [photo, setPhoto] = useState('')
   const [licenseDoc, setLicenseDoc] = useState('')
   const [vehicleRegDoc, setVehicleRegDoc] = useState('')
@@ -267,21 +379,22 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
     setLastKey(key)
     if (d) {
       const [type, plate] = d.vehicle.split(' · ')
-      setForm({ name: d.name, phone: d.phone, vehicleType: type || 'Scooter', plate: plate || '', zone: d.zone, licenseNo: d.licenseNo ?? '' })
+      setForm({ name: d.name, phone: d.phone, vehicleType: type || 'Scooter', plate: plate || '', licenseNo: d.licenseNo ?? '' })
       setStoreIds(d.storeIds ?? [])
+      setSelectedZones(d.zones ?? (d.zone ? d.zone.split(',').map((z) => z.trim()).filter(Boolean) : []))
       setPhoto(d.avatar && !d.avatar.startsWith('https://i.pravatar') ? d.avatar : '')
       setLicenseDoc(d.licenseDoc ?? '')
       setVehicleRegDoc(d.vehicleRegDoc ?? '')
     } else {
       setForm(empty)
       setStoreIds([])
+      setSelectedZones([])
       setPhoto('')
       setLicenseDoc('')
       setVehicleRegDoc('')
     }
   }
   const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
-  const toggleStore = (id: string) => setStoreIds((prev) => (prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]))
 
   const submit = async () => {
     const vehicle = form.plate.trim() ? `${form.vehicleType} · ${form.plate.trim()}` : form.vehicleType
@@ -291,7 +404,8 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
       phone: form.phone,
       vehicle,
       storeIds,
-      zone: form.zone,
+      zone: selectedZones.join(', '),
+      zones: selectedZones,
       licenseNo: form.licenseNo,
       licenseDoc,
       vehicleRegDoc,
@@ -323,25 +437,25 @@ function DriverFormModal({ driver, onClose }: { driver: Driver | 'new' | null; o
           <Select label="Vehicle type" value={form.vehicleType} onChange={(e) => set('vehicleType', e.target.value)} options={VEHICLE_TYPES.map((v) => ({ label: v, value: v }))} />
           <Input label="Vehicle number (plate)" value={form.plate} onChange={(e) => set('plate', e.target.value)} placeholder="e.g. BA 24 PA 1290" />
           <Input label="License number" value={form.licenseNo} onChange={(e) => set('licenseNo', e.target.value)} placeholder="e.g. 03-06-074521" />
-          <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={zones.map((z) => ({ label: z.name, value: z.name }))} />
+          
+          <div className="col-span-1">
+            <SearchableMultiSelect
+              label="Delivery Zones"
+              placeholder="Select zones..."
+              options={zones.map((z) => ({ label: z.name, value: z.name }))}
+              selectedValues={selectedZones}
+              onChange={setSelectedZones}
+            />
+          </div>
         </div>
         <div>
-          <p className="mb-1.5 text-sm font-medium text-slate-700">Dark stores <span className="text-slate-400">(one or more)</span></p>
-          <div className="flex flex-wrap gap-2">
-            {stores.map((s) => {
-              const on = storeIds.includes(s.id)
-              return (
-                <button
-                  key={s.id}
-                  type="button"
-                  onClick={() => toggleStore(s.id)}
-                  className={`focus-ring rounded-full border px-3 py-1.5 text-sm font-medium transition-colors ${on ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
-                >
-                  {on ? '✓ ' : ''}{s.name}
-                </button>
-              )
-            })}
-          </div>
+          <SearchableMultiSelect
+            label="Dark Stores"
+            placeholder="Select stores..."
+            options={stores.map((s) => ({ label: s.name, value: s.id }))}
+            selectedValues={storeIds}
+            onChange={setStoreIds}
+          />
         </div>
         <div>
           <p className="mb-2 text-sm font-semibold text-slate-700">Documents (KYC)</p>

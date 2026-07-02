@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { AlertTriangle, Bike, Check, Clock3, Download, Eye, PauseCircle, Search, UserPlus } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
@@ -12,6 +12,7 @@ import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
 import { PaymentBadge } from '@/components/shared/StatusBadge'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
+import { AssignPackerModal } from '@/components/orders/AssignPackerModal'
 import { OrderStatusSelect } from '@/components/orders/OrderStatusSelect'
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { ORDER_STATUS_META, PAYMENT_META } from '@/lib/constants'
@@ -25,7 +26,37 @@ import { useGetOrdersQuery, useUpdateOrderStatusMutation } from '@/services/endp
 import { useGetDriversQuery } from '@/services/endpoints/driversApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import { useGetZonesQuery } from '@/services/endpoints/deliveryApi'
+import { useGetPackersQuery } from '@/services/endpoints/packersApi'
 import type { Order, OrderStatus, PaymentMethod } from '@/types/common.types'
+
+function HoldCountdown({ holdUntil }: { holdUntil: string }) {
+  const [timeLeft, setTimeLeft] = useState(0)
+
+  useEffect(() => {
+    const calc = () => {
+      const diff = Math.max(0, Math.round((Date.parse(holdUntil) - Date.now()) / 1000))
+      setTimeLeft(diff)
+    }
+    calc()
+    const timer = setInterval(calc, 1000)
+    return () => clearInterval(timer)
+  }, [holdUntil])
+
+  if (timeLeft <= 0) return null
+
+  const formatTime = (secs: number) => {
+    if (secs < 60) return `${secs}s`
+    const mins = Math.floor(secs / 60)
+    const s = secs % 60
+    return `${mins}m ${s}s`
+  }
+
+  return (
+    <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-amber-600">
+      <PauseCircle className="h-3 w-3 animate-pulse" /> On hold ({formatTime(timeLeft)})
+    </p>
+  )
+}
 
 /** The three rider stages, grouped under one "In transit" tab. */
 const IN_TRANSIT: OrderStatus[] = ['picked_up', 'on_the_way', 'arrived']
@@ -55,6 +86,7 @@ export default function OrdersPage() {
   const [search, setSearch] = useState('')
   const debouncedSearch = useDebounce(search, 300)
   const [assignFor, setAssignFor] = useState<Order | null>(null)
+  const [assignPackerFor, setAssignPackerFor] = useState<Order | null>(null)
   const [cancelFor, setCancelFor] = useState<Order | null>(null)
   const [cancelReason, setCancelReason] = useState('')
   const [confirmStatus, setConfirmStatus] = useState<{ order: Order; status: OrderStatus } | null>(null)
@@ -62,6 +94,7 @@ export default function OrdersPage() {
   const [updateStatus, { isLoading: cancelling }] = useUpdateOrderStatusMutation()
   const { data: stores = [] } = useGetStoresQuery()
   const { data: zones = [] } = useGetZonesQuery()
+  const { data: packers = [] } = useGetPackersQuery()
 
   /** Quick inline status change. Cancel needs a reason; pickup needs a rider; others confirm. */
   const changeStatus = (order: Order, status: OrderStatus) => {
@@ -196,9 +229,7 @@ export default function OrdersPage() {
             <p className="mt-0.5 text-xs text-slate-400">{timeAgo(o.placedAt)}</p>
           )}
           {o.holdUntil && Date.parse(o.holdUntil) > Date.now() && (
-            <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-amber-600">
-              <PauseCircle className="h-3 w-3" /> On hold
-            </p>
+            <HoldCountdown holdUntil={o.holdUntil} />
           )}
         </div>
       ),
@@ -286,6 +317,53 @@ export default function OrdersPage() {
                 <Check className="h-3 w-3" /> Accepted
               </span>
             ) : null}
+          </div>
+        )
+      },
+    },
+    {
+      key: 'packer',
+      header: 'Packer',
+      className: 'whitespace-nowrap',
+      cell: (o) => {
+        const closed = ['delivered', 'cancelled'].includes(o.status)
+        const assigned = packers.find((p) => p.id === o.packerId)
+        if (!o.packerId) {
+          return closed ? (
+            <span className="text-xs text-slate-400">—</span>
+          ) : (
+            <Button
+              variant="secondary"
+              size="sm"
+              className="h-7 px-2.5"
+              leftIcon={<UserPlus className="h-3.5 w-3.5" />}
+              onClick={(e) => {
+                e.stopPropagation()
+                setAssignPackerFor(o)
+              }}
+            >
+              Assign
+            </Button>
+          )
+        }
+        return (
+          <div className="text-sm font-medium text-slate-700">
+            <span className="flex items-center gap-1.5">
+              <Avatar name={assigned?.name ?? 'Packer'} size="sm" />
+              <span className="font-medium text-slate-700">{assigned?.name ?? 'Packer'}</span>
+              {!closed && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    setAssignPackerFor(o)
+                  }}
+                  className="focus-ring rounded px-1 text-[11px] font-semibold text-brand-600 hover:underline"
+                  title="Change packer"
+                >
+                  Reassign
+                </button>
+              )}
+            </span>
           </div>
         )
       },
@@ -395,6 +473,7 @@ export default function OrdersPage() {
       </Card>
 
       <AssignDriverModal order={assignFor} open={!!assignFor} onClose={() => setAssignFor(null)} />
+      <AssignPackerModal order={assignPackerFor} open={!!assignPackerFor} onClose={() => setAssignPackerFor(null)} />
 
       <Modal
         open={!!cancelFor}

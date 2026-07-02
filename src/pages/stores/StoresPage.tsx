@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Check, Clock, Map, Pencil, Plus, SlidersHorizontal, Store, Trash2 } from 'lucide-react'
+import { Clock, Map, Pencil, Plus, SlidersHorizontal, Store, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -22,6 +22,117 @@ import {
 } from '@/services/endpoints/storesApi'
 import { useGetZonesQuery, useSaveZoneMutation } from '@/services/endpoints/deliveryApi'
 import type { DarkStore } from '@/types/common.types'
+
+interface MultiSelectProps {
+  label: string
+  placeholder?: string
+  options: { label: string; value: string }[]
+  selectedValues: string[]
+  onChange: (values: string[]) => void
+}
+
+function SearchableMultiSelect({ label, placeholder = 'Search...', options, selectedValues, onChange }: MultiSelectProps) {
+  const [open, setOpen] = useState(false)
+  const [search, setSearch] = useState('')
+
+  const toggleValue = (val: string) => {
+    if (selectedValues.includes(val)) {
+      onChange(selectedValues.filter((v) => v !== val))
+    } else {
+      onChange([...selectedValues, val])
+    }
+  }
+
+  const removeValue = (val: string) => {
+    onChange(selectedValues.filter((v) => v !== val))
+  }
+
+  const filtered = options.filter((o) =>
+    o.label.toLowerCase().includes(search.toLowerCase())
+  )
+
+  const selectedOptions = options.filter((o) => selectedValues.includes(o.value))
+
+  return (
+    <div className="relative">
+      <label className="mb-1.5 block text-sm font-semibold text-slate-700">{label}</label>
+      
+      {/* Selected tags */}
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {selectedOptions.map((o) => (
+          <span
+            key={o.value}
+            className="inline-flex items-center gap-1 rounded-lg border border-brand-100 bg-brand-50 px-2.5 py-1 text-xs font-semibold text-brand-700"
+          >
+            {o.label}
+            <button
+              type="button"
+              onClick={() => removeValue(o.value)}
+              className="text-brand-400 hover:text-brand-600 focus:outline-none ml-1 text-sm font-bold"
+              aria-label={`Remove ${o.label}`}
+            >
+              ×
+            </button>
+          </span>
+        ))}
+        {selectedOptions.length === 0 && (
+          <span className="text-xs text-slate-400 italic">None selected</span>
+        )}
+      </div>
+
+      {/* Selector Trigger */}
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="flex h-10 w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-3 text-left text-sm text-slate-700 shadow-sm focus-ring hover:bg-slate-50"
+      >
+        <span className="truncate text-slate-500">
+          {selectedValues.length > 0 ? `${selectedValues.length} selected` : placeholder}
+        </span>
+        <span className="text-slate-400 text-xs">▼</span>
+      </button>
+
+      {/* Dropdown Menu */}
+      {open && (
+        <>
+          <div className="fixed inset-0 z-20" onClick={() => setOpen(false)} />
+          <div className="absolute left-0 z-30 mt-1 w-full rounded-xl border border-slate-200 bg-white p-2 shadow-lg max-h-60 flex flex-col">
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Search..."
+              className="mb-2 h-9 w-full rounded-lg border border-slate-200 bg-slate-50 px-3 text-xs focus-ring"
+              autoFocus
+            />
+            <div className="flex-1 overflow-y-auto space-y-0.5">
+              {filtered.map((o) => {
+                const isSelected = selectedValues.includes(o.value)
+                return (
+                  <button
+                    key={o.value}
+                    type="button"
+                    onClick={() => toggleValue(o.value)}
+                    className={cn(
+                      'flex w-full items-center justify-between rounded-lg px-2.5 py-1.5 text-left text-xs transition-colors',
+                      isSelected ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-slate-700 hover:bg-slate-50'
+                    )}
+                  >
+                    <span>{o.label}</span>
+                    {isSelected && <span className="text-brand-600 font-bold">✓</span>}
+                  </button>
+                )
+              })}
+              {filtered.length === 0 && (
+                <p className="py-3 text-center text-xs text-slate-400">No options found</p>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
 
 export default function StoresPage() {
   const { data: stores = [], isLoading } = useGetStoresQuery()
@@ -214,13 +325,10 @@ function StoreZonesModal({ store, onClose }: { store: DarkStore | null; onClose:
   }
   const storeName = (id?: string) => stores.find((s) => s.id === id)?.name
 
-  const toggle = (id: string) =>
-    setPicked((prev) => {
-      const next = new Set(prev)
-      if (next.has(id)) next.delete(id)
-      else next.add(id)
-      return next
-    })
+  const selectedValues = Array.from(picked)
+  const handleSelectedChange = (vals: string[]) => {
+    setPicked(new Set(vals))
+  }
 
   const submit = async () => {
     if (!store) return
@@ -248,32 +356,22 @@ function StoreZonesModal({ store, onClose }: { store: DarkStore | null; onClose:
         </>
       }
     >
-      <div className="max-h-[60vh] space-y-1 overflow-y-auto">
-        {zones.map((z) => {
-          const checked = picked.has(z.id)
-          const other = z.storeId && z.storeId !== store?.id ? storeName(z.storeId) : null
-          return (
-            <button
-              key={z.id}
-              onClick={() => toggle(z.id)}
-              className={cn(
-                'flex w-full items-center justify-between gap-3 rounded-xl border p-3 text-left transition-colors',
-                checked ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:bg-slate-50',
-              )}
-            >
-              <div className="min-w-0">
-                <p className="font-medium text-slate-800">{z.name}</p>
-                <p className="truncate text-xs text-slate-400">{z.areas.join(', ')}{other ? ` · currently: ${other}` : ''}</p>
-              </div>
-              <span className={cn('flex h-5 w-5 shrink-0 items-center justify-center rounded-md border', checked ? 'border-brand-600 bg-brand-600 text-white' : 'border-slate-300')}>
-                {checked && <Check className="h-3.5 w-3.5" />}
-              </span>
-            </button>
-          )
-        })}
-        {zones.length === 0 && <p className="py-6 text-center text-sm text-slate-400">No zones yet. Add zones in Delivery &amp; Zones.</p>}
+      <div className="space-y-4 py-2">
+        <SearchableMultiSelect
+          label="Zones Served"
+          placeholder="Search and select zones..."
+          options={zones.map((z) => {
+            const other = z.storeId && z.storeId !== store?.id ? storeName(z.storeId) : null
+            return {
+              label: z.name + (other ? ` (currently: ${other})` : ''),
+              value: z.id
+            }
+          })}
+          selectedValues={selectedValues}
+          onChange={handleSelectedChange}
+        />
+        <p className="text-xs text-slate-400">Selecting a zone moves it from its current store — each zone belongs to one store.</p>
       </div>
-      <p className="mt-2 text-xs text-slate-400">Selecting a zone moves it from its current store — each zone belongs to one store.</p>
     </Modal>
   )
 }

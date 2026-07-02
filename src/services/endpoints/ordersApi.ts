@@ -350,12 +350,129 @@ export const ordersApi = api.injectEndpoints({
         item.name = replacement.name
         item.image = replacement.image
         item.price = replacement.price
+
         // Recompute totals.
         order.subtotal = order.items.reduce((s, it) => s + it.price * it.quantity, 0)
         order.grandTotal = order.subtotal + order.deliveryFee
+
+        // Calculate the cash difference for prepaid orders
+        if (order.paymentMethod !== 'cod') {
+          const diff = (replacement.price - item.originalPrice) * item.quantity
+          if (diff !== 0) {
+            order.substitutionAdjustment = {
+              type: diff < 0 ? 'excess' : 'short',
+              amount: Math.abs(diff),
+              status: 'pending',
+            }
+          } else {
+            order.substitutionAdjustment = undefined
+          }
+        }
+
         return { data: clone(order) }
       },
       invalidatesTags: ['Order'],
+    }),
+
+    resolveSubstitutionAdjustment: build.mutation<Order, { orderId: string; option: string; adminName: string }>({
+      async queryFn({ orderId, option, adminName }) {
+        await mockDelay(250)
+        const order = orders.find((o) => o.id === orderId)
+        if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        if (!order.substitutionAdjustment) return { error: { status: 400, data: 'No adjustment needed' } as never }
+
+        const adj = order.substitutionAdjustment
+        adj.option = option
+        adj.status = 'resolved'
+
+        const now = new Date().toISOString()
+        
+        // If option is wallet credit / wallet charge
+        if (option === 'wallet') {
+          // Excess Cash -> Credit Wallet
+          const customer = customers.find((c) => c.id === order.customerId)
+          if (customer) {
+            customer.walletBalance += adj.amount
+            customer.credits.push({
+              id: uid('cc'),
+              amount: adj.amount,
+              type: 'refund',
+              reason: 'Substitution excess cash credit',
+              orderId: order.id,
+              adminName,
+              at: now,
+            })
+          }
+          // Mirror in transactions
+          transactions.unshift({
+            id: uid('t'),
+            type: 'refund',
+            reference: order.reference,
+            party: order.customerName,
+            amount: adj.amount,
+            method: 'Wallet Credit',
+            status: 'success',
+            orderId: order.id,
+            createdAt: now,
+          })
+        } else if (option === 'charge_wallet') {
+          // Short Cash -> Charge Wallet
+          const customer = customers.find((c) => c.id === order.customerId)
+          if (customer) {
+            customer.walletBalance = Math.max(0, customer.walletBalance - adj.amount)
+            customer.credits.push({
+              id: uid('cc'),
+              amount: -adj.amount,
+              type: 'compensation',
+              reason: 'Substitution short cash charge',
+              orderId: order.id,
+              adminName,
+              at: now,
+            })
+          }
+          // Mirror in transactions
+          transactions.unshift({
+            id: uid('t'),
+            type: 'order_payment',
+            reference: order.reference,
+            party: order.customerName,
+            amount: adj.amount,
+            method: 'Wallet Charge',
+            status: 'success',
+            orderId: order.id,
+            createdAt: now,
+          })
+        } else if (option === 'cash_rider' || option === 'collect_cash') {
+          // Cash handled physically by rider
+          transactions.unshift({
+            id: uid('t'),
+            type: option === 'cash_rider' ? 'refund' : 'order_payment',
+            reference: order.reference,
+            party: order.customerName,
+            amount: adj.amount,
+            method: 'Cash',
+            status: 'success',
+            orderId: order.id,
+            createdAt: now,
+          })
+        } else if (option === 'qr_admin' || option === 'collect_qr') {
+          // QR handled by admin / rider digitally
+          transactions.unshift({
+            id: uid('t'),
+            type: option === 'qr_admin' ? 'refund' : 'order_payment',
+            reference: order.reference,
+            party: order.customerName,
+            amount: adj.amount,
+            method: 'QR',
+            status: 'success',
+            orderId: order.id,
+            createdAt: now,
+          })
+        }
+
+        return { data: clone(order) }
+      },
+      invalidatesTags: ['Order', 'Customer', 'Transaction'],
     }),
 
     holdOrder: build.mutation<Order, { orderId: string; minutes: number }>({
@@ -396,6 +513,7 @@ export const {
   useAddOrderNoteMutation,
   useAddRefundMutation,
   useSubstituteItemMutation,
+  useResolveSubstitutionAdjustmentMutation,
   useHoldOrderMutation,
   useReleaseHoldMutation,
 } = ordersApi

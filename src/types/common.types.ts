@@ -79,6 +79,13 @@ export interface OrderRefund {
 /** Paper size for printed invoices. */
 export type InvoiceSize = 'a4' | 'thermal80' | 'thermal58'
 
+export interface SubstitutionAdjustment {
+  type: 'excess' | 'short'
+  amount: number
+  option?: string
+  status: 'pending' | 'resolved'
+}
+
 export interface Order {
   id: ID
   reference: string
@@ -129,6 +136,7 @@ export interface Order {
   /** Delivery destination coordinates (for live rider tracking on the map). */
   lat?: number
   lng?: number
+  substitutionAdjustment?: SubstitutionAdjustment
 }
 
 export interface Product {
@@ -530,6 +538,7 @@ export interface AdminUser {
   active: boolean
   /** Assigned dark store; null = master admin (all stores). */
   storeId: ID | null
+  storeIds?: ID[]
   lastActiveAt: string
   createdAt: string
 }

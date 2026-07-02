@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Switch } from '@/components/ui/Switch'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
+import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
 import { timeAgo } from '@/lib/utils'
 import {
   useDeleteAdminMutation,
@@ -42,7 +43,11 @@ export default function AdminsPage() {
   const [formFor, setFormFor] = useState<AdminUser | 'new' | null>(null)
   const [deleteFor, setDeleteFor] = useState<AdminUser | null>(null)
   const [roleAddOpen, setRoleAddOpen] = useState(false)
-  const storeName = (id: string | null) => (id ? stores.find((s) => s.id === id)?.name ?? '—' : 'All stores (master)')
+  const storeNames = (a: AdminUser) => {
+    const ids = a.storeIds ?? (a.storeId ? [a.storeId] : [])
+    if (ids.length === 0) return 'All stores (master)'
+    return ids.map((id) => stores.find((s) => s.id === id)?.name ?? '—').join(', ')
+  }
 
   const tabs: TabItem[] = [
     { label: 'Team', value: 'team', count: admins.length },
@@ -70,7 +75,7 @@ export default function AdminsPage() {
       header: 'Role',
       cell: (a) => <Badge tone={roleTone(a.role)}>{roleName(a.role)}</Badge>,
     },
-    { key: 'store', header: 'Store', cell: (a) => <span className="text-slate-600">{storeName(a.storeId)}</span> },
+    { key: 'store', header: 'Store', cell: (a) => <span className="text-slate-600">{storeNames(a)}</span> },
     {
       key: 'phone',
       header: 'Phone',
@@ -146,18 +151,18 @@ function AdminFormModal({ admin, stores, onClose }: { admin: AdminUser | 'new' |
   const isEdit = admin && admin !== 'new'
   const a = isEdit ? (admin as AdminUser) : null
 
-  const empty = { name: '', email: '', phone: '', role: 'dispatcher', storeId: '' }
+  const empty = { name: '', email: '', phone: '', role: 'dispatcher', storeIds: [] as string[] }
   const [form, setForm] = useState(empty)
   const key = admin === 'new' ? 'new' : a?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
   if (key !== lastKey && admin) {
     setLastKey(key)
-    setForm(a ? { name: a.name, email: a.email, phone: a.phone, role: a.role, storeId: a.storeId ?? '' } : empty)
+    setForm(a ? { name: a.name, email: a.email, phone: a.phone, role: a.role, storeIds: a.storeIds ?? (a.storeId ? [a.storeId] : []) } : empty)
   }
-  const set = (k: keyof typeof form, v: string) => setForm((f) => ({ ...f, [k]: v }))
+  const set = (k: keyof Omit<typeof form, 'storeIds'>, v: string) => setForm((f) => ({ ...f, [k]: v }))
 
   const submit = async () => {
-    await save({ id: a?.id, name: form.name, email: form.email, phone: form.phone, role: form.role, storeId: form.storeId || null }).unwrap()
+    await save({ id: a?.id, name: form.name, email: form.email, phone: form.phone, role: form.role, storeIds: form.storeIds }).unwrap()
     onClose()
   }
 
@@ -181,12 +186,12 @@ function AdminFormModal({ admin, stores, onClose }: { admin: AdminUser | 'new' |
         <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="name@chutkima.com" leftIcon={<Mail className="h-4 w-4" />} />
         <Input label="Phone" value={form.phone} onChange={(e) => set('phone', e.target.value)} placeholder="+977 98…" leftIcon={<Phone className="h-4 w-4" />} />
         <Select label="Role" value={form.role} onChange={(e) => set('role', e.target.value)} options={roles.map((r) => ({ label: r.name, value: r.id }))} />
-        <Select
-          label="Dark store"
-          value={form.storeId}
-          onChange={(e) => set('storeId', e.target.value)}
-          placeholder="All stores (master admin)"
+        <SearchableMultiSelect
+          label="Dark stores"
+          placeholder="Select dark stores (master if empty)..."
           options={stores.map((s) => ({ label: s.name, value: s.id }))}
+          selectedValues={form.storeIds}
+          onChange={(vals) => setForm((f) => ({ ...f, storeIds: vals }))}
         />
         {roles.find((r) => r.id === form.role)?.description && (
           <p className="rounded-xl bg-mint-50 px-3 py-2.5 text-xs text-slate-500">

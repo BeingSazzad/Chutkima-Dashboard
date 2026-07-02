@@ -18,10 +18,14 @@ export const adminsApi = api.injectEndpoints({
         if (payload.id) {
           const idx = admins.findIndex((a) => a.id === payload.id)
           if (idx === -1) return { error: { status: 404, data: 'Not found' } as never }
-          admins[idx] = { ...admins[idx], ...payload } as AdminUser
+          const storeIds = payload.storeIds ?? admins[idx].storeIds ?? (payload.storeId ? [payload.storeId] : (admins[idx].storeId ? [admins[idx].storeId!] : []))
+          const storeId = storeIds.length > 0 ? storeIds[0] : null
+          admins[idx] = { ...admins[idx], ...payload, storeId, storeIds } as AdminUser
           return { data: clone(admins[idx]) }
         }
         const now = new Date().toISOString()
+        const storeIds = payload.storeIds ?? (payload.storeId ? [payload.storeId] : [])
+        const storeId = storeIds.length > 0 ? storeIds[0] : null
         const created: AdminUser = {
           id: `a${Date.now()}`,
           name: payload.name ?? 'New Admin',
@@ -30,7 +34,8 @@ export const adminsApi = api.injectEndpoints({
           role: payload.role ?? 'dispatcher',
           avatar: `https://i.pravatar.cc/120?u=chutkima-${payload.email ?? Date.now()}`,
           active: payload.active ?? true,
-          storeId: payload.storeId ?? null,
+          storeId,
+          storeIds,
           lastActiveAt: now,
           createdAt: now,
         }

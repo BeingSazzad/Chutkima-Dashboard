@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { Banknote, ChevronDown, Clock, MapPin, MessageCircle, Phone, Printer, RotateCcw, StickyNote } from 'lucide-react'
+import { Banknote, Check, ChevronDown, Clock, MapPin, MessageCircle, Phone, Printer, RotateCcw, StickyNote } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card, CardContent, CardHeader } from '@/components/ui/Card'
 import { Button } from '@/components/ui/Button'
@@ -35,6 +35,7 @@ import {
   useAddRefundMutation,
   useUpdateOrderStatusMutation,
   useAcceptRiderMutation,
+  useResolveSubstitutionAdjustmentMutation,
 } from '@/services/endpoints/ordersApi'
 import { awaitingRiderAcceptance } from '@/lib/orderStage'
 import { useGetDriverQuery } from '@/services/endpoints/driversApi'
@@ -58,6 +59,8 @@ export default function OrderDetailPage() {
   const [cancelOpen, setCancelOpen] = useState(false)
   const [cancelReason, setCancelReason] = useState('')
   const [substituteFor, setSubstituteFor] = useState<OrderItem | null>(null)
+  const [resolveAdjustment, { isLoading: isResolving }] = useResolveSubstitutionAdjustmentMutation()
+  const { user } = useAuth()
 
   if (isLoading) return <Spinner label="Loading order…" className="py-24" />
   if (!order)
@@ -161,28 +164,105 @@ export default function OrderDetailPage() {
                   <span>Grand total</span>
                   <span>{formatNPR(order.grandTotal)}</span>
                 </div>
-                {(() => {
-                  const diff = order.items.reduce((sum, item) => {
-                    if (item.substituted && item.originalPrice !== undefined) {
-                      return sum + (item.price - item.originalPrice) * item.quantity
-                    }
-                    return sum
-                  }, 0)
-                  if (diff === 0) return null
-                  return (
-                    <div className={cn(
-                      'mt-3 p-3 rounded-xl border text-sm font-semibold flex items-center justify-between',
-                      diff < 0 ? 'bg-green-50 border-green-100 text-green-800' : 'bg-amber-50 border-amber-100 text-amber-800'
-                    )}>
+                {order.substitutionAdjustment && (
+                  <div className={cn(
+                    'mt-3 p-3.5 rounded-xl border text-sm flex flex-col gap-2.5',
+                    order.substitutionAdjustment.type === 'excess' ? 'bg-green-50 border-green-100 text-green-800' : 'bg-amber-50 border-amber-100 text-amber-800'
+                  )}>
+                    <div className="flex items-center justify-between font-bold">
                       <span>
-                        {diff < 0 ? 'Excess Cash (cheaper substitution)' : 'Short Cash (more expensive substitution)'}
+                        {order.substitutionAdjustment.type === 'excess' ? 'Excess Cash (cheaper substitution)' : 'Short Cash (more expensive substitution)'}
                       </span>
-                      <span className="font-extrabold">
-                        {formatNPR(Math.abs(diff))}
+                      <span className="font-extrabold text-base">
+                        {formatNPR(order.substitutionAdjustment.amount)}
                       </span>
                     </div>
-                  )
-                })()}
+
+                    {order.substitutionAdjustment.status === 'pending' ? (
+                      <div className="mt-1">
+                        <p className="text-xs font-semibold mb-2 opacity-90">Select resolution method:</p>
+                        <div className="flex flex-col gap-1.5">
+                          {order.substitutionAdjustment.type === 'excess' ? (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 justify-start text-xs bg-white text-slate-700 border-slate-200"
+                                onClick={() => resolveAdjustment({ orderId: order.id, option: 'cash_rider', adminName: user?.name ?? 'Admin' })}
+                                disabled={isResolving}
+                              >
+                                Cash Refund (via Rider)
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 justify-start text-xs bg-white text-slate-700 border-slate-200"
+                                onClick={() => resolveAdjustment({ orderId: order.id, option: 'qr_admin', adminName: user?.name ?? 'Admin' })}
+                                disabled={isResolving}
+                              >
+                                QR Refund (via Admin)
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 justify-start text-xs bg-white text-slate-700 border-slate-200"
+                                onClick={() => resolveAdjustment({ orderId: order.id, option: 'wallet', adminName: user?.name ?? 'Admin' })}
+                                disabled={isResolving}
+                              >
+                                Add Credit to Customer Wallet
+                              </Button>
+                            </>
+                          ) : (
+                            <>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 justify-start text-xs bg-white text-slate-700 border-slate-200"
+                                onClick={() => resolveAdjustment({ orderId: order.id, option: 'collect_cash', adminName: user?.name ?? 'Admin' })}
+                                disabled={isResolving}
+                              >
+                                Collect Cash from Customer
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 justify-start text-xs bg-white text-slate-700 border-slate-200"
+                                onClick={() => resolveAdjustment({ orderId: order.id, option: 'collect_qr', adminName: user?.name ?? 'Admin' })}
+                                disabled={isResolving}
+                              >
+                                Collect via QR Payment (via Rider)
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-8 justify-start text-xs bg-white text-slate-700 border-slate-200"
+                                onClick={() => resolveAdjustment({ orderId: order.id, option: 'charge_wallet', adminName: user?.name ?? 'Admin' })}
+                                disabled={isResolving}
+                              >
+                                Charge Customer Wallet
+                              </Button>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="mt-1 flex items-center gap-1.5 text-xs font-semibold opacity-90 border-t border-black/5 pt-2">
+                        <Check className="h-3.5 w-3.5" />
+                        <span>
+                          Resolved via:{' '}
+                          <strong className="underline">
+                            {order.substitutionAdjustment.option === 'wallet' && 'Add Credit to Customer Wallet'}
+                            {order.substitutionAdjustment.option === 'charge_wallet' && 'Charge Customer Wallet'}
+                            {order.substitutionAdjustment.option === 'cash_rider' && 'Cash Refund (via Rider)'}
+                            {order.substitutionAdjustment.option === 'qr_admin' && 'QR Refund (via Admin)'}
+                            {order.substitutionAdjustment.option === 'collect_cash' && 'Collect Cash from Customer'}
+                            {order.substitutionAdjustment.option === 'collect_qr' && 'Collect via QR Payment (via Rider)'}
+                          </strong>
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -638,7 +718,7 @@ function RefundCard({ order }: { order: Order }) {
                   method === 'cash' ? 'border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 )}
               >
-                CASH
+                Cash Refund
               </button>
               <button
                 type="button"
@@ -648,7 +728,7 @@ function RefundCard({ order }: { order: Order }) {
                   method === 'qr' ? 'border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 )}
               >
-                QR
+                QR Refund
               </button>
               <button
                 type="button"
@@ -658,7 +738,7 @@ function RefundCard({ order }: { order: Order }) {
                   method === 'wallet' ? 'border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
                 )}
               >
-                ADD CREDIT
+                Add Credit to Customer Wallet
               </button>
             </div>
           </div>

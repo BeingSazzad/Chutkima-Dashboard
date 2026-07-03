@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Mail, Pencil, Phone, Plus, RotateCcw, Search, Trash2 } from 'lucide-react'
+import { Mail, Pencil, Phone, Plus, Printer, RotateCcw, Search, Trash2 } from 'lucide-react'
 import { PageHeader } from '@/components/layout/PageHeader'
 import { Card } from '@/components/ui/Card'
 import { DataTable, type Column } from '@/components/ui/Table'
@@ -25,6 +25,7 @@ import {
   useToggleSupplierMutation,
 } from '@/services/endpoints/suppliersApi'
 import type { Product, ReturnReason, Supplier, SupplierReturn } from '@/types/common.types'
+import { printSupplierReturn } from '@/lib/export'
 
 const fmtDate = (iso: string) =>
   new Date(iso).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
@@ -202,6 +203,7 @@ function SuppliersTab({
 // ── Returns tab ─────────────────────────────────────────────────────────────
 function ReturnsTab({ returns, onNew }: { returns: SupplierReturn[]; onNew: () => void }) {
   const { isLoading } = useGetSupplierReturnsQuery()
+  const [viewReturn, setViewReturn] = useState<SupplierReturn | null>(null)
 
   const columns: Column<SupplierReturn>[] = [
     {
@@ -209,7 +211,12 @@ function ReturnsTab({ returns, onNew }: { returns: SupplierReturn[]; onNew: () =
       header: 'Return',
       cell: (r) => (
         <div>
-          <p className="font-mono font-semibold text-slate-800">{r.reference}</p>
+          <button
+            onClick={() => setViewReturn(r)}
+            className="font-mono font-bold text-brand-600 hover:text-brand-850 hover:underline text-left focus:outline-none"
+          >
+            {r.reference}
+          </button>
           <p className="text-xs text-slate-400">{fmtDate(r.createdAt)}</p>
         </div>
       ),
@@ -252,7 +259,77 @@ function ReturnsTab({ returns, onNew }: { returns: SupplierReturn[]; onNew: () =
         emptyTitle="No returns yet"
         emptyDescription="Return expired, slow-moving or damaged stock to a supplier — inventory updates automatically."
       />
+
+      <ReturnDetailModal ret={viewReturn} onClose={() => setViewReturn(null)} />
     </Card>
+  )
+}
+
+function ReturnDetailModal({ ret, onClose }: { ret: SupplierReturn | null; onClose: () => void }) {
+  if (!ret) return null
+  const m = reasonMeta(ret.reason)
+
+  return (
+    <Modal
+      open={!!ret}
+      onClose={onClose}
+      title={`Return ${ret.reference}`}
+      description="Details of returned inventory goods"
+      size="md"
+      footer={
+        <div className="flex justify-between w-full">
+          <Button
+            variant="outline"
+            leftIcon={<Printer className="h-4 w-4" />}
+            onClick={() => printSupplierReturn(ret)}
+          >
+            Print Return Note
+          </Button>
+          <Button onClick={onClose}>Close</Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div className="grid grid-cols-2 gap-4 rounded-2xl bg-slate-50 p-4 text-sm">
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Supplier</p>
+            <p className="font-bold text-slate-800 mt-1">{ret.supplierName}</p>
+            <p className="text-xs text-slate-500 mt-0.5">ID: {ret.supplierId || 'N/A'}</p>
+          </div>
+          <div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Processed By</p>
+            <p className="font-bold text-slate-800 mt-1">{ret.adminName}</p>
+            <p className="text-xs text-slate-500 mt-0.5">Date: {fmtDate(ret.createdAt)}</p>
+          </div>
+        </div>
+
+        <div className="border border-slate-100 rounded-2xl p-4 space-y-3">
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Product</span>
+            <span className="font-semibold text-slate-800">{ret.productName}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">SKU</span>
+            <span className="font-mono text-slate-800">{ret.sku}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-slate-500">Quantity</span>
+            <span className="font-extrabold text-slate-900 text-base">{ret.quantity}</span>
+          </div>
+          <div className="flex justify-between text-sm items-center">
+            <span className="text-slate-500">Reason</span>
+            <Badge tone={m.tone}>{m.label}</Badge>
+          </div>
+        </div>
+
+        {ret.comments && (
+          <div className="bg-red-50/50 border border-red-100 rounded-2xl p-4">
+            <p className="text-xs font-bold text-red-800 uppercase tracking-wide">Comments / Return Reason Note</p>
+            <p className="text-sm text-red-700 mt-1.5 leading-relaxed">{ret.comments}</p>
+          </div>
+        )}
+      </div>
+    </Modal>
   )
 }
 

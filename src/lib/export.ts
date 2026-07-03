@@ -194,3 +194,94 @@ function openPrintWindow(html: string, size: InvoiceSize) {
   // Give the new document a tick to render before printing.
   setTimeout(() => win.print(), 300)
 }
+
+/** Open a clean, printable Return Note for supplier returns. */
+export function printSupplierReturn(ret: any) {
+  const reasonLabel = {
+    expired: 'Expired Stock',
+    slow_moving: 'Slow Moving Stock',
+    damaged: 'Damaged / Broken Product',
+  }[ret.reason as 'expired' | 'slow_moving' | 'damaged'] || ret.reason
+
+  const html = `<!doctype html><html><head><meta charset="utf-8" />
+    <title>Supplier Return ${ret.reference}</title>
+    <style>
+      * { font-family: -apple-system, Segoe UI, Roboto, sans-serif; color: #1e293b; }
+      body { padding: 32px; max-width: 720px; margin: auto; }
+      .brand { color: #dc2626; font-size: 24px; font-weight: 800; }
+      .muted { color: #64748b; font-size: 13px; }
+      .title { font-size: 20px; font-weight: 700; margin-top: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 24px; font-size: 14px; }
+      th, td { padding: 10px 8px; border-bottom: 1px solid #e2e8f0; }
+      th { text-align: left; color: #64748b; font-size: 12px; text-transform: uppercase; background: #f8fafc; }
+      .row { display: flex; justify-content: space-between; align-items: flex-start; margin-top: 24px; gap: 24px; }
+      .box { background: #f1f5f9; border-radius: 12px; padding: 12px 14px; font-size: 13px; flex: 1; }
+      .notes-box { margin-top: 20px; background: #fdf2f2; border: 1px solid #fee2e2; border-radius: 12px; padding: 12px 14px; font-size: 13px; color: #991b1b; }
+      @page { size: A4; margin: 14mm; }
+      @media print { body { padding: 0; } }
+    </style></head>
+    <body>
+      <div class="row">
+        <div>
+          <div class="brand">CHUTKIMA</div>
+          <div class="title">Supplier Return Note</div>
+          <div class="muted" style="margin-top:4px">Reference: <strong>${ret.reference}</strong></div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted">Date Issued</div>
+          <div style="font-weight:700;font-size:14px;margin-top:2px">${new Date(ret.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="box">
+          <div class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Return To (Supplier)</div>
+          <div style="font-weight:700;font-size:15px;margin-top:4px;color:#0f172a">${ret.supplierName}</div>
+          <div class="muted" style="margin-top:2px">ID: ${ret.supplierId || 'N/A'}</div>
+        </div>
+        <div class="box">
+          <div class="muted" style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px">Authorized By</div>
+          <div style="font-weight:700;font-size:15px;margin-top:4px;color:#0f172a">${ret.adminName}</div>
+          <div class="muted" style="margin-top:2px">Dark Store Administrator</div>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Product Name</th>
+            <th>SKU Code</th>
+            <th>Return Qty</th>
+            <th>Reason</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-weight:600;color:#0f172a">${ret.productName}</td>
+            <td style="font-family:monospace">${ret.sku}</td>
+            <td style="font-weight:700;font-size:15px">${ret.quantity}</td>
+            <td><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;background:#fee2e2;color:#991b1b">${reasonLabel}</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      ${ret.comments ? `
+      <div class="notes-box">
+        <div style="font-weight:700;text-transform:uppercase;font-size:10px;letter-spacing:0.5px;margin-bottom:4px">Return Comments</div>
+        <div>${ret.comments}</div>
+      </div>
+      ` : ''}
+
+      <div style="margin-top:80px;border-top:1px dashed #cbd5e1;padding-top:16px;display:flex;justify-content:space-between;font-size:12px;color:#64748b">
+        <div>System Record: ${ret.id}</div>
+        <div>Signature: __________________________</div>
+      </div>
+    </body></html>`
+
+  const win = window.open('', '_blank', 'width=820,height=900')
+  if (!win) return
+  win.document.write(html)
+  win.document.close()
+  win.focus()
+  setTimeout(() => win.print(), 300)
+}

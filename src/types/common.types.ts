@@ -456,6 +456,7 @@ export interface Zone {
   geofence: [number, number][]
   /** Dark store that fulfils orders in this zone (order auto-routing). */
   storeId?: ID
+  storeIds?: ID[]
   active: boolean
 }
 

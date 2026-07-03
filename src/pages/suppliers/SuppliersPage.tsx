@@ -12,6 +12,8 @@ import { Switch } from '@/components/ui/Switch'
 import { Tabs } from '@/components/ui/Tabs'
 import { Badge } from '@/components/ui/Badge'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
+import { SearchableMultiSelect } from '@/components/ui/SearchableMultiSelect'
+import { useGetCategoriesQuery } from '@/services/endpoints/categoriesApi'
 import { useAuth } from '@/hooks/useAuth'
 import { useGetProductsQuery } from '@/services/endpoints/productsApi'
 import {
@@ -257,6 +259,7 @@ function ReturnsTab({ returns, onNew }: { returns: SupplierReturn[]; onNew: () =
 // ── Supplier create / edit ──────────────────────────────────────────────────
 function SupplierFormModal({ supplier, onClose }: { supplier: Supplier | 'new' | null; onClose: () => void }) {
   const [save, { isLoading }] = useSaveSupplierMutation()
+  const { data: categories = [] } = useGetCategoriesQuery()
   const isEdit = supplier && supplier !== 'new'
   const s = isEdit ? (supplier as Supplier) : null
 
@@ -307,12 +310,12 @@ function SupplierFormModal({ supplier, onClose }: { supplier: Supplier | 'new' |
           <Input label="Email" type="email" value={form.email} onChange={(e) => set('email', e.target.value)} placeholder="orders@company.com.np" />
         </div>
         <Input label="Address" value={form.address} onChange={(e) => set('address', e.target.value)} placeholder="e.g. Butwal Industrial Area" />
-        <Textarea
+        <SearchableMultiSelect
           label="Products / goods supplied"
-          value={form.productsSupplied}
-          onChange={(e) => set('productsSupplied', e.target.value)}
-          rows={2}
-          placeholder="e.g. Rice, daal, biscuits, staples"
+          placeholder="Select category(ies) supplied"
+          options={categories.map((c) => ({ label: c.name, value: c.name }))}
+          selectedValues={form.productsSupplied.split(',').map((x) => x.trim()).filter(Boolean)}
+          onChange={(vals) => set('productsSupplied', vals.join(', '))}
         />
         <Textarea
           label="Notes"

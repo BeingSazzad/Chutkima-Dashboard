@@ -227,7 +227,7 @@ export default function ProductsPage() {
 
       <ProductFormModal product={formFor} onClose={() => setFormFor(null)} />
       <DeleteProduct product={deleteFor} onClose={() => setDeleteFor(null)} />
-      <BulkImportModal open={bulkOpen} onClose={() => setBulkOpen(false)} />
+      <BulkImportModal open={bulkOpen} onClose={() => setBulkOpen(false)} products={products} />
     </>
   )
 }
@@ -397,7 +397,7 @@ function DeleteProduct({ product, onClose }: { product: Product | null; onClose:
   )
 }
 
-function BulkImportModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+function BulkImportModal({ open, onClose, products }: { open: boolean; onClose: () => void; products: Product[] }) {
   const [mode, setMode] = useState('products')
   const [importProducts, { isLoading: importing }] = useBulkImportProductsMutation()
   const [updateStock, { isLoading: stocking }] = useBulkUpdateStockMutation()
@@ -412,13 +412,20 @@ function BulkImportModal({ open, onClose }: { open: boolean; onClose: () => void
         ['sku', 'name', 'description', 'brand', 'category', 'categoryGroup', 'price', 'mrp', 'stock', 'unit', 'shelfNo', 'image'].map((k) => ({ key: k, label: k })),
       )
     } else {
+      // Export current stock list as a ready-to-use template pre-filled with active products
+      const rows = products.map((p) => ({
+        sku: p.sku,
+        name: p.name,
+        quantity: String(p.stock),
+      }))
+
       downloadCSV(
         'chutkima-stock-template.csv',
-        [{ sku: 'WW-001', name: 'Wai Wai Noodles', stock: '120' }],
+        rows.length > 0 ? rows : [{ sku: 'WW-001', name: 'Wai Wai Noodles', quantity: '120' }],
         [
           { key: 'sku', label: 'sku' },
           { key: 'name', label: 'name' },
-          { key: 'stock', label: 'stock' },
+          { key: 'quantity', label: 'quantity' },
         ],
       )
     }
@@ -446,7 +453,11 @@ function BulkImportModal({ open, onClose }: { open: boolean; onClose: () => void
         const res = await importProducts(payload).unwrap()
         setResult(`✓ ${res.added} added, ${res.updated} updated.`)
       } else {
-        const payload = rows.filter((r) => r.sku).map((r) => ({ sku: r.sku, stock: Number(r.stock) || 0 }))
+        const payload = rows.filter((r) => r.sku).map((r) => {
+          // Support both 'quantity' and legacy 'stock' columns
+          const qty = r.quantity !== undefined ? r.quantity : r.stock
+          return { sku: r.sku, stock: Number(qty) || 0 }
+        })
         const res = await updateStock(payload).unwrap()
         setResult(`✓ ${res.updated} updated.${res.missing.length ? ` Missing SKUs: ${res.missing.join(', ')}` : ''}`)
       }
@@ -471,7 +482,7 @@ function BulkImportModal({ open, onClose }: { open: boolean; onClose: () => void
           {mode === 'products' ? (
             <p>Columns: <span className="font-mono text-xs">sku, name, description, brand, category, categoryGroup, price, mrp, stock, unit, shelfNo, image</span>. Rows are matched by <strong>SKU</strong> — existing SKUs update, new ones are added.</p>
           ) : (
-            <p>Columns: <span className="font-mono text-xs">sku, name, stock</span>. Updates stock for matching SKUs only (name is ignored but helps identify products) — no other fields touched. Great for daily restock.</p>
+            <p>Columns: <span className="font-mono text-xs">sku, name, quantity</span>. Updates stock for matching SKUs only (name is ignored but helps identify products) — no other fields touched. Great for daily restock.</p>
           )}
           <Button variant="outline" size="sm" className="mt-3" leftIcon={<Download className="h-3.5 w-3.5" />} onClick={downloadTemplate}>
             Download template
@@ -486,7 +497,7 @@ function BulkImportModal({ open, onClose }: { open: boolean; onClose: () => void
 
         {result && (
           <p className="flex items-center gap-2 rounded-xl bg-green-50 px-3 py-2.5 text-sm font-medium text-green-700">
-            <Check className="h-4 w-4" /> {result}
+            <Check className="flex-shrink-0 h-4 w-4" /> {result}
           </p>
         )}
         {error && <p className="rounded-xl bg-red-50 px-3 py-2.5 text-sm font-medium text-danger">{error}</p>}

@@ -42,6 +42,7 @@ import { useGetDriverQuery } from '@/services/endpoints/driversApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import { useGetStoreSetupQuery, useGetSystemControlsQuery, type StoreSetup } from '@/services/endpoints/settingsApi'
 import { useAuth } from '@/hooks/useAuth'
+import { useGetPackersQuery } from '@/services/endpoints/packersApi'
 import { useAppSelector } from '@/store/hooks'
 import type { InvoiceSize, Order, OrderItem, OrderStatus, RefundType } from '@/types/common.types'
 
@@ -51,6 +52,7 @@ export default function OrderDetailPage() {
   const { data: order, isLoading } = useGetOrderQuery(orderId)
   const { data: driver } = useGetDriverQuery(order?.driverId ?? '', { skip: !order?.driverId })
   const { data: stores = [] } = useGetStoresQuery()
+  const { data: packers = [] } = useGetPackersQuery()
   const { data: storeSetup } = useGetStoreSetupQuery()
   const { data: sysControls } = useGetSystemControlsQuery()
   const [updateStatus, { isLoading: updating }] = useUpdateOrderStatusMutation()
@@ -455,6 +457,8 @@ export default function OrderDetailPage() {
           <RefundCard order={order} />
 
           <OrderNotesCard order={order} />
+
+          <OrderActivityLog order={order} driver={driver} packers={packers} />
         </div>
       </div>
 
@@ -765,6 +769,155 @@ function RefundCard({ order }: { order: Order }) {
           <Textarea label="Comments (required)" value={comments} onChange={(e) => setComments(e.target.value)} rows={2} placeholder="Internal notes for the audit trail" />
         </div>
       </Modal>
+    </Card>
+  )
+}
+
+function OrderActivityLog({ order, driver, packers }: { order: Order; driver: any; packers: any[] }) {
+  const activities = (() => {
+    const list: { title: string; desc?: string; at: string; type: string }[] = []
+
+    // 1. Stage timestamps (Status Transitions)
+    if (order.stageTimestamps) {
+      Object.entries(order.stageTimestamps).forEach(([status, at]) => {
+        if (!at) return
+        let title = ''
+        let desc = ''
+        switch (status) {
+          case 'pending':
+            title = 'Order Placed'
+            desc = 'Order created by customer'
+            break
+          case 'confirmed':
+            title = 'Order Confirmed'
+            desc = 'System auto-confirmed the order'
+            break
+          case 'packing':
+            title = 'Started Packing'
+            if (order.packerId) {
+              const pkName = packers.find((pk) => pk.id === order.packerId)?.name || order.packerId
+              desc = `Assigned to packer: ${pkName}`
+            } else {
+              desc = 'Order moved to packing queue'
+            }
+            break
+          case 'packed':
+            title = 'Packing Completed'
+            desc = 'Items picked, checked and packed'
+            break
+          case 'picked_up':
+            title = 'Rider Picked Up'
+            if (order.driverId) {
+              const drName = driver?.name || order.driverId
+              desc = `Picked up by rider: ${drName}`
+            } else {
+              desc = 'Rider collected package'
+            }
+            break
+          case 'on_the_way':
+            title = 'Out for Delivery'
+            desc = 'Rider departed dark store'
+            break
+          case 'arrived':
+            title = 'Rider Arrived'
+            desc = 'Rider reached delivery address'
+            break
+          case 'delivered':
+            title = 'Delivered'
+            desc = order.codCollected
+              ? 'Package delivered & Cash payment reconciled'
+              : 'Package delivered successfully'
+            break
+          case 'cancelled':
+            title = 'Order Cancelled'
+            desc = order.cancelReason ? `Reason: ${order.cancelReason}` : 'Cancelled by admin'
+            break
+          default:
+            title = `Status updated: ${status}`
+            break
+        }
+        list.push({ title, desc, at, type: 'status' })
+      })
+    }
+
+    // 2. Note creations
+    if (order.notes) {
+      order.notes.forEach((note) => {
+        list.push({
+          title: 'Admin Note Added',
+          desc: `"${note.content}"`,
+          at: note.at,
+          type: 'note',
+        })
+      })
+    }
+
+    // 3. Refunds processed
+    if (order.refunds) {
+      order.refunds.forEach((ref) => {
+        list.push({
+          title: `Refund Processed (NPR ${ref.amount})`,
+          desc: `Processed via ${ref.method === 'wallet' ? 'Wallet' : 'QR'} (${ref.type} refund). Reason: "${ref.reason}". Comments: "${ref.comments}" by ${ref.adminName}`,
+          at: ref.at,
+          type: 'refund',
+        })
+      })
+    }
+
+    // Sort chronologically (newest first)
+    return list.sort((a, b) => Date.parse(b.at) - Date.parse(a.at))
+  })()
+
+  if (activities.length === 0) return null
+
+  return (
+    <Card>
+      <CardHeader title="Order activity log" subtitle="Audit trail of milestones, assignments & notes" />
+      <CardContent className="pt-2 pb-5">
+        <div className="relative border-l border-slate-100 pl-4 ml-2.5 space-y-5">
+          {activities.map((act, idx) => {
+            // Get color indicator based on type
+            let dotColor = 'bg-slate-300 ring-slate-100'
+            let textColor = 'text-slate-700'
+            if (act.type === 'status') {
+              if (act.title === 'Delivered') {
+                dotColor = 'bg-green-500 ring-green-100'
+                textColor = 'text-green-900 font-bold'
+              } else if (act.title === 'Order Cancelled') {
+                dotColor = 'bg-red-500 ring-red-100'
+                textColor = 'text-red-950 font-bold'
+              } else {
+                dotColor = 'bg-brand-500 ring-mint-100'
+                textColor = 'text-slate-800 font-semibold'
+              }
+            } else if (act.type === 'refund') {
+              dotColor = 'bg-amber-500 ring-amber-100'
+              textColor = 'text-amber-900 font-bold'
+            } else if (act.type === 'note') {
+              dotColor = 'bg-violet-500 ring-violet-100'
+              textColor = 'text-violet-900'
+            }
+
+            return (
+              <div key={idx} className="relative group">
+                {/* Timeline Dot */}
+                <div className={`absolute -left-[22px] top-1.5 h-2.5 w-2.5 rounded-full border-2 border-white ring-4 ${dotColor}`} />
+                <div>
+                  <div className="flex flex-wrap items-baseline justify-between gap-1">
+                    <p className={`text-sm ${textColor}`}>{act.title}</p>
+                    <span className="text-[10px] text-slate-400 font-medium tabular-nums">
+                      {new Date(act.at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+                      {' · '}
+                      {new Date(act.at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                    </span>
+                  </div>
+                  {act.desc && <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">{act.desc}</p>}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </CardContent>
     </Card>
   )
 }

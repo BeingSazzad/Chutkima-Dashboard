@@ -85,11 +85,8 @@ export const ordersApi = api.injectEndpoints({
         let result = [...orders].sort(
           (a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime(),
         )
-        // Hide orders that are in the 10-second cancellation window
-        result = result.filter((o) => {
-          const elapsedMs = Date.now() - new Date(o.placedAt).getTime()
-          return elapsedMs >= 10000
-        })
+        // Hide orders that are 'pending' (they are still in the 10-second customer cancellation window)
+        result = result.filter((o) => o.status !== 'pending')
         if (filters?.status && filters.status !== 'all') {
           result = result.filter((o) => o.status === filters.status)
         }
@@ -132,7 +129,7 @@ export const ordersApi = api.injectEndpoints({
         await mockDelay(200)
         autoProgressOrders()
         const order = orders.find((o) => o.id === id)
-        if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        if (!order || order.status === 'pending') return { error: { status: 404, data: 'Order not found or still in customer cancellation window' } as never }
         
         // Clear hold released alert seen flag on load of the detail page
         if (order.holdReleasedAlert) {

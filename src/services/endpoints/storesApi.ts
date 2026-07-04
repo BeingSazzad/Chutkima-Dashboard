@@ -26,7 +26,7 @@ export const storesApi = api.injectEndpoints({
       async queryFn() {
         await mockDelay(300)
         const rows = darkStores.map((store) => {
-          const storeOrders = orders.filter((o) => o.storeId === store.id)
+          const storeOrders = orders.filter((o) => o.storeId === store.id && o.status !== 'pending')
           return {
             store: clone(store),
             orders: storeOrders.length,

@@ -138,7 +138,7 @@ export const ordersApi = api.injectEndpoints({
         
         return { data: clone(order) }
       },
-      providesTags: (_r, _e, id) => [{ type: 'Order', id }],
+      providesTags: (_r, _e, id) => ['Order', { type: 'Order', id }],
     }),
 
     assignDriver: build.mutation<Order, { orderId: string; driverId: string }>({

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   AlertTriangle,
@@ -23,6 +23,7 @@ import { useAuth } from '@/hooks/useAuth'
 import { useAppDispatch, useAppSelector } from '@/store/hooks'
 import { toggleSidebar, setActiveStore } from '@/store/uiSlice'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
+import { useGetOrdersQuery } from '@/services/endpoints/ordersApi'
 
 interface Notification {
   id: string
@@ -126,6 +127,36 @@ export function Topbar() {
   const [notifOpen, setNotifOpen] = useState(false)
   const [notifs, setNotifs] = useState(INITIAL_NOTIFS)
   const unreadCount = notifs.filter((n) => n.unread).length
+
+  // Poll orders list to automatically check & release expired holds and load new orders
+  const { data: ordersList = [] } = useGetOrdersQuery(undefined, { pollingInterval: 5000 })
+
+  useEffect(() => {
+    const expiredHoldOrders = ordersList.filter((o) => o.holdReleasedAlert)
+    if (expiredHoldOrders.length > 0) {
+      setNotifs((current) => {
+        const updated = [...current]
+        let changed = false
+        expiredHoldOrders.forEach((o) => {
+          const notifId = `hold-${o.id}`
+          if (!updated.some((n) => n.id === notifId)) {
+            updated.unshift({
+              id: notifId,
+              icon: AlertTriangle,
+              iconClass: 'bg-amber-50 text-amber-600',
+              title: `Hold released: ${o.reference}`,
+              desc: `${o.customerName} hold released`,
+              time: 'Just now',
+              unread: true,
+              to: ROUTES.orderDetail(o.id),
+            })
+            changed = true
+          }
+        })
+        return changed ? updated : current
+      })
+    }
+  }, [ordersList])
 
   const openNotif = (n: Notification) => {
     setNotifs((list) => list.map((x) => (x.id === n.id ? { ...x, unread: false } : x)))

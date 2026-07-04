@@ -39,12 +39,17 @@ export function AssignDriverModal({ order, open, onClose }: Props) {
     // Nearest available rider first: sort by distance to the dark store
     // (riders with no GPS fix sink to the bottom), then availability.
     .sort((a, b) => {
+      // 1. Available/active (status === 'available') riders appear first.
+      if (a.status === 'available' && b.status !== 'available') return -1
+      if (a.status !== 'available' && b.status === 'available') return 1
+
+      // 2. Then sort by distance (nearest to store first).
       const da = distanceFor(a)
       const db = distanceFor(b)
       if (da != null && db != null && da !== db) return da - db
       if (da != null && db == null) return -1
       if (da == null && db != null) return 1
-      return a.status === 'available' ? -1 : 1
+      return 0
     })
 
   const handleAssign = async () => {

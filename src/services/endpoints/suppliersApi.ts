@@ -10,12 +10,13 @@ function deriveStatus(stock: number, threshold: number): ProductStatus {
 }
 
 export interface NewReturnPayload {
-  productId: string
+  productId?: string
   supplierId: string | null
-  quantity: number
+  quantity?: number
   reason: SupplierReturn['reason']
   comments?: string
   adminName?: string
+  items: { productId: string; quantity: number }[]
 }
 
 export const suppliersApi = api.injectEndpoints({
@@ -104,27 +105,52 @@ export const suppliersApi = api.injectEndpoints({
     createSupplierReturn: build.mutation<SupplierReturn, NewReturnPayload>({
       async queryFn(payload) {
         await mockDelay(350)
-        const product = products.find((p) => p.id === payload.productId)
-        if (!product) return { error: { status: 404, data: 'Product not found' } as never }
+        
+        const returnItems: { productId: string; productName: string; sku: string; quantity: number }[] = []
+        let totalQty = 0
 
-        const qty = Math.max(0, Math.min(payload.quantity, product.stock))
-        product.stock -= qty
-        product.status = deriveStatus(product.stock, product.lowStockThreshold)
+        for (const item of payload.items) {
+          const product = products.find((p) => p.id === item.productId)
+          if (product) {
+            const qty = Math.max(0, Math.min(item.quantity, product.stock))
+            product.stock -= qty
+            product.status = deriveStatus(product.stock, product.lowStockThreshold)
+            totalQty += qty
+            returnItems.push({
+              productId: product.id,
+              productName: product.name,
+              sku: product.sku,
+              quantity: qty,
+            })
+          }
+        }
+
+        if (returnItems.length === 0) {
+          return { error: { status: 400, data: 'No valid products selected' } as never }
+        }
+
+        // Summary representation for compatibility
+        const primaryItem = returnItems[0]
+        const productNameSummary = returnItems.length > 1
+          ? `${primaryItem.productName} (+ ${returnItems.length - 1} other item${returnItems.length > 2 ? 's' : ''})`
+          : primaryItem.productName
+        const skuSummary = returnItems.length > 1 ? 'MULTI' : primaryItem.sku
 
         const supplier = payload.supplierId ? suppliers.find((s) => s.id === payload.supplierId) : null
         const record: SupplierReturn = {
           id: `ret${Date.now()}`,
           reference: `RET-${String(returnCounter.next).padStart(6, '0')}`,
-          productId: product.id,
-          productName: product.name,
-          sku: product.sku,
+          productId: primaryItem.productId,
+          productName: productNameSummary,
+          sku: skuSummary,
           supplierId: supplier?.id ?? null,
           supplierName: supplier?.name ?? '—',
-          quantity: qty,
+          quantity: totalQty,
           reason: payload.reason,
           comments: payload.comments ?? '',
           adminName: payload.adminName || 'Admin',
           createdAt: new Date().toISOString(),
+          items: returnItems,
         }
         returnCounter.next += 1
         supplierReturns.unshift(record)

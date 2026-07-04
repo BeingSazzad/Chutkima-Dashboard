@@ -8,17 +8,25 @@ import { setSidebar } from '@/store/uiSlice'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import { usePermissions } from '@/hooks/usePermissions'
 import { NAV_SECTIONS, type NavSection } from './navConfig'
+import { useGetSystemControlsQuery } from '@/services/endpoints/settingsApi'
+import { ROUTES } from '@/constants/routes'
 
 /** Hide nav items the current role can't access, or disabled for the active store. */
 function useVisibleSections(): NavSection[] {
   const activeStoreId = useAppSelector((s) => s.ui.activeStoreId)
   const { data: stores = [] } = useGetStoresQuery()
+  const { data: controls } = useGetSystemControlsQuery()
   const perms = usePermissions()
   const active = activeStoreId ? stores.find((s) => s.id === activeStoreId) : null
+  const riderEarningsEnabled = controls?.riderEarningsEnabled ?? true
+
   return NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter(
-      (item) => perms.allows(item.to) && (!active || !item.feature || active.features[item.feature]),
+      (item) =>
+        perms.allows(item.to) &&
+        (!active || !item.feature || active.features[item.feature]) &&
+        (item.to !== ROUTES.riderFinance || riderEarningsEnabled),
     ),
   })).filter((section) => section.items.length > 0)
 }

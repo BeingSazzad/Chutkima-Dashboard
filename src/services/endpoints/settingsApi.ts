@@ -30,6 +30,7 @@ export interface SystemControls {
   minAppVersion: string
   whatsappAdminAlert: boolean
   adminWhatsappNumber: string
+  riderEarningsEnabled: boolean
 }
 
 /** Referral programme config (feature 35). */

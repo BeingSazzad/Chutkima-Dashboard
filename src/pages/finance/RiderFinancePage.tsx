@@ -23,7 +23,7 @@ import {
   useGetRiderFinanceQuery,
   type RiderFinance,
 } from '@/services/endpoints/driversApi'
-import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
+import { useGetOpsConfigQuery, useGetSystemControlsQuery } from '@/services/endpoints/settingsApi'
 
 /**
  * The rider must deposit the FULL COD cash they collected — fuel is NOT deducted
@@ -32,6 +32,25 @@ import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
 const outstanding = (r: RiderFinance) => Math.max(0, r.codCollected - r.deposited)
 
 export default function RiderFinancePage() {
+  const { data: controls } = useGetSystemControlsQuery()
+  const riderEarningsEnabled = controls?.riderEarningsEnabled ?? true
+
+  if (!riderEarningsEnabled) {
+    return (
+      <div className="flex h-[60vh] flex-col items-center justify-center p-6 text-center">
+        <div className="rounded-2xl border border-slate-200 bg-white p-8 max-w-md shadow-sm">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 text-slate-500">
+            <Fuel className="h-6 w-6" />
+          </div>
+          <h2 className="text-lg font-bold text-slate-800">Rider Finance System Disabled</h2>
+          <p className="mt-2 text-sm text-slate-500">
+            Rider earnings and fuel tracking are currently disabled by the administrator in settings.
+          </p>
+        </div>
+      </div>
+    )
+  }
+
   const today = new Date().toISOString().slice(0, 10)
   const { user } = useAuth()
   const [from, setFrom] = useState(today)

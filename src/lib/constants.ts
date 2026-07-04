@@ -125,8 +125,8 @@ export const DRIVER_STATUS_META: Record<
   },
   on_delivery: {
     label: 'On Delivery',
-    dot: 'bg-brand-500',
-    badge: 'bg-brand-50 text-brand-700 ring-brand-600/15',
+    dot: 'bg-red-500',
+    badge: 'bg-red-50 text-red-700 ring-red-600/15',
   },
   offline: {
     label: 'Offline',

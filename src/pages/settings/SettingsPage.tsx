@@ -332,6 +332,13 @@ function SystemControlsCard() {
         {data.whatsappAdminAlert && (
           <Input label="Admin WhatsApp number" defaultValue={data.adminWhatsappNumber} onBlur={(e) => set({ adminWhatsappNumber: e.target.value })} placeholder="+977 98XXXXXXXX" />
         )}
+        <div className="flex items-center justify-between gap-4 border-t border-slate-100 pt-3">
+          <div>
+            <p className="text-sm font-semibold text-slate-800">Rider Earnings System</p>
+            <p className="text-xs text-slate-400">Enable or disable rider finance tabs and earnings tracking</p>
+          </div>
+          <Switch checked={data.riderEarningsEnabled} onChange={(v) => set({ riderEarningsEnabled: v })} aria-label="Rider Earnings System" />
+        </div>
       </CardContent>
     </Card>
   )

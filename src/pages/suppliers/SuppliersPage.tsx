@@ -303,19 +303,51 @@ function ReturnDetailModal({ ret, onClose }: { ret: SupplierReturn | null; onClo
           </div>
         </div>
 
+        {ret.items && ret.items.length > 0 ? (
+          <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-slate-200 bg-slate-50 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                  <th className="p-3 w-16 text-center">S.N</th>
+                  <th className="p-3 w-28">SKU</th>
+                  <th className="p-3">Product Name</th>
+                  <th className="p-3 w-20 text-center">QTY</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100 text-sm">
+                {ret.items.map((item, idx) => (
+                  <tr key={item.productId} className="hover:bg-slate-50/50">
+                    <td className="p-3 text-center text-slate-400 font-medium">{idx + 1}</td>
+                    <td className="p-3 font-mono text-xs text-slate-600">{item.sku}</td>
+                    <td className="p-3 font-medium text-slate-800">{item.productName}</td>
+                    <td className="p-3 text-center font-bold text-slate-850">{item.quantity}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div className="bg-slate-50 px-4 py-2 text-right border-t border-slate-200 text-xs font-bold text-slate-500 uppercase tracking-wider flex justify-between">
+              <span>Total Units</span>
+              <span className="text-slate-800 font-extrabold text-sm">{ret.quantity}</span>
+            </div>
+          </div>
+        ) : (
+          <div className="border border-slate-100 rounded-2xl p-4 space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Product</span>
+              <span className="font-semibold text-slate-800">{ret.productName}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">SKU</span>
+              <span className="font-mono text-slate-800">{ret.sku}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-slate-500">Quantity</span>
+              <span className="font-extrabold text-slate-900 text-base">{ret.quantity}</span>
+            </div>
+          </div>
+        )}
+
         <div className="border border-slate-100 rounded-2xl p-4 space-y-3">
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Product</span>
-            <span className="font-semibold text-slate-800">{ret.productName}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">SKU</span>
-            <span className="font-mono text-slate-800">{ret.sku}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span className="text-slate-500">Quantity</span>
-            <span className="font-extrabold text-slate-900 text-base">{ret.quantity}</span>
-          </div>
           <div className="flex justify-between text-sm items-center">
             <span className="text-slate-500">Reason</span>
             <Badge tone={m.tone}>{m.label}</Badge>
@@ -433,47 +465,60 @@ function ReturnModal({ open, onClose, suppliers }: { open: boolean; onClose: () 
   const { data: products = [] } = useGetProductsQuery()
   const [create, { isLoading }] = useCreateSupplierReturnMutation()
 
-  const [productId, setProductId] = useState('')
   const [supplierId, setSupplierId] = useState('')
-  const [quantity, setQuantity] = useState('')
   const [reason, setReason] = useState<ReturnReason | ''>('')
   const [comments, setComments] = useState('')
+
+  // Local state for items list: { productId, quantity }
+  const [items, setItems] = useState<{ productId: string; quantity: number }[]>([])
 
   // Reset every time the modal opens.
   const [wasOpen, setWasOpen] = useState(false)
   if (open !== wasOpen) {
     setWasOpen(open)
     if (open) {
-      setProductId('')
       setSupplierId('')
-      setQuantity('')
       setReason('')
       setComments('')
+      setItems([])
     }
   }
 
-  const product = products.find((p: Product) => p.id === productId)
-  const maxQty = product?.stock ?? 0
-  const qtyNum = Math.max(0, Math.min(Number(quantity) || 0, maxQty))
-  const resultingStock = Math.max(0, maxQty - qtyNum)
+  const supplierProducts = products.filter((p: Product) => p.supplierId === supplierId)
 
-  const pickProduct = (id: string) => {
-    setProductId(id)
-    const p = products.find((x: Product) => x.id === id)
-    // Pre-fill the supplier from the product's own linked supplier.
-    if (p?.supplierId) setSupplierId(p.supplierId)
+  // Options for products dropdown that aren't already selected
+  const availableProducts = supplierProducts.filter(
+    (p) => !items.some((it) => it.productId === p.id)
+  )
+
+  const handleAddProduct = (prodId: string) => {
+    if (!prodId) return
+    setItems((prev) => [...prev, { productId: prodId, quantity: 1 }])
   }
 
-  const canSubmit = !!product && qtyNum > 0 && !!reason
+  const updateItemQty = (prodId: string, qty: number) => {
+    const p = products.find((x) => x.id === prodId)
+    const max = p?.stock ?? 9999
+    const val = Math.max(1, Math.min(max, qty))
+    setItems((prev) =>
+      prev.map((it) => (it.productId === prodId ? { ...it, quantity: val } : it))
+    )
+  }
+
+  const removeItem = (prodId: string) => {
+    setItems((prev) => prev.filter((it) => it.productId !== prodId))
+  }
+
+  const totalUnits = items.reduce((sum, item) => sum + item.quantity, 0)
+  const canSubmit = items.length > 0 && !!reason
   const submit = async () => {
     if (!canSubmit) return
     await create({
-      productId,
       supplierId: supplierId || null,
-      quantity: qtyNum,
       reason: reason as ReturnReason,
       comments,
       adminName: user?.name,
+      items,
     }).unwrap()
     onClose()
   }
@@ -488,28 +533,52 @@ function ReturnModal({ open, onClose, suppliers }: { open: boolean; onClose: () 
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit} loading={isLoading} disabled={!canSubmit}>
+          <Button onClick={submit} loading={isLoading} disabled={!canSubmit} className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-xl">
             Confirm return
           </Button>
         </>
       }
     >
-      <div className="space-y-3">
-        <Select
-          label="Product"
-          value={productId}
-          onChange={(e) => pickProduct(e.target.value)}
-          placeholder="Select a product to return"
-          options={products.map((p: Product) => ({ label: `${p.name} · ${p.sku} — ${p.stock} in stock`, value: p.id }))}
-        />
-
+      <div className="space-y-4">
+        {/* Supplier & Code Row */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <Select
-            label="Supplier"
+            label="Supplier Name"
             value={supplierId}
-            onChange={(e) => setSupplierId(e.target.value)}
+            onChange={(e) => {
+              setSupplierId(e.target.value)
+              setItems([]) // Reset items on supplier change
+            }}
             placeholder="Select a supplier"
-            options={suppliers.map((s) => ({ label: `${s.name} (${s.code})`, value: s.id }))}
+            options={suppliers.map((s) => ({ label: s.name, value: s.id }))}
+          />
+          <div className="flex flex-col">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wide mb-1.5">Supplier Code</label>
+            <div className="flex items-center h-10 w-full rounded-xl border border-slate-200 bg-slate-50/50 px-3 text-sm text-slate-500 font-medium">
+              {supplierId ? (
+                <>
+                  <span>{suppliers.find((s) => s.id === supplierId)?.code}</span>
+                  <span className="ml-1.5 text-xs text-red-500 font-bold">(automatic)</span>
+                </>
+              ) : (
+                <span className="text-slate-400 italic">Select a supplier</span>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Products & Reason Row */}
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+          <Select
+            label="Select Products"
+            value=""
+            disabled={!supplierId}
+            onChange={(e) => handleAddProduct(e.target.value)}
+            placeholder={supplierId ? (availableProducts.length > 0 ? "Choose products to return" : "All supplier products added") : "Select supplier first"}
+            options={availableProducts.map((p) => ({
+              label: `${p.name} (${p.sku})`,
+              value: p.id,
+            }))}
           />
           <Select
             label="Reason"
@@ -520,40 +589,83 @@ function ReturnModal({ open, onClose, suppliers }: { open: boolean; onClose: () 
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Input
-            label="Quantity to return"
-            type="number"
-            min={1}
-            max={maxQty}
-            value={quantity}
-            onChange={(e) => setQuantity(e.target.value)}
-            placeholder="0"
-            hint={product ? `${maxQty} available · in stock after return: ${resultingStock}` : 'Pick a product first'}
-          />
-          <div className="flex items-end">
-            {product && (
-              <div className="w-full rounded-xl bg-mint-50 px-3.5 py-2.5 text-sm text-slate-600">
-                <span className="text-slate-500">Stock </span>
-                <span className="font-semibold text-slate-800">{maxQty}</span>
-                <span className="mx-1.5 text-slate-400">→</span>
-                <span className="font-semibold text-brand-700">{resultingStock}</span>
-              </div>
-            )}
+        {/* Selected Products Table */}
+        {items.length > 0 && (
+          <div className="rounded-xl border border-slate-200 overflow-hidden bg-white">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-indigo-100 bg-indigo-50/50 text-xs font-bold text-indigo-900 uppercase tracking-wider">
+                  <th className="p-3 w-16 text-center">S.N</th>
+                  <th className="p-3 w-28">SKU</th>
+                  <th className="p-3">Product Name</th>
+                  <th className="p-3 w-36 text-center">QTY</th>
+                  <th className="p-3 w-16 text-center">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-indigo-50 text-sm">
+                {items.map((item, idx) => {
+                  const p = products.find((x) => x.id === item.productId)
+                  return (
+                    <tr key={item.productId} className="even:bg-indigo-50/20 hover:bg-indigo-50/40 transition-colors">
+                      <td className="p-3 text-center font-medium text-slate-400">{idx + 1}</td>
+                      <td className="p-3 font-mono text-xs text-slate-600">{p?.sku || '—'}</td>
+                      <td className="p-3 font-medium text-slate-800">{p?.name || 'Unknown'}</td>
+                      <td className="p-3">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => updateItemQty(item.productId, item.quantity - 1)}
+                            className="focus-ring h-7 w-7 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min={1}
+                            max={p?.stock || undefined}
+                            value={item.quantity}
+                            onChange={(e) => updateItemQty(item.productId, parseInt(e.target.value) || 1)}
+                            className="w-12 h-7 rounded-lg border border-slate-200 text-center text-sm font-semibold tabular-nums focus:ring-brand-500"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => updateItemQty(item.productId, item.quantity + 1)}
+                            className="focus-ring h-7 w-7 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                          >
+                            +
+                          </button>
+                        </div>
+                      </td>
+                      <td className="p-3 text-center">
+                        <button
+                          type="button"
+                          onClick={() => removeItem(item.productId)}
+                          className="text-xs font-bold text-red-500 hover:text-red-700"
+                        >
+                          Remove
+                        </button>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
-        </div>
+        )}
 
+        {/* Comments Textarea */}
         <Textarea
           label="Comments"
           value={comments}
           onChange={(e) => setComments(e.target.value)}
-          rows={2}
-          placeholder="Optional note — batch number, condition, consignment date…"
+          rows={3}
+          placeholder="Optional note — batch number, condition, consignment date.."
         />
 
-        <p className="rounded-xl bg-slate-50 px-3.5 py-2.5 text-xs text-slate-500">
-          On confirm, {qtyNum || 0} unit(s) will be deducted from inventory and recorded as <span className="font-semibold text-slate-600">Returned to Supplier</span> with the reason, quantity, date and supplier for reporting.
-        </p>
+        {/* Inventory deduction hint card */}
+        <div className="rounded-xl bg-slate-50 border border-slate-100 p-3.5 text-xs text-slate-500 leading-relaxed">
+          On confirm, <span className="font-bold text-slate-700">{totalUnits}</span> unit(s) will be deducted from inventory and recorded as <span className="font-semibold text-slate-800">Returned to Supplier</span> with the reason, quantity, date and supplier for reporting.
+        </div>
       </div>
     </Modal>
   )

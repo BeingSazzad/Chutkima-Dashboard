@@ -85,9 +85,45 @@ export const customersApi = api.injectEndpoints({
         await mockDelay(300)
         const customer = customers.find((c) => c.id === customerId)
         if (!customer) return { error: { status: 404, data: 'Not found' } as never }
-        customer.credits.push({ id: creditId(), amount, type, reason, orderId, note, adminName, at: new Date().toISOString() })
+        const at = new Date().toISOString()
+        const creditRecord = { id: creditId(), amount, type, reason, orderId, note, adminName, at }
+        customer.credits.push(creditRecord)
         customer.walletBalance += amount
         customer.creditsEarned += amount
+
+        // Sync with local storage for cross-origin customer-app
+        if (customerId === 'u1') {
+          try {
+            const balanceKey = 'chutkima_wallet_balance'
+            const txsKey = 'chutkima_wallet_transactions'
+            const currentBal = parseFloat(localStorage.getItem(balanceKey) || '100')
+            const newBal = currentBal + amount
+            localStorage.setItem(balanceKey, newBal.toString())
+            
+            const txs = JSON.parse(localStorage.getItem(txsKey) || '[]')
+            txs.unshift({
+              id: creditRecord.id,
+              amount: amount,
+              type: type,
+              reason: reason || 'Manual credit',
+              orderId: orderId || 'Adjustment',
+              at,
+            })
+            localStorage.setItem(txsKey, JSON.stringify(txs))
+
+            // Instant receipt event
+            localStorage.setItem('chutkima_wallet_refund_received', JSON.stringify({
+              amount: amount,
+              orderId: orderId || 'Admin Adjustment',
+              reason,
+              at,
+              timestamp: Date.now()
+            }))
+          } catch (e) {
+            console.error('LocalStorage write failed:', e)
+          }
+        }
+
         return { data: clone(customer) }
       },
       invalidatesTags: ['Customer'],

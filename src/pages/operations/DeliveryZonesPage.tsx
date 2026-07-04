@@ -166,11 +166,12 @@ function ZonesCard({
           </Button>
         }
       />
-      <CardContent className="space-y-2 pt-2">
+      <CardContent className="pt-2">
         {isLoading ? (
           <Spinner label="Loading zones…" className="py-10" />
         ) : (
-          zones.map((z) => (
+          <div className="max-h-[500px] overflow-y-auto space-y-2 pr-1">
+            {zones.map((z) => (
             <div key={z.id} className="flex items-start gap-3 rounded-xl border border-slate-100 px-3 py-2.5">
               <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-mint-100 text-brand-600">
                 <MapPin className="h-4 w-4" />
@@ -245,7 +246,8 @@ function ZonesCard({
                 </div>
               </div>
             </div>
-          ))
+          ))}
+          </div>
         )}
       </CardContent>
     </Card>

@@ -1,5 +1,5 @@
 import { api, clone, mockDelay } from '@/services/api'
-import { orders, drivers, products, transactions, customers } from '@/services/mock/data'
+import { orders, drivers, products, transactions, customers, zones, packers } from '@/services/mock/data'
 import { PAYMENT_META, SUBSTITUTABLE_STATUSES } from '@/lib/constants'
 import type { Order, OrderStatus, PaymentMethod, RefundItem, RefundType } from '@/types/common.types'
 
@@ -21,6 +21,29 @@ function stampStage(order: Order, status: OrderStatus) {
   }
 }
 
+function autoProgressOrders() {
+  const now = Date.now()
+  orders.forEach((o) => {
+    // Only auto-progress if current status is 'pending' and not on hold
+    if (o.status !== 'pending' || o.holdUntil) return
+
+    const elapsedMs = now - new Date(o.placedAt).getTime()
+    const elapsedSec = elapsedMs / 1000
+
+    if (elapsedSec >= 10) {
+      o.status = 'confirmed'
+      stampStage(o, 'confirmed')
+      o.notes.push({
+        id: uid('on'),
+        content: `System auto-confirmed order: 10-second customer cancellation window elapsed.`,
+        adminName: 'System',
+        adminId: 'system',
+        at: new Date().toISOString(),
+      })
+    }
+  })
+}
+
 interface OrderFilters {
   status?: OrderStatus | 'all'
   zone?: string
@@ -39,14 +62,48 @@ export const ordersApi = api.injectEndpoints({
     getOrders: build.query<Order[], OrderFilters | void>({
       async queryFn(filters) {
         await mockDelay()
+
+        // Auto-progress order statuses based on time elapsed
+        autoProgressOrders()
+        
+        // Auto-release expired holds
+        const now = Date.now()
+        orders.forEach((o) => {
+          if (o.holdUntil && new Date(o.holdUntil).getTime() <= now) {
+            o.holdUntil = null
+            o.holdReleasedAlert = true
+            o.notes.push({
+              id: uid('on'),
+              content: `System auto-released hold: duration expired. State transitioned.`,
+              adminName: 'System',
+              adminId: 'system',
+              at: new Date().toISOString(),
+            })
+          }
+        })
+
         let result = [...orders].sort(
           (a, b) => new Date(b.placedAt).getTime() - new Date(a.placedAt).getTime(),
         )
+        // Hide orders that are in the 10-second cancellation window
+        result = result.filter((o) => {
+          const elapsedMs = Date.now() - new Date(o.placedAt).getTime()
+          return elapsedMs >= 10000
+        })
         if (filters?.status && filters.status !== 'all') {
           result = result.filter((o) => o.status === filters.status)
         }
         if (filters?.zone) result = result.filter((o) => o.zone === filters.zone)
-        if (filters?.storeId) result = result.filter((o) => o.storeId === filters.storeId)
+        if (filters?.storeId) {
+          const storeId = filters.storeId
+          result = result.filter((o) => {
+            if (o.storeId === storeId) return true
+            if (o.storeId) return false // Claimed by another store
+            const zone = zones.find((z) => z.name === o.zone)
+            const servedStores = zone?.storeIds && zone.storeIds.length > 0 ? zone.storeIds : (zone?.storeId ? [zone.storeId] : [])
+            return servedStores.includes(storeId)
+          })
+        }
         if (filters?.payment && filters.payment !== 'all') {
           result = result.filter((o) => o.paymentMethod === filters.payment)
         }
@@ -73,8 +130,15 @@ export const ordersApi = api.injectEndpoints({
     getOrder: build.query<Order, string>({
       async queryFn(id) {
         await mockDelay(200)
+        autoProgressOrders()
         const order = orders.find((o) => o.id === id)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
+        
+        // Clear hold released alert seen flag on load of the detail page
+        if (order.holdReleasedAlert) {
+          order.holdReleasedAlert = false
+        }
+        
         return { data: clone(order) }
       },
       providesTags: (_r, _e, id) => [{ type: 'Order', id }],
@@ -96,6 +160,9 @@ export const ordersApi = api.injectEndpoints({
         }
         order.driverId = driverId
         order.assignments = [{ driverId, note: '', confirmed: false }]
+        if (!order.storeId && driver.storeIds && driver.storeIds.length > 0) {
+          order.storeId = driver.storeIds[0]
+        }
         // Newly assigned → status becomes "Rider Assigned" until the rider accepts.
         order.riderAccepted = false
         // Assigning ≠ picked up. The rider marks "Picked Up" (or admin overrides).
@@ -139,12 +206,15 @@ export const ordersApi = api.injectEndpoints({
       invalidatesTags: ['Order', 'Driver'],
     }),
 
-    updateOrderStatus: build.mutation<Order, { orderId: string; status: OrderStatus; reason?: string }>({
-      async queryFn({ orderId, status, reason }) {
+    updateOrderStatus: build.mutation<Order, { orderId: string; status: OrderStatus; reason?: string; storeId?: string }>({
+      async queryFn({ orderId, status, reason, storeId }) {
         await mockDelay(250)
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
         order.status = status
+        if (storeId) {
+          order.storeId = storeId
+        }
         // Record the stage timestamp (and backfill skips) for the journey/timing UI.
         stampStage(order, status)
         // Keep the packed flag in sync once an order reaches "Packed" or beyond.
@@ -215,6 +285,10 @@ export const ordersApi = api.injectEndpoints({
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
         order.packerId = packerId
+        const packer = packers.find((p) => p.id === packerId)
+        if (packer) {
+          order.storeId = packer.storeId
+        }
         // Sending to a packer moves a confirmed order into packing (confirm must happen first).
         if (order.status === 'confirmed') {
           order.status = 'packing'
@@ -269,9 +343,9 @@ export const ordersApi = api.injectEndpoints({
     /** Process a full / partial refund, append to the order's refund history. */
     addRefund: build.mutation<
       Order,
-      { orderId: string; type: RefundType; amount: number; reason: string; comments: string; adminName: string; items?: RefundItem[]; method: 'cash' | 'qr' | 'wallet' }
+      { orderId: string; type: RefundType; amount: number; reason: string; comments: string; adminName: string; adminId?: string; items?: RefundItem[]; method: 'qr' | 'wallet' }
     >({
-      async queryFn({ orderId, type, amount, reason, comments, adminName, items, method }) {
+      async queryFn({ orderId, type, amount, reason, comments, adminName, adminId, items, method }) {
         await mockDelay(300)
         const order = orders.find((o) => o.id === orderId)
         if (!order) return { error: { status: 404, data: 'Order not found' } as never }
@@ -297,7 +371,20 @@ export const ordersApi = api.injectEndpoints({
         // Mark fully refunded when the whole grand total is covered.
         if (alreadyRefunded + refundAmount >= order.grandTotal) order.paymentStatus = 'refunded'
         
-        // If refund method is wallet, credit the customer
+        const refundMethodLabel = method === 'qr' ? 'QR Refund' : 'Wallet Credit'
+        
+        // 1. Create a complete refund log in the Order's activity notes timeline
+        const refundLogContent = `Refund processed: NPR ${refundAmount} via ${refundMethodLabel} (${type} refund). Reason: ${reason}. Notes: ${comments}. Order: ${order.reference}.`
+        order.notes.push({
+          id: uid('on'),
+          content: refundLogContent,
+          adminName,
+          adminId: adminId || 'system',
+          at,
+        })
+        order.adminNote = refundLogContent
+
+        // 2. If refund method is wallet, credit the customer & sync to localStorage
         if (method === 'wallet') {
           const customer = customers.find((c) => c.id === order.customerId)
           if (customer) {
@@ -311,10 +398,41 @@ export const ordersApi = api.injectEndpoints({
               adminName,
               at,
             })
+
+            // Sync with local storage for cross-origin customer-app
+            if (order.customerId === 'u1') {
+              try {
+                const balanceKey = 'chutkima_wallet_balance'
+                const txsKey = 'chutkima_wallet_transactions'
+                const currentBal = parseFloat(localStorage.getItem(balanceKey) || '100')
+                const newBal = currentBal + refundAmount
+                localStorage.setItem(balanceKey, newBal.toString())
+                
+                const txs = JSON.parse(localStorage.getItem(txsKey) || '[]')
+                txs.unshift({
+                  id: uid('cc'),
+                  amount: refundAmount,
+                  type: type === 'full' ? 'refund' : 'partial_refund',
+                  reason: reason || 'Order refund',
+                  orderId: order.reference,
+                  at,
+                })
+                localStorage.setItem(txsKey, JSON.stringify(txs))
+
+                // Instant receipt event
+                localStorage.setItem('chutkima_wallet_refund_received', JSON.stringify({
+                  amount: refundAmount,
+                  orderId: order.reference,
+                  reason,
+                  at,
+                  timestamp: Date.now()
+                }))
+              } catch (e) {
+                console.error('LocalStorage write failed:', e)
+              }
+            }
           }
         }
-
-        const refundMethodLabel = method === 'cash' ? 'Cash Refund' : method === 'qr' ? 'QR Refund' : 'Wallet Credit'
 
         // Mirror into the finance transaction ledger.
         transactions.unshift({

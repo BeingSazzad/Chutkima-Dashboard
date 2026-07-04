@@ -106,7 +106,7 @@ export interface Order {
   /** All riders on this order (multi-rider). */
   assignments: OrderAssignment[]
   /** Dark store fulfilling this order. */
-  storeId: ID
+  storeId: ID | null
   /** Optional packer assigned to pick & pack this order. */
   packerId: ID | null
   /** Admin has confirmed packing is complete (order is "Ready to Collect"). */
@@ -133,6 +133,8 @@ export interface Order {
   scheduledFor: string | null
   /** Admin hold: processing paused until this time; null = not on hold. */
   holdUntil: string | null
+  /** Flag to indicate that a hold was automatically released, showing an alert. */
+  holdReleasedAlert?: boolean
   /** Delivery destination coordinates (for live rider tracking on the map). */
   lat?: number
   lng?: number
@@ -220,6 +222,8 @@ export interface SupplierReturn {
   adminName: string
   /** Date the return was processed. */
   createdAt: string
+  /** List of individual items in a multi-item return. */
+  items?: { productId: string; productName: string; sku: string; quantity: number }[]
 }
 
 /** A top-level grouping of categories (e.g. "Grocery & Kitchen"). */

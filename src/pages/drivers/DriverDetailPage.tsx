@@ -28,7 +28,7 @@ import {
   useSetDriverStatusMutation,
 } from '@/services/endpoints/driversApi'
 import { useGetReportsQuery, useGetReviewsQuery, useGetWarningsQuery } from '@/services/endpoints/reviewsApi'
-import { useGetOpsConfigQuery } from '@/services/endpoints/settingsApi'
+import { useGetOpsConfigQuery, useGetSystemControlsQuery } from '@/services/endpoints/settingsApi'
 import { FUEL_RATE_PER_KM } from '@/lib/constants'
 import { formatNPR } from '@/lib/utils'
 import type { DriverAccountAction } from '@/types/common.types'
@@ -50,6 +50,7 @@ export default function DriverDetailPage() {
   const { data: accountEvents = [] } = useGetDriverAccountEventsQuery(driverId)
   const { data: deliveries = [] } = useGetDriverDeliveriesQuery(driverId)
   const { data: ops } = useGetOpsConfigQuery()
+  const { data: controls } = useGetSystemControlsQuery()
   const [setStatus] = useSetDriverStatusMutation()
   const [setAccount, { isLoading: savingAccount }] = useSetDriverAccountMutation()
   const [warnFor, setWarnFor] = useState<{ reportId?: string; reportReason?: string } | null>(null)
@@ -119,7 +120,7 @@ export default function DriverDetailPage() {
                 <div className="min-w-0">
                   <p className="font-bold text-slate-800">{driver.name}</p>
                   <div className="mt-0.5 flex flex-wrap items-center gap-1.5">
-                    <DriverStatusBadge status={driver.status} />
+                    <DriverStatusBadge status={driver.status} accountStatus={driver.accountStatus} />
                     {accountStatus !== 'active' && <Badge tone={acctMeta.badge}>{acctMeta.label}</Badge>}
                   </div>
                 </div>
@@ -130,7 +131,9 @@ export default function DriverDetailPage() {
                 <p className="flex items-center gap-2 text-slate-600"><MapPin className="h-4 w-4 text-slate-400" /> {driver.zone}</p>
                 <p className="flex items-center gap-2 text-slate-600"><IdCard className="h-4 w-4 text-slate-400" /> License: {driver.licenseNo || <span className="text-slate-400">not on file</span>}</p>
                 <p className="flex items-center gap-2 text-slate-600"><Star className="h-4 w-4 fill-amber-400 text-amber-400" /> {avgRating.toFixed(1)} {reviews.length ? `(${reviews.length} reviews)` : 'rating'}</p>
-                <p className="flex items-center gap-2 text-slate-600"><Fuel className="h-4 w-4 text-slate-400" /> {driver.kmToday} km today · {formatNPR(driver.kmToday * (ops?.fuelRatePerKm ?? FUEL_RATE_PER_KM))} fuel</p>
+                {(controls?.riderEarningsEnabled ?? true) && (
+                  <p className="flex items-center gap-2 text-slate-600"><Fuel className="h-4 w-4 text-slate-400" /> {driver.kmToday} km today · {formatNPR(driver.kmToday * (ops?.fuelRatePerKm ?? FUEL_RATE_PER_KM))} fuel</p>
+                )}
               </div>
               <div className="mt-4 flex gap-2">
                 {accountStatus !== 'active' ? (

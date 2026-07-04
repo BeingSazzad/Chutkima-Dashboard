@@ -162,9 +162,14 @@ const DEFAULT_STORE_ID = 's1'
  * a zone's store in the admin changes routing here. Falls back to the default store
  * for an unknown/unassigned zone so every routed order always has a valid store.
  */
-export function storeIdForZone(zoneName: string): string {
+export function storeIdForZone(zoneName: string): string | null {
   const zone = zones.find((z) => z.name === zoneName || z.areas.includes(zoneName))
-  return zone?.storeId || DEFAULT_STORE_ID
+  if (!zone) return DEFAULT_STORE_ID
+  const servedStores = zone.storeIds && zone.storeIds.length > 0 ? zone.storeIds : (zone.storeId ? [zone.storeId] : [])
+  if (servedStores.length > 1) {
+    return null // unclaimed, first-come first-served
+  }
+  return servedStores[0] || DEFAULT_STORE_ID
 }
 
 // ── Orders ──────────────────────────────────────────────────────────────────
@@ -578,6 +583,7 @@ export const systemControls = {
   whatsappAdminAlert: true,
   /** Master admin number that receives new-order alerts. */
   adminWhatsappNumber: '+977 9800000001',
+  riderEarningsEnabled: true,
 }
 
 /** Referral programme config (feature 35) — all values admin-editable. */

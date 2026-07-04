@@ -51,6 +51,49 @@ export default function ProductsPage() {
     search: debounced || undefined,
   })
 
+  const { data: suppliers = [] } = useGetSuppliersQuery()
+
+  const exportAllProducts = () => {
+    const rows = products.map((p) => {
+      const supplier = suppliers.find((s) => s.id === p.supplierId)
+      return {
+        sku: p.sku,
+        name: p.name,
+        description: p.description || '',
+        brand: p.brand || '',
+        category: p.category,
+        categoryGroup: p.categoryGroup || '',
+        price: String(p.price),
+        mrp: String(p.mrp),
+        stock: String(p.stock),
+        unit: p.unit || '',
+        shelfNo: p.shelfNo || '',
+        image: p.image || '',
+        supplierCode: supplier?.code || '',
+      }
+    })
+
+    downloadCSV(
+      'chutkima-all-products.csv',
+      rows,
+      [
+        { key: 'sku', label: 'sku' },
+        { key: 'name', label: 'name' },
+        { key: 'description', label: 'description' },
+        { key: 'brand', label: 'brand' },
+        { key: 'category', label: 'category' },
+        { key: 'categoryGroup', label: 'categoryGroup' },
+        { key: 'price', label: 'price' },
+        { key: 'mrp', label: 'mrp' },
+        { key: 'stock', label: 'stock' },
+        { key: 'unit', label: 'unit' },
+        { key: 'shelfNo', label: 'shelfNo' },
+        { key: 'image', label: 'image' },
+        { key: 'supplierCode', label: 'supplierCode' },
+      ],
+    )
+  }
+
   const columns: Column<Product>[] = [
     {
       key: 'product',
@@ -127,6 +170,9 @@ export default function ProductsPage() {
         description="Upload, edit, restock or remove items from your catalog."
         actions={
           <>
+            <Button variant="outline" leftIcon={<Download className="h-4 w-4" />} onClick={exportAllProducts}>
+              Export CSV
+            </Button>
             <Button variant="outline" leftIcon={<Upload className="h-4 w-4" />} onClick={() => setBulkOpen(true)}>
               Bulk import
             </Button>
@@ -366,7 +412,15 @@ function BulkImportModal({ open, onClose }: { open: boolean; onClose: () => void
         ['sku', 'name', 'description', 'brand', 'category', 'categoryGroup', 'price', 'mrp', 'stock', 'unit', 'shelfNo', 'image'].map((k) => ({ key: k, label: k })),
       )
     } else {
-      downloadCSV('chutkima-stock-template.csv', [{ sku: 'WW-001', stock: '120' }], [{ key: 'sku', label: 'sku' }, { key: 'stock', label: 'stock' }])
+      downloadCSV(
+        'chutkima-stock-template.csv',
+        [{ sku: 'WW-001', name: 'Wai Wai Noodles', stock: '120' }],
+        [
+          { key: 'sku', label: 'sku' },
+          { key: 'name', label: 'name' },
+          { key: 'stock', label: 'stock' },
+        ],
+      )
     }
   }
 
@@ -417,7 +471,7 @@ function BulkImportModal({ open, onClose }: { open: boolean; onClose: () => void
           {mode === 'products' ? (
             <p>Columns: <span className="font-mono text-xs">sku, name, description, brand, category, categoryGroup, price, mrp, stock, unit, shelfNo, image</span>. Rows are matched by <strong>SKU</strong> — existing SKUs update, new ones are added.</p>
           ) : (
-            <p>Columns: <span className="font-mono text-xs">sku, stock</span>. Updates stock for matching SKUs only — no other fields touched. Great for daily restock.</p>
+            <p>Columns: <span className="font-mono text-xs">sku, name, stock</span>. Updates stock for matching SKUs only (name is ignored but helps identify products) — no other fields touched. Great for daily restock.</p>
           )}
           <Button variant="outline" size="sm" className="mt-3" leftIcon={<Download className="h-3.5 w-3.5" />} onClick={downloadTemplate}>
             Download template

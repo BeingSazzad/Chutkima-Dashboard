@@ -8,6 +8,7 @@ import {
 } from '@/lib/constants'
 import type {
   DriverStatus,
+  DriverAccountStatus,
   OrderStatus,
   PaymentMethod,
   PaymentStatus,
@@ -30,7 +31,14 @@ export function OrderStatusBadge({ status }: { status: OrderStatus }) {
   )
 }
 
-export function DriverStatusBadge({ status }: { status: DriverStatus }) {
+export function DriverStatusBadge({ status, accountStatus }: { status: DriverStatus; accountStatus?: DriverAccountStatus }) {
+  if (accountStatus === 'suspended') {
+    return (
+      <Badge tone="bg-amber-50 text-amber-700 ring-amber-600/15" dot="bg-amber-500">
+        Suspended
+      </Badge>
+    )
+  }
   const meta = DRIVER_STATUS_META[status]
   return (
     <Badge tone={meta.badge} dot={meta.dot}>

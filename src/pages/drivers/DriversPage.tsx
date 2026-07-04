@@ -127,7 +127,7 @@ export default function DriversPage() {
         </span>
       ),
     },
-    { key: 'status', header: 'Status', cell: (d) => <DriverStatusBadge status={d.status} /> },
+    { key: 'status', header: 'Status', cell: (d) => <DriverStatusBadge status={d.status} accountStatus={d.accountStatus} /> },
     {
       key: 'active',
       header: 'Active order',

@@ -42,6 +42,7 @@ import { useGetDriverQuery } from '@/services/endpoints/driversApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import { useGetStoreSetupQuery, useGetSystemControlsQuery, type StoreSetup } from '@/services/endpoints/settingsApi'
 import { useAuth } from '@/hooks/useAuth'
+import { useAppSelector } from '@/store/hooks'
 import type { InvoiceSize, Order, OrderItem, OrderStatus, RefundType } from '@/types/common.types'
 
 export default function OrderDetailPage() {
@@ -61,6 +62,7 @@ export default function OrderDetailPage() {
   const [substituteFor, setSubstituteFor] = useState<OrderItem | null>(null)
   const [resolveAdjustment, { isLoading: isResolving }] = useResolveSubstitutionAdjustmentMutation()
   const { user } = useAuth()
+  const activeStoreId = useAppSelector((s) => s.ui.activeStoreId)
 
   if (isLoading) return <Spinner label="Loading order…" className="py-24" />
   if (!order)
@@ -341,7 +343,7 @@ export default function OrderDetailPage() {
                         <p className="text-sm font-medium text-violet-700">
                           “{nextLabel}” is normally updated by the rider in their app.
                         </p>
-                        <Button className="mt-2" size="sm" variant="outline" loading={updating} onClick={() => updateStatus({ orderId: order.id, status: nextStatus })}>
+                        <Button className="mt-2" size="sm" variant="outline" loading={updating} onClick={() => updateStatus({ orderId: order.id, status: nextStatus, storeId: activeStoreId || undefined })}>
                           Admin override → Mark {nextLabel}
                         </Button>
                       </div>
@@ -590,7 +592,7 @@ function RefundCard({ order }: { order: Order }) {
   const [amount, setAmount] = useState('')
   const [reason, setReason] = useState('')
   const [comments, setComments] = useState('')
-  const [method, setMethod] = useState<'cash' | 'qr' | 'wallet' | ''>('')
+  const [method, setMethod] = useState<'qr' | 'wallet' | ''>('')
   const [itemQty, setItemQty] = useState<Record<string, number>>({})
 
   const refunded = order.refunds.reduce((s, r) => s + r.amount, 0)
@@ -618,8 +620,9 @@ function RefundCard({ order }: { order: Order }) {
       reason: reason.trim(),
       comments: comments.trim(),
       adminName: user?.name ?? 'Admin',
+      adminId: user?.id,
       items: type === 'item' ? refundItems : undefined,
-      method: method as 'cash' | 'qr' | 'wallet',
+      method: method as 'qr' | 'wallet',
     }).unwrap()
     setOpen(false)
     setType('full')
@@ -736,16 +739,6 @@ function RefundCard({ order }: { order: Order }) {
           <div>
             <p className="mb-1.5 text-sm font-semibold text-slate-700">Refund method <span className="text-red-500">*</span></p>
             <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={() => setMethod('cash')}
-                className={cn(
-                  'flex-1 py-2 px-3 border rounded-xl font-bold text-center text-sm transition-colors focus-ring',
-                  method === 'cash' ? 'border-brand-500 bg-brand-50 text-brand-700 ring-1 ring-brand-500' : 'border-slate-200 text-slate-600 hover:bg-slate-50'
-                )}
-              >
-                Cash Refund
-              </button>
               <button
                 type="button"
                 onClick={() => setMethod('qr')}

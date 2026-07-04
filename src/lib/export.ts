@@ -256,12 +256,24 @@ export function printSupplierReturn(ret: any) {
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td style="font-weight:600;color:#0f172a">${ret.productName}</td>
-            <td style="font-family:monospace">${ret.sku}</td>
-            <td style="font-weight:700;font-size:15px">${ret.quantity}</td>
-            <td><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;background:#fee2e2;color:#991b1b">${reasonLabel}</span></td>
-          </tr>
+          ${ret.items && ret.items.length > 0
+            ? ret.items.map((item: any) => `
+                <tr>
+                  <td style="font-weight:600;color:#0f172a">${item.productName}</td>
+                  <td style="font-family:monospace">${item.sku}</td>
+                  <td style="font-weight:700;font-size:15px">${item.quantity}</td>
+                  <td><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;background:#fee2e2;color:#991b1b">${reasonLabel}</span></td>
+                </tr>
+              `).join('')
+            : `
+                <tr>
+                  <td style="font-weight:600;color:#0f172a">${ret.productName}</td>
+                  <td style="font-family:monospace">${ret.sku}</td>
+                  <td style="font-weight:700;font-size:15px">${ret.quantity}</td>
+                  <td><span style="display:inline-block;padding:2px 8px;border-radius:6px;font-size:11px;font-weight:700;text-transform:uppercase;background:#fee2e2;color:#991b1b">${reasonLabel}</span></td>
+                </tr>
+              `
+          }
         </tbody>
       </table>
 

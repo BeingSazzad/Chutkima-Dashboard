@@ -10,10 +10,9 @@ import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
-import { PaymentBadge } from '@/components/shared/StatusBadge'
+import { OrderStatusBadge, PaymentBadge } from '@/components/shared/StatusBadge'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
 import { AssignPackerModal } from '@/components/orders/AssignPackerModal'
-import { OrderStatusSelect } from '@/components/orders/OrderStatusSelect'
 import { DateRangeFilter } from '@/components/shared/DateRangeFilter'
 import { ORDER_STATUS_META, PAYMENT_META } from '@/lib/constants'
 import { awaitingRiderAcceptance } from '@/lib/orderStage'
@@ -97,6 +96,7 @@ export default function OrdersPage() {
   const { data: packers = [] } = useGetPackersQuery()
 
   /** Quick inline status change. Cancel needs a reason; pickup needs a rider; others confirm. */
+  // @ts-ignore
   const changeStatus = (order: Order, status: OrderStatus) => {
     if (status === 'cancelled') {
       setCancelFor(order)
@@ -221,6 +221,11 @@ export default function OrdersPage() {
           >
             {o.reference}
           </button>
+          {o.holdReleasedAlert && (
+            <span className="ml-1.5 inline-flex items-center gap-0.5 rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-bold text-amber-700 ring-1 ring-inset ring-amber-600/20 animate-pulse">
+              ⚠️ Hold Released
+            </span>
+          )}
           {o.scheduledFor ? (
             <p className="mt-0.5 flex items-center gap-1 text-xs font-medium text-violet-600">
               <Clock3 className="h-3 w-3" /> {fmtSchedule(o.scheduledFor)}
@@ -372,7 +377,7 @@ export default function OrdersPage() {
       key: 'status',
       header: 'Status',
       className: 'whitespace-nowrap',
-      cell: (o) => <OrderStatusSelect status={o.status} loading={pendingId === o.id} onChange={(status) => changeStatus(o, status)} />,
+      cell: (o) => <OrderStatusBadge status={o.status} />,
     },
   ]
 

@@ -147,16 +147,12 @@ export const ordersApi = api.injectEndpoints({
         const order = orders.find((o) => o.id === orderId)
         const driver = drivers.find((d) => d.id === driverId)
         if (!order || !driver) return { error: { status: 404, data: 'Not found' } as never }
-        // Free any previous driver
-        if (order.driverId) {
-          const prev = drivers.find((d) => d.id === order.driverId)
-          if (prev) {
-            prev.status = 'available'
-            prev.activeOrderId = null
-          }
+        if (!order.assignments.some((a) => a.driverId === driverId)) {
+          order.assignments.push({ driverId, note: '', confirmed: false })
         }
-        order.driverId = driverId
-        order.assignments = [{ driverId, note: '', confirmed: false }]
+        if (!order.driverId) {
+          order.driverId = driverId
+        }
         if (!order.storeId && driver.storeIds && driver.storeIds.length > 0) {
           order.storeId = driver.storeIds[0]
         }

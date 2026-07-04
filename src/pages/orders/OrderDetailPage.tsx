@@ -16,7 +16,6 @@ import { OrderStatusBadge, PaymentBadge } from '@/components/shared/StatusBadge'
 import { OrderJourney } from '@/components/orders/OrderJourney'
 import { LiveTrackingCard } from '@/components/orders/LiveTrackingCard'
 import { PackingCard } from '@/components/orders/PackingCard'
-import { PendingConfirm } from '@/components/orders/PendingConfirm'
 import { HoldControl } from '@/components/orders/HoldControl'
 import { AssignDriverModal } from '@/components/orders/AssignDriverModal'
 import { RiderCard } from '@/components/orders/RiderCard'
@@ -313,10 +312,7 @@ export default function OrderDetailPage() {
                 <>
                   <HoldControl order={order} />
 
-                  {/* Pending → 15s cancellation window + auto-confirm (admin can override). */}
-                  {order.status === 'pending' && (
-                    <PendingConfirm order={order} confirm={() => updateStatus({ orderId: order.id, status: 'confirmed' })} confirming={updating} />
-                  )}
+
 
                   {/* Rider assigned but not yet accepted — admin can mark accepted or reassign. */}
                   {awaitingRiderAcceptance(order) && (

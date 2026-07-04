@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/Button'
 import type { Order } from '@/types/common.types'
 
 /** Customer cancellation window before a pending order is auto-confirmed. */
-const WINDOW_SECS = 15
+const WINDOW_SECS = 10
 /** Only genuinely fresh orders auto-confirm on screen; older pending orders keep a manual button. */
 const FRESH_SECS = 120
 

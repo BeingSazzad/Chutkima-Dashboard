@@ -51,6 +51,10 @@
   z-index: 0;
 }
 
+.leaflet-tile {
+  filter: sepia(0.6) hue-rotate(100deg) saturate(1.4) brightness(0.95) contrast(1.1);
+}
+
 @layer components {
   /* Consistent focus ring used across interactive elements */
   .focus-ring {

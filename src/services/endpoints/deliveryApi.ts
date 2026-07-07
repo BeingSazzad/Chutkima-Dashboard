@@ -31,6 +31,8 @@ export const deliveryApi = api.injectEndpoints({
           geofence: payload.geofence ?? [],
           storeId: payload.storeId,
           active: payload.active ?? true,
+          status: payload.status ?? 'active',
+          offlineReason: payload.offlineReason ?? '',
         }
         zones.push(created)
         return { data: clone(created) }

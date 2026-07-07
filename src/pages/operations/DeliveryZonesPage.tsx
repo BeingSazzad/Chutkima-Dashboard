@@ -21,7 +21,6 @@ import {
   useGetZonesQuery,
   useSaveDeliveryConfigMutation,
   useSaveZoneMutation,
-  useToggleZoneMutation,
 } from '@/services/endpoints/deliveryApi'
 import { useGetStoresQuery } from '@/services/endpoints/storesApi'
 import type { DeliveryTier, Zone } from '@/types/common.types'
@@ -30,6 +29,27 @@ export default function DeliveryZonesPage() {
   const [formFor, setFormFor] = useState<Zone | 'new' | null>(null)
   const [deleteFor, setDeleteFor] = useState<Zone | null>(null)
   const [fenceFor, setFenceFor] = useState<Zone | null>(null)
+  const [offlineReasonModalFor, setOfflineReasonModalFor] = useState<Zone | null>(null)
+  const [saveZone] = useSaveZoneMutation()
+
+  const handleToggleActive = async (z: Zone) => {
+    if (z.active) {
+      setOfflineReasonModalFor(z)
+    } else {
+      await saveZone({ id: z.id, active: true, status: 'active', offlineReason: '' }).unwrap()
+    }
+  }
+
+  const handleSaveOfflineReason = async (reason: string, status: 'offline' | 'on_hold') => {
+    if (!offlineReasonModalFor) return
+    await saveZone({
+      id: offlineReasonModalFor.id,
+      active: false,
+      status,
+      offlineReason: reason,
+    }).unwrap()
+    setOfflineReasonModalFor(null)
+  }
 
   return (
     <>
@@ -37,13 +57,119 @@ export default function DeliveryZonesPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <FeeConfigCard />
-        <ZonesCard onAdd={() => setFormFor('new')} onEdit={setFormFor} onDelete={setDeleteFor} onFence={setFenceFor} />
+        <ZonesCard
+          onAdd={() => setFormFor('new')}
+          onEdit={setFormFor}
+          onDelete={setDeleteFor}
+          onFence={setFenceFor}
+          onToggleActive={handleToggleActive}
+        />
       </div>
 
       <ZoneFormModal zone={formFor} onClose={() => setFormFor(null)} />
       <GeofenceModal zone={fenceFor} onClose={() => setFenceFor(null)} />
       <DeleteZone zone={deleteFor} onClose={() => setDeleteFor(null)} />
+      <OfflineReasonModal
+        zone={offlineReasonModalFor}
+        onClose={() => setOfflineReasonModalFor(null)}
+        onSave={handleSaveOfflineReason}
+      />
     </>
+  )
+}
+
+function OfflineReasonModal({
+  zone,
+  onClose,
+  onSave,
+}: {
+  zone: Zone | null
+  onClose: () => void
+  onSave: (reason: string, status: 'offline' | 'on_hold') => void
+}) {
+  const [reason, setReason] = useState('Heavy rain')
+  const [customText, setCustomText] = useState('')
+  const [status, setStatus] = useState<'offline' | 'on_hold'>('offline')
+
+  const options = ['Heavy rain', 'Rider unavailable', 'Traffic', 'Strike', 'Custom text']
+
+  const handleSave = () => {
+    const finalReason = reason === 'Custom text' ? customText : reason
+    onSave(finalReason, status)
+  }
+
+  return (
+    <Modal
+      open={!!zone}
+      onClose={onClose}
+      title={`Take "${zone?.name}" Offline`}
+      footer={
+        <>
+          <Button variant="outline" onClick={onClose}>Cancel</Button>
+          <Button onClick={handleSave} disabled={reason === 'Custom text' && !customText.trim()}>
+            Save & Take Offline
+          </Button>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="text-sm font-medium text-slate-700">Choose Action</label>
+          <div className="mt-2 flex gap-4">
+            <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+              <input
+                type="radio"
+                name="offline-status"
+                checked={status === 'offline'}
+                onChange={() => setStatus('offline')}
+                className="text-brand focus:ring-brand"
+              />
+              Offline
+            </label>
+            <label className="flex items-center gap-2 text-sm font-semibold cursor-pointer">
+              <input
+                type="radio"
+                name="offline-status"
+                checked={status === 'on_hold'}
+                onChange={() => setStatus('on_hold')}
+                className="text-brand focus:ring-brand"
+              />
+              On Hold
+            </label>
+          </div>
+        </div>
+
+        <div>
+          <label className="text-sm font-medium text-slate-700">Reason / Custom Message</label>
+          <div className="mt-2 grid grid-cols-2 gap-2">
+            {options.map((opt) => (
+              <button
+                key={opt}
+                type="button"
+                onClick={() => setReason(opt)}
+                className={`flex h-10 items-center justify-center rounded-xl border text-xs font-semibold transition-all ${
+                  reason === opt
+                    ? 'border-brand bg-brand-50 text-brand-700'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50'
+                }`}
+              >
+                {opt}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {reason === 'Custom text' && (
+          <Input
+            label="Custom message"
+            placeholder="Type custom offline reason..."
+            value={customText}
+            onChange={(e) => setCustomText(e.target.value)}
+            autoFocus
+          />
+        )}
+      </div>
+    </Modal>
   )
 }
 
@@ -143,15 +269,16 @@ function ZonesCard({
   onEdit,
   onDelete,
   onFence,
+  onToggleActive,
 }: {
   onAdd: () => void
   onEdit: (z: Zone) => void
   onDelete: (z: Zone) => void
   onFence: (z: Zone) => void
+  onToggleActive: (z: Zone) => void
 }) {
   const { data: zones = [], isLoading } = useGetZonesQuery()
   const { data: stores = [] } = useGetStoresQuery()
-  const [toggle] = useToggleZoneMutation()
   const [menuFor, setMenuFor] = useState<string | null>(null)
   const storeName = (id?: string) => stores.find((s) => s.id === id)?.name
 
@@ -189,6 +316,11 @@ function ZonesCard({
                   <span className="flex items-center gap-0.5"><Clock className="h-3 w-3" /> {z.etaMins} min ETA</span>
                 </p>
                 {z.areas.length > 0 && <p className="mt-0.5 truncate text-xs text-slate-400">Covers: {z.areas.join(', ')}</p>}
+                {!z.active && z.offlineReason && (
+                  <p className="mt-1 text-xs font-semibold text-red-600 bg-red-50/50 rounded-lg px-2.5 py-1 w-fit">
+                    Reason: {z.offlineReason}
+                  </p>
+                )}
                 {/* Badges wrap under the meta so a paused/geo-fenced row never crushes the name column. */}
                 <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                   {(() => {
@@ -203,12 +335,16 @@ function ZonesCard({
                     ));
                   })()}
                   {z.geofence.length >= 3 && <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15">Geo-fenced</Badge>}
-                  {!z.active && <Badge>Paused</Badge>}
+                  {!z.active && (
+                    <Badge tone={z.status === 'on_hold' ? 'bg-amber-50 text-amber-700 ring-amber-600/15' : 'bg-red-50 text-red-700 ring-red-600/15'}>
+                      {z.status === 'on_hold' ? 'On Hold' : 'Offline'}
+                    </Badge>
+                  )}
                 </div>
               </div>
               {/* Primary toggle stays visible; secondary actions tuck into a kebab menu to cut clutter. */}
               <div className="flex shrink-0 items-center gap-1">
-                <Switch checked={z.active} onChange={() => toggle(z.id)} size="sm" aria-label={`Toggle ${z.name}`} />
+                <Switch checked={z.active} onChange={() => onToggleActive(z)} size="sm" aria-label={`Toggle ${z.name}`} />
                 <div className="relative">
                   <button
                     onClick={() => setMenuFor((id) => (id === z.id ? null : z.id))}
@@ -260,14 +396,14 @@ function ZoneFormModal({ zone, onClose }: { zone: Zone | 'new' | null; onClose: 
   const isEdit = zone && zone !== 'new'
   const z = isEdit ? (zone as Zone) : null
 
-  const empty = { name: '', etaMins: '12', areas: '', mapLink: '', storeIds: [] as string[] }
+  const empty = { name: '', etaMins: '12', areas: '', mapLink: '', storeIds: [] as string[], status: 'active', offlineReason: '' }
   const [form, setForm] = useState(empty)
   const key = zone === 'new' ? 'new' : z?.id ?? 'closed'
   const [lastKey, setLastKey] = useState('')
   if (key !== lastKey && zone) {
     setLastKey(key)
     const initialStoreIds = z ? (z.storeIds && z.storeIds.length > 0 ? z.storeIds : (z.storeId ? [z.storeId] : [])) : []
-    setForm(z ? { name: z.name, etaMins: String(z.etaMins), areas: z.areas.join(', '), mapLink: z.mapLink, storeIds: initialStoreIds } : empty)
+    setForm(z ? { name: z.name, etaMins: String(z.etaMins), areas: z.areas.join(', '), mapLink: z.mapLink, storeIds: initialStoreIds, status: z.status ?? 'active', offlineReason: z.offlineReason ?? '' } : empty)
   }
   const set = (k: keyof typeof form, v: any) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -280,6 +416,9 @@ function ZoneFormModal({ zone, onClose }: { zone: Zone | 'new' | null; onClose: 
       mapLink: form.mapLink.trim(),
       storeIds: form.storeIds,
       storeId: form.storeIds.length > 0 ? form.storeIds[0] : undefined,
+      status: form.status as any,
+      offlineReason: form.offlineReason,
+      active: form.status === 'active',
     }).unwrap()
     onClose()
   }
@@ -310,7 +449,29 @@ function ZoneFormModal({ zone, onClose }: { zone: Zone | 'new' | null; onClose: 
           />
           <p className="mt-1 text-xs text-slate-400">Orders placed in this zone are automatically routed to these dark stores.</p>
         </div>
-        <Input label="Avg. ETA (min)" type="number" value={form.etaMins} onChange={(e) => set('etaMins', e.target.value)} hint="Delivery fee is set globally by cart-value tiers (left panel)." />
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs font-semibold text-slate-500">Status</label>
+            <select
+              value={form.status}
+              onChange={(e) => set('status', e.target.value)}
+              className="focus-ring mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm outline-none focus:border-brand"
+            >
+              <option value="active">Active</option>
+              <option value="offline">Offline</option>
+              <option value="on_hold">On Hold</option>
+            </select>
+          </div>
+          <Input label="Avg. ETA (min)" type="number" value={form.etaMins} onChange={(e) => set('etaMins', e.target.value)} />
+        </div>
+        {form.status !== 'active' && (
+          <Input
+            label="Offline Reason / Custom Message"
+            value={form.offlineReason}
+            onChange={(e) => set('offlineReason', e.target.value)}
+            placeholder="e.g. Heavy rain, rider unavailable..."
+          />
+        )}
         <Input
           label="Covered areas"
           value={form.areas}

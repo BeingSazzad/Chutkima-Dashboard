@@ -462,6 +462,8 @@ export interface Zone {
   storeId?: ID
   storeIds?: ID[]
   active: boolean
+  status?: 'active' | 'offline' | 'on_hold'
+  offlineReason?: string
 }
 
 /** Tiered delivery fee: fee applies when order >= minOrder (highest match wins). */

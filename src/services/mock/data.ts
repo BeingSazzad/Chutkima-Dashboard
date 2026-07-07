@@ -145,12 +145,12 @@ export const categoryGroups: CategoryGroup[] = [
 
 // ── Delivery zones — SINGLE SOURCE OF TRUTH for zone -> dark store routing ─────
 export const zones: Zone[] = [
-  { id: 'z1', name: 'Traffic Chowk', etaMins: 10, areas: ['Traffic Chowk', 'Yogikuti', 'Hospital Line'], mapLink: 'https://maps.google.com/?q=Traffic+Chowk+Butwal', geofence: [[27.7075, 83.4445], [27.7095, 83.4525], [27.7025, 83.4565], [27.6965, 83.4515], [27.6985, 83.4435]], storeId: 's1', active: true },
-  { id: 'z2', name: 'Amarpath', etaMins: 12, areas: ['Amarpath', 'Buddha Marg', 'Devinagar'], mapLink: 'https://maps.google.com/?q=Amarpath+Butwal', geofence: [], storeId: 's1', active: true },
-  { id: 'z3', name: 'Milanchowk', etaMins: 14, areas: ['Milanchowk', 'Kalikanagar'], mapLink: '', geofence: [], storeId: 's1', active: true },
-  { id: 'z4', name: 'Golpark', etaMins: 13, areas: ['Golpark', 'Tinkune', 'Ramnagar'], mapLink: '', geofence: [], storeId: 's2', active: true },
-  { id: 'z5', name: 'Sukkhanagar', etaMins: 16, areas: ['Sukkhanagar', 'Fulbari'], mapLink: '', geofence: [], storeId: 's2', active: true },
-  { id: 'z6', name: 'Buddhanagar', etaMins: 18, areas: ['Buddhanagar', 'Manglapur'], mapLink: '', geofence: [], storeId: 's2', active: false },
+  { id: 'z1', name: 'Traffic Chowk', etaMins: 10, areas: ['Traffic Chowk', 'Yogikuti', 'Hospital Line'], mapLink: 'https://maps.google.com/?q=Traffic+Chowk+Butwal', geofence: [[27.7075, 83.4445], [27.7095, 83.4525], [27.7025, 83.4565], [27.6965, 83.4515], [27.6985, 83.4435]], storeId: 's1', active: true, status: 'active', offlineReason: '' },
+  { id: 'z2', name: 'Amarpath', etaMins: 12, areas: ['Amarpath', 'Buddha Marg', 'Devinagar'], mapLink: 'https://maps.google.com/?q=Amarpath+Butwal', geofence: [], storeId: 's1', active: true, status: 'active', offlineReason: '' },
+  { id: 'z3', name: 'Milanchowk', etaMins: 14, areas: ['Milanchowk', 'Kalikanagar'], mapLink: '', geofence: [], storeId: 's1', active: true, status: 'active', offlineReason: '' },
+  { id: 'z4', name: 'Golpark', etaMins: 13, areas: ['Golpark', 'Tinkune', 'Ramnagar'], mapLink: '', geofence: [], storeId: 's2', active: true, status: 'active', offlineReason: '' },
+  { id: 'z5', name: 'Sukkhanagar', etaMins: 16, areas: ['Sukkhanagar', 'Fulbari'], mapLink: '', geofence: [], storeId: 's2', active: true, status: 'active', offlineReason: '' },
+  { id: 'z6', name: 'Buddhanagar', etaMins: 18, areas: ['Buddhanagar', 'Manglapur'], mapLink: '', geofence: [], storeId: 's2', active: false, status: 'offline', offlineReason: 'Rider unavailable' },
 ]
 
 /** Safe default store when a zone is unknown or has no store assigned. */

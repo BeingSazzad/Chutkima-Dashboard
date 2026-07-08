@@ -1,0 +1,2380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chutkima Rider App — Driver Flow Prototype</title>
+    <!-- Design system: Tailwind + Inter/Hind + FontAwesome (same pattern as rider dashboard) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=Hind:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: { extend: { colors: {
+                brand: { DEFAULT: '#0B8570', dark: '#096A5A', light: '#E6F4F1' }
+            }}}
+        };
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #eef2f6; }
+        .np { font-family: 'Hind', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+        @keyframes customPulse { 0%,100% { transform: scale(1); opacity:.25 } 50% { transform: scale(1.4); opacity:.6 } }
+        .pulse-ring { animation: customPulse 2s infinite ease-in-out; }
+        .toggle-dot { transition: all .3s cubic-bezier(.4,0,.2,1); }
+        .glow-brand { box-shadow: 0 0 18px rgba(11,133,112,.35); }
+        .glow-blue { box-shadow: 0 0 16px rgba(59,130,246,.3); }
+        .checked-line { text-decoration: line-through; color:#94a3b8; transition: all .3s ease; }
+        /* App screen layering */
+        .screen { position:absolute; inset:0; display:flex; flex-direction:column; }
+        .hidden-screen { display:none !important; }
+        .sheet-enter { transform: translateY(0) !important; }
+        .fade { transition: all .3s ease; }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col lg:flex-row items-center justify-center p-4 lg:p-8 gap-8 overflow-x-hidden text-slate-800">
+
+    <!-- ============ LEFT: SIMULATION CONSOLE & NOTES (design pattern) ============ -->
+    <div class="w-full lg:w-[400px] bg-white p-6 rounded-2xl border border-slate-200/80 flex flex-col gap-5 shadow-xl self-start">
+        <div>
+            <div class="flex items-center gap-2 mb-2">
+                <span class="px-2.5 py-1 text-xs font-semibold bg-brand/10 text-brand rounded-full border border-brand/20">Chutkima · Butwal</span>
+                <span class="text-xs text-slate-400 font-medium">Rider App v1.0</span>
+            </div>
+            <h1 class="text-2xl font-extrabold bg-gradient-to-r from-brand to-emerald-600 bg-clip-text text-transparent">Chutkima Rider</h1>
+            <p class="text-sm text-slate-600 mt-2 leading-relaxed">
+                Admin-<strong>assigned</strong> order flow (no job feed / accept-reject). Brand teal
+                <strong class="text-brand">#0B8570</strong>, NPR currency. Built to the
+                <strong>RIDER_APP_USERFLOW.md</strong> spec — features 111A–115C.
+            </p>
+        </div>
+
+        <div class="border-t border-slate-100 pt-4">
+            <h3 class="text-sm font-bold text-slate-800 mb-3"><i class="fa-solid fa-gamepad mr-2 text-brand"></i>Simulation Console</h3>
+            <div class="grid grid-cols-2 gap-2 text-xs">
+                <button onclick="simAssign('Prepaid')" class="p-3 bg-slate-50 hover:bg-brand hover:text-white text-slate-700 rounded-xl border border-slate-200 transition-all text-left flex flex-col justify-between h-[72px] shadow-sm active:scale-95">
+                    <span class="font-bold block">+ Prepaid Order</span><span class="text-[10px] opacity-80">Push new assignment (112A)</span>
+                </button>
+                <button onclick="simAssign('COD')" class="p-3 bg-slate-50 hover:bg-orange-600 hover:text-white text-slate-700 rounded-xl border border-slate-200 transition-all text-left flex flex-col justify-between h-[72px] shadow-sm active:scale-95">
+                    <span class="font-bold block">+ COD Order</span><span class="text-[10px] opacity-80">Collect cash on delivery</span>
+                </button>
+                <button onclick="simAssign('Scheduled')" class="p-3 bg-slate-50 hover:bg-violet-600 hover:text-white text-slate-700 rounded-xl border border-slate-200 transition-all text-left flex flex-col justify-between h-[72px] shadow-sm active:scale-95">
+                    <span class="font-bold block">+ Scheduled</span><span class="text-[10px] opacity-80">Locked until 7:00 AM (112C)</span>
+                </button>
+                <button onclick="simAssign('Team')" class="p-3 bg-slate-50 hover:bg-indigo-600 hover:text-white text-slate-700 rounded-xl border border-slate-200 transition-all text-left flex flex-col justify-between h-[72px] shadow-sm active:scale-95">
+                    <span class="font-bold block">+ Team Order</span><span class="text-[10px] opacity-80">Multi-rider portion (112D)</span>
+                </button>
+                <button onclick="simActivateScheduled()" class="p-3 bg-slate-50 hover:bg-amber-500 hover:text-white text-slate-700 rounded-xl border border-slate-200 transition-all text-left flex flex-col justify-between h-[72px] shadow-sm active:scale-95">
+                    <span class="font-bold block">⏰ 7:00 AM Cron</span><span class="text-[10px] opacity-80">Activate scheduled orders</span>
+                </button>
+                <button onclick="simCancelActive()" class="p-3 bg-slate-50 hover:bg-rose-500 hover:text-white text-slate-700 rounded-xl border border-slate-200 transition-all text-left flex flex-col justify-between h-[72px] shadow-sm active:scale-95">
+                    <span class="font-bold block">✕ Cancel Order</span><span class="text-[10px] opacity-80">Alert on cancellation (112E)</span>
+                </button>
+            </div>
+            <button onclick="resetDemo()" class="mt-2 w-full p-2.5 bg-slate-800 hover:bg-slate-900 text-white rounded-xl text-xs font-bold transition-all active:scale-95"><i class="fa-solid fa-rotate-left mr-1.5"></i>Reset Demo</button>
+
+            <!-- store / ops + pay-mode simulation -->
+            <div class="mt-3 pt-3 border-t border-slate-100">
+                <p class="text-[11px] font-bold text-slate-600 mb-2">Store / Ops simulation</p>
+                <button onclick="simParcelReady()" class="w-full p-2.5 bg-slate-50 hover:bg-emerald-600 hover:text-white text-slate-700 rounded-xl border border-slate-200 text-xs font-bold transition-all active:scale-95 text-left flex items-center gap-2"><i class="fa-solid fa-box-open"></i><span class="flex-1">📦 Mark Parcel Ready<span class="block text-[10px] opacity-70 font-medium">Store packed → Ready for Pickup</span></span></button>
+                <p class="text-[11px] font-bold text-slate-600 mt-3 mb-1.5">Earnings mode <span class="font-medium text-slate-400">(admin config)</span></p>
+                <div class="grid grid-cols-3 gap-1.5 text-[11px]">
+                    <button id="pm-fuel"       onclick="setPayMode('fuel')"       class="h-9 rounded-lg border font-bold transition-all">Fuel</button>
+                    <button id="pm-salary"     onclick="setPayMode('salary')"     class="h-9 rounded-lg border font-bold transition-all">Salary</button>
+                    <button id="pm-commission" onclick="setPayMode('commission')" class="h-9 rounded-lg border font-bold transition-all">Commission</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="border-t border-slate-100 pt-4 text-xs text-slate-500 space-y-2.5">
+            <h3 class="font-bold text-slate-700 mb-1">Design rules enforced (4.6):</h3>
+            <p><i class="fa-solid fa-hand-pointer text-brand mr-1.5"></i>≥ 56px tap targets (gloves) · ≥ 16px body font</p>
+            <p><i class="fa-solid fa-layer-group text-brand mr-1.5"></i>Max 2 levels deep (Orders → Detail; rest overlays)</p>
+            <p><i class="fa-solid fa-wifi text-brand mr-1.5"></i>Offline cache of last order · logout confirmation</p>
+        </div>
+    </div>
+
+    <!-- ============ RIGHT: 430 x 932 MOBILE SCREEN (no bezel) ============ -->
+    <div class="relative w-[430px] h-[932px] bg-slate-50 rounded-[40px] shadow-[0_25px_60px_-15px_rgba(0,0,0,.3)] overflow-hidden border border-slate-200 flex-shrink-0">
+
+        <!-- Status bar -->
+        <div class="h-11 px-7 pt-3 flex items-center justify-between text-sm font-semibold text-slate-800 z-40 select-none">
+            <span id="clock">7:24</span>
+            <div class="flex items-center gap-2">
+                <i class="fa-solid fa-signal text-[12px] text-brand"></i>
+                <span class="text-[11px] tracking-wide">NTC 4G</span>
+                <i class="fa-solid fa-battery-three-quarters text-[13px]"></i>
+            </div>
+        </div>
+
+        <!-- ===================== SCREEN: SPLASH ===================== -->
+        <div id="screen-splash" class="screen items-center justify-center bg-brand text-white" style="top:44px">
+            <div class="text-center">
+                <div class="w-24 h-24 mx-auto rounded-3xl bg-white/15 backdrop-blur flex items-center justify-center mb-5 border border-white/20">
+                    <i class="fa-solid fa-bolt text-5xl"></i>
+                </div>
+                <h1 class="text-4xl font-black tracking-tight">Chutkima</h1>
+                <p class="text-white/80 mt-2 text-base font-medium">Rider Partner</p>
+            </div>
+            <button onclick="goLogin()" class="absolute bottom-12 left-7 right-7 h-14 bg-white text-brand rounded-2xl text-base font-extrabold active:scale-[.98] transition-all shadow-lg">Get Started</button>
+        </div>
+
+        <!-- ===================== SCREEN: LOGIN / SIGN UP (111A) ===================== -->
+        <div id="screen-login" class="screen hidden-screen px-7 pt-5 overflow-y-auto no-scrollbar pb-10" style="top:44px">
+            <button onclick="goSplash()" class="w-11 h-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600 mb-4"><i class="fa-solid fa-arrow-left"></i></button>
+
+            <!-- brand -->
+            <div class="flex items-center gap-2.5 mb-5">
+                <div class="w-10 h-10 rounded-xl bg-brand text-white flex items-center justify-center"><i class="fa-solid fa-bolt"></i></div>
+                <div><h2 class="text-lg font-extrabold text-slate-800 leading-tight">Chutkima Rider</h2><span class="text-xs text-slate-400">Delivery partner</span></div>
+            </div>
+
+            <!-- Sign In / Sign Up toggle -->
+            <div class="flex gap-1 bg-slate-100 p-1 rounded-xl mb-5">
+                <button id="auth-tab-signin" onclick="showAuth('signin')" class="flex-1 h-10 rounded-lg text-sm font-bold transition-all">Sign In</button>
+                <button id="auth-tab-signup" onclick="showAuth('signup')" class="flex-1 h-10 rounded-lg text-sm font-bold transition-all">Sign Up</button>
+            </div>
+
+            <!-- ============ SIGN IN ============ -->
+            <div id="auth-signin">
+                <div id="login-phone">
+                    <h3 class="text-xl font-extrabold text-slate-800">Welcome back</h3>
+                    <p class="text-sm text-slate-500 mt-1">Enter your phone to get an OTP (Sparrow SMS).</p>
+                    <label class="block text-xs font-bold text-slate-500 mt-6 mb-1.5 uppercase tracking-wide">Phone number</label>
+                    <div class="flex items-center gap-2 bg-white border-2 border-slate-200 focus-within:border-brand rounded-2xl px-4 h-14 transition-colors">
+                        <span class="text-base font-bold text-slate-500">+977</span>
+                        <input id="phoneInput" type="tel" maxlength="10" value="9845012345" placeholder="98XXXXXXXX" class="flex-1 bg-transparent text-base font-bold text-slate-800 focus:outline-none tracking-wide">
+                    </div>
+                    <button onclick="sendOtp()" class="mt-6 w-full h-14 bg-brand hover:bg-brand-dark text-white rounded-2xl text-base font-extrabold active:scale-[.98] transition-all glow-brand">Send OTP</button>
+                    <p class="text-xs text-slate-400 text-center mt-4">New rider? <button onclick="showAuth('signup')" class="font-bold text-brand">Create an account</button></p>
+                </div>
+                <div id="login-otp" class="hidden">
+                    <h3 class="text-xl font-extrabold text-slate-800">Verify OTP</h3>
+                    <p class="text-sm text-slate-500 mt-1">6-digit code sent to <strong id="otpPhoneLabel" class="text-slate-700">+977 9845012345</strong>.</p>
+                    <div class="flex gap-2 mt-6" id="otpBoxes">
+                        <input maxlength="1" class="otp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                        <input maxlength="1" class="otp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                        <input maxlength="1" class="otp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                        <input maxlength="1" class="otp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                        <input maxlength="1" class="otp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                        <input maxlength="1" class="otp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                    </div>
+                    <p class="text-sm text-slate-400 mt-4">Tip: any 6 digits work in this demo.</p>
+                    <button onclick="verifyOtp()" class="mt-5 w-full h-14 bg-brand hover:bg-brand-dark text-white rounded-2xl text-base font-extrabold active:scale-[.98] transition-all glow-brand">Verify & Continue</button>
+                    <button onclick="backToPhone()" class="mt-3 w-full h-12 text-slate-500 text-sm font-bold">Change number</button>
+                </div>
+            </div>
+
+            <!-- ============ SIGN UP (rider registration) ============ -->
+            <div id="auth-signup" class="hidden">
+                <!-- progress -->
+                <div class="flex gap-1.5 mb-2">
+                    <div id="su-prog-1" class="flex-1 h-1.5 rounded-full bg-slate-200"></div>
+                    <div id="su-prog-2" class="flex-1 h-1.5 rounded-full bg-slate-200"></div>
+                    <div id="su-prog-3" class="flex-1 h-1.5 rounded-full bg-slate-200"></div>
+                    <div id="su-prog-4" class="flex-1 h-1.5 rounded-full bg-slate-200"></div>
+                    <div id="su-prog-5" class="flex-1 h-1.5 rounded-full bg-slate-200"></div>
+                </div>
+                <p class="text-[11px] font-bold text-slate-400 mb-4">Step <span id="suStepNum">1</span> of 5 · <span id="suStepName">Phone</span></p>
+
+                <!-- step 1: phone -->
+                <div id="su-1">
+                    <h3 class="text-xl font-extrabold text-slate-800">Your phone number</h3>
+                    <p class="text-sm text-slate-500 mt-1">We'll send an OTP to verify. No email needed now.</p>
+                    <label class="block text-xs font-bold text-slate-500 mt-5 mb-1.5 uppercase tracking-wide">Phone number</label>
+                    <div class="flex items-center gap-2 bg-white border-2 border-slate-200 focus-within:border-brand rounded-2xl px-4 h-14">
+                        <span class="text-base font-bold text-slate-500">+977</span>
+                        <input id="suPhone" type="tel" maxlength="10" placeholder="98XXXXXXXX" class="flex-1 bg-transparent text-base font-bold text-slate-800 focus:outline-none tracking-wide">
+                    </div>
+                    <button onclick="suSendOtp()" class="mt-6 w-full h-14 bg-brand hover:bg-brand-dark text-white rounded-2xl text-base font-extrabold active:scale-[.98] transition-all glow-brand">Send OTP</button>
+                </div>
+
+                <!-- step 2: otp -->
+                <div id="su-2" class="hidden">
+                    <h3 class="text-xl font-extrabold text-slate-800">Verify phone</h3>
+                    <p class="text-sm text-slate-500 mt-1">Enter the 6-digit code.</p>
+                    <div class="flex gap-2 mt-5">
+                        <input maxlength="1" class="suotp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                        <input maxlength="1" class="suotp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                        <input maxlength="1" class="suotp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                        <input maxlength="1" class="suotp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                        <input maxlength="1" class="suotp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                        <input maxlength="1" class="suotp-box w-full h-14 text-center text-xl font-black bg-white border-2 border-slate-200 rounded-xl focus:outline-none focus:border-brand">
+                    </div>
+                    <button onclick="suGo(3)" class="mt-6 w-full h-14 bg-brand hover:bg-brand-dark text-white rounded-2xl text-base font-extrabold active:scale-[.98] transition-all glow-brand">Verify &amp; Continue</button>
+                    <button onclick="suGo(1)" class="mt-2 w-full h-11 text-slate-500 text-sm font-bold">Back</button>
+                </div>
+
+                <!-- step 3: personal details -->
+                <div id="su-3" class="hidden">
+                    <h3 class="text-xl font-extrabold text-slate-800">Personal details</h3>
+                    <div class="space-y-3 mt-4">
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Full name</label><input placeholder="e.g. Bikash Karki" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none"></div>
+                        <div class="grid grid-cols-2 gap-2">
+                            <div><label class="text-xs font-bold text-slate-500 uppercase">Date of birth</label><input type="date" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-3 text-sm font-bold text-slate-800 focus:outline-none"></div>
+                            <div><label class="text-xs font-bold text-slate-500 uppercase">Gender</label><select class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-3 text-sm font-bold text-slate-800 focus:outline-none"><option>Male</option><option>Female</option><option>Other</option></select></div>
+                        </div>
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Address</label><input placeholder="Tole, Butwal ward no." class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none"></div>
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Emergency contact</label><input type="tel" placeholder="+977 98XXXXXXXX" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none"></div>
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Email <span class="text-slate-300 normal-case">(optional — add later)</span></label><input type="email" placeholder="you@email.com" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none"></div>
+                    </div>
+                    <button onclick="suGo(4)" class="mt-5 w-full h-14 bg-brand hover:bg-brand-dark text-white rounded-2xl text-base font-extrabold active:scale-[.98] transition-all glow-brand">Continue</button>
+                    <button onclick="suGo(2)" class="mt-2 w-full h-11 text-slate-500 text-sm font-bold">Back</button>
+                </div>
+
+                <!-- step 4: vehicle -->
+                <div id="su-4" class="hidden">
+                    <h3 class="text-xl font-extrabold text-slate-800">Vehicle details</h3>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mt-4 mb-1.5">Vehicle type</label>
+                    <div class="grid grid-cols-3 gap-2" id="suVehChips">
+                        <button onclick="selectVeh('Bike')" id="veh-Bike" class="h-16 rounded-xl border-2 text-xs font-bold flex flex-col items-center justify-center gap-1"><i class="fa-solid fa-motorcycle text-lg"></i> Bike</button>
+                        <button onclick="selectVeh('Scooter')" id="veh-Scooter" class="h-16 rounded-xl border-2 text-xs font-bold flex flex-col items-center justify-center gap-1"><i class="fa-solid fa-motorcycle text-lg"></i> Scooter</button>
+                        <button onclick="selectVeh('Cycle')" id="veh-Cycle" class="h-16 rounded-xl border-2 text-xs font-bold flex flex-col items-center justify-center gap-1"><i class="fa-solid fa-bicycle text-lg"></i> Cycle</button>
+                    </div>
+                    <div class="space-y-3 mt-4">
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Vehicle model</label><input placeholder="e.g. Honda Shine" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none"></div>
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Plate number</label><input placeholder="e.g. Lu 2 Pa 3456" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none"></div>
+                    </div>
+                    <button onclick="suGo(5)" class="mt-5 w-full h-14 bg-brand hover:bg-brand-dark text-white rounded-2xl text-base font-extrabold active:scale-[.98] transition-all glow-brand">Continue</button>
+                    <button onclick="suGo(3)" class="mt-2 w-full h-11 text-slate-500 text-sm font-bold">Back</button>
+                </div>
+
+                <!-- step 5: documents -->
+                <div id="su-5" class="hidden">
+                    <h3 class="text-xl font-extrabold text-slate-800">Documents (KYC)</h3>
+                    <p class="text-sm text-slate-500 mt-1">Required for admin verification.</p>
+                    <div class="space-y-3 mt-4">
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Driving License no.</label><input placeholder="12-345-678901" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none"></div>
+                        <button onclick="toast('Upload','License photo upload would open here.','fa-upload')" class="w-full h-12 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 text-sm font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-cloud-arrow-up"></i> Upload License photo</button>
+                        <div><label class="text-xs font-bold text-slate-500 uppercase">Citizenship / National ID no.</label><input placeholder="27-01-75-09876" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none"></div>
+                        <button onclick="toast('Upload','Citizenship photo upload would open here.','fa-upload')" class="w-full h-12 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 text-sm font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Citizenship</button>
+                        <button onclick="toast('Upload','Bluebook upload would open here.','fa-upload')" class="w-full h-12 rounded-xl border-2 border-dashed border-slate-300 text-slate-500 text-sm font-bold flex items-center justify-center gap-2"><i class="fa-solid fa-cloud-arrow-up"></i> Upload Vehicle Bluebook</button>
+                    </div>
+                    <label class="flex items-start gap-2.5 mt-4 text-sm text-slate-600"><input type="checkbox" id="suTerms" class="w-5 h-5 accent-brand mt-0.5"> <span>I agree to the <button onclick="openDoc('terms')" class="font-bold text-brand">Terms &amp; Conditions</button> and <button onclick="openDoc('privacy')" class="font-bold text-brand">Privacy Policy</button>.</span></label>
+                    <button onclick="suSubmit()" class="mt-5 w-full h-14 bg-brand hover:bg-brand-dark text-white rounded-2xl text-base font-extrabold active:scale-[.98] transition-all glow-brand">Submit Application</button>
+                    <button onclick="suGo(4)" class="mt-2 w-full h-11 text-slate-500 text-sm font-bold">Back</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SCREEN: APP SHELL ===================== -->
+        <div id="screen-app" class="screen hidden-screen" style="top:44px">
+            <!-- ---------- TAB: ORDERS ---------- -->
+            <div id="tab-orders" class="flex-1 flex flex-col overflow-hidden">
+                <!-- Header: profile + online toggle (111B) -->
+                <div class="px-5 pt-2 pb-3">
+                    <div class="flex items-center justify-between bg-white p-3 rounded-2xl border border-slate-200/60 shadow-sm">
+                        <div onclick="switchTab('profile')" class="flex items-center gap-3 cursor-pointer active:scale-[.98] transition-transform">
+                            <div class="relative">
+                                <img src="https://placehold.co/100x100/0B8570/ffffff?text=BK" class="w-11 h-11 rounded-full object-cover border-2 border-slate-100" alt="rider">
+                                <span id="presenceDot" class="absolute bottom-0 right-0 w-3.5 h-3.5 bg-slate-400 border-2 border-white rounded-full"></span>
+                            </div>
+                            <div>
+                                <h4 class="text-base font-bold text-slate-800 flex items-center gap-1">Bikash K. <i class="fa-solid fa-circle-check text-brand text-xs"></i></h4>
+                                <span class="text-xs text-slate-500 flex items-center gap-1"><i class="fa-solid fa-motorcycle text-brand"></i> Traffic Chowk Zone</span>
+                            </div>
+                        </div>
+                        <div class="flex flex-col items-end">
+                            <button onclick="toggleOnline()" class="relative w-14 h-8 bg-slate-200 rounded-full transition-colors duration-300" id="onlineToggle">
+                                <div id="toggleDot" class="absolute top-1 left-1 w-6 h-6 bg-slate-400 rounded-full flex items-center justify-center shadow-md toggle-dot">
+                                    <i id="toggleIcon" class="fa-solid fa-power-off text-[10px] text-white"></i>
+                                </div>
+                            </button>
+                            <span id="onlineLabel" class="text-[9px] font-extrabold text-slate-400 tracking-wider mt-1 uppercase">OFFLINE</span>
+                        </div>
+                    </div>
+
+                    <!-- mini stats -->
+                    <div class="mt-3 grid grid-cols-3 gap-2.5">
+                        <div class="bg-white border border-slate-200/50 p-2.5 rounded-2xl text-center shadow-sm">
+                            <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">Delivered</span>
+                            <span id="statDelivered" class="block text-base font-black text-slate-800 mt-0.5">0</span>
+                        </div>
+                        <div class="bg-white border border-slate-200/50 p-2.5 rounded-2xl text-center shadow-sm">
+                            <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">KM Today</span>
+                            <span id="statKm" class="block text-base font-black text-brand mt-0.5">0.0</span>
+                        </div>
+                        <div class="bg-white border border-slate-200/50 p-2.5 rounded-2xl text-center shadow-sm">
+                            <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider">COD Cash</span>
+                            <span id="statCash" class="block text-base font-black text-slate-800 mt-0.5">NPR 0</span>
+                        </div>
+                    </div>
+
+                    <!-- cancellation alert (112E) -->
+                    <div id="cancelAlert" class="hidden mt-3 p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-full bg-rose-500/20 flex items-center justify-center text-rose-700"><i class="fa-solid fa-ban"></i></div>
+                        <div class="flex-1"><h5 class="text-sm font-bold text-rose-800">Order Cancelled</h5><p id="cancelAlertBody" class="text-xs text-slate-600 leading-tight">An active order was cancelled by admin.</p></div>
+                        <button onclick="document.getElementById('cancelAlert').classList.add('hidden')" class="text-rose-400 px-1"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>
+
+                <!-- list body -->
+                <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-24">
+                    <!-- offline empty state -->
+                    <div id="ordersOffline" class="flex flex-col items-center justify-center py-20">
+                        <div class="w-32 h-32 rounded-full bg-slate-200/50 flex items-center justify-center mb-4">
+                            <i class="fa-solid fa-motorcycle text-4xl text-slate-300"></i>
+                        </div>
+                        <h3 class="text-lg font-bold text-slate-800">You're Offline</h3>
+                        <p class="text-sm text-slate-500 text-center max-w-[260px] mt-2">Turn on duty at the top to start receiving orders assigned by the dark store.</p>
+                    </div>
+
+                    <!-- online: searching / list -->
+                    <div id="ordersOnline" class="hidden">
+                        <div class="bg-white border border-slate-200 rounded-2xl p-3.5 flex items-center justify-between mb-4 shadow-sm">
+                            <div class="flex items-center gap-3">
+                                <div class="relative w-10 h-10 flex items-center justify-center">
+                                    <div class="absolute inset-0 bg-brand/20 rounded-full pulse-ring"></div>
+                                    <div class="w-6 h-6 bg-brand rounded-full flex items-center justify-center text-white text-xs"><i class="fa-solid fa-tower-broadcast"></i></div>
+                                </div>
+                                <div><h4 class="text-xs font-extrabold text-brand uppercase tracking-wider">On Duty</h4><p class="text-xs text-slate-500">Receiving assignments · GPS active</p></div>
+                            </div>
+                            <span class="px-2 py-1 text-[10px] font-bold bg-brand/10 text-brand rounded-lg">Live</span>
+                        </div>
+                        <div class="flex items-center justify-between mb-2">
+                            <h4 class="text-xs font-bold text-slate-400 uppercase tracking-wider">Assigned Orders (<span id="orderCount">0</span>)</h4>
+                        </div>
+                        <div id="orderList" class="space-y-3"></div>
+                        <div id="ordersEmpty" class="text-center py-16 text-slate-400">
+                            <i class="fa-regular fa-clock text-3xl mb-3"></i>
+                            <p class="text-sm font-medium">Waiting for new orders…</p>
+                            <p class="text-xs mt-1">Use the simulation console to push one.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ---------- TAB: EARNINGS (114D, 115A, 115B) ---------- -->
+            <div id="tab-earnings" class="hidden-screen flex-1 flex-col overflow-y-auto no-scrollbar px-5 pt-3 pb-24">
+                <div class="flex items-center justify-between mb-3">
+                    <div class="flex items-center gap-2">
+                        <h3 class="text-xl font-extrabold text-slate-800">My Earnings</h3>
+                        <span id="earnModePill" class="px-2 py-0.5 text-[10px] font-bold bg-brand/10 text-brand rounded-md uppercase tracking-wide">Fuel</span>
+                    </div>
+                    <span id="earnRateLabel" class="text-[11px] text-slate-400 font-semibold">NPR 4 / km · 115B</span>
+                </div>
+
+                <!-- period segmented control -->
+                <div class="flex gap-1 bg-slate-100 p-1 rounded-xl mb-3">
+                    <button id="seg-week"  onclick="setEarnPeriod('week')"  class="flex-1 h-9 rounded-lg text-xs font-bold transition-all">Week</button>
+                    <button id="seg-month" onclick="setEarnPeriod('month')" class="flex-1 h-9 rounded-lg text-xs font-bold transition-all">Month</button>
+                    <button id="seg-all"   onclick="setEarnPeriod('all')"   class="flex-1 h-9 rounded-lg text-xs font-bold transition-all">All-time</button>
+                </div>
+
+                <!-- hero: total fuel earnings for selected period -->
+                <div class="bg-gradient-to-br from-brand to-emerald-600 rounded-2xl p-5 text-white shadow-lg mb-3 glow-brand">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span id="earnTitle" class="text-xs font-medium opacity-85 uppercase tracking-wide">This Week · Fuel Earnings</span>
+                            <h1 class="text-[40px] leading-none font-black mt-1.5">NPR <span id="earnTotal">0</span></h1>
+                            <span id="earnSub" class="text-xs opacity-85 mt-2 block">0 deliveries · 0 km</span>
+                        </div>
+                        <span id="earnDelta" class="px-2.5 py-1 text-xs font-bold rounded-full bg-white/20 whitespace-nowrap"></span>
+                    </div>
+                </div>
+
+                <!-- mini bar chart: earnings trend -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-sm font-bold text-slate-700">Earnings trend</h4>
+                        <span class="text-[11px] text-slate-400">Avg <span id="earnAvg" class="font-bold text-slate-600">NPR 0</span> · Best <span id="earnBest" class="font-bold text-slate-600">NPR 0</span></span>
+                    </div>
+                    <div id="earnChartBars" class="flex items-end gap-1.5 h-28"></div>
+                    <div id="earnChartLabels" class="flex gap-1.5 mt-1.5"></div>
+                </div>
+
+                <!-- micro KPIs -->
+                <div class="grid grid-cols-3 gap-2.5 mb-4">
+                    <div class="bg-white border border-slate-200/60 p-3 rounded-2xl text-center shadow-sm"><span class="text-[10px] text-slate-400 font-bold uppercase block">Today</span><span class="text-sm font-black text-brand mt-1 block">NPR <span id="earnToday">0</span></span></div>
+                    <div class="bg-white border border-slate-200/60 p-3 rounded-2xl text-center shadow-sm"><span class="text-[10px] text-slate-400 font-bold uppercase block">Distance · 115A</span><span class="text-sm font-black text-slate-800 mt-1 block"><span id="kmToday2">0.0</span> km</span></div>
+                    <div class="bg-white border border-slate-200/60 p-3 rounded-2xl text-center shadow-sm"><span class="text-[10px] text-slate-400 font-bold uppercase block">Avg / Order</span><span class="text-sm font-black text-slate-800 mt-1 block">NPR <span id="earnPerDelivery">0</span></span></div>
+                </div>
+
+                <!-- cash to deposit — clearly NOT the rider's earnings (114D) -->
+                <div class="bg-white border border-orange-200 rounded-2xl p-4 shadow-sm mb-4">
+                    <div class="flex items-center justify-between mb-2">
+                        <div>
+                            <h4 class="text-sm font-bold text-slate-700">Cash to Deposit</h4>
+                            <span class="text-[10px] text-slate-400">Company money — not your earnings</span>
+                        </div>
+                        <span class="px-2 py-0.5 bg-orange-100 text-orange-700 text-[10px] font-bold rounded-md">Reconcile</span>
+                    </div>
+                    <div class="bg-orange-50 rounded-xl p-3 text-center mb-3">
+                        <span class="text-[10px] font-bold text-orange-600 uppercase">Hand over at store</span>
+                        <h2 class="text-3xl font-black text-orange-700 mt-0.5">NPR <span id="cashToDeposit">0</span></h2>
+                    </div>
+                    <div class="flex justify-between text-sm py-1 border-b border-slate-100"><span class="text-slate-500">Cash collected (COD)</span><span class="font-bold text-slate-800">NPR <span id="codCollected">0</span></span></div>
+                    <div class="flex justify-between text-sm py-1 border-b border-slate-100"><span class="text-slate-500">COD orders done</span><span class="font-bold text-slate-800"><span id="codOrders">0</span></span></div>
+                    <div class="flex justify-between text-sm py-1"><span class="text-slate-500">Digital (QR) collected</span><span class="font-bold text-slate-800">NPR <span id="qrCollected">0</span></span></div>
+                    <!-- daily settlement action (114D) -->
+                    <div id="settleDoneNote" class="hidden mt-3 p-2.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center gap-2 text-xs text-emerald-700"><i class="fa-solid fa-circle-check"></i><span>Last settled <strong id="settleLastAmt">NPR 0</strong> at <span id="settleLastTime">—</span></span></div>
+                    <button id="settleBtn" onclick="openSettle()" class="mt-3 w-full h-12 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white text-sm font-extrabold flex items-center justify-center gap-2 active:scale-[.98] transition-all"><i class="fa-solid fa-hand-holding-dollar"></i> Settle / Deposit Cash</button>
+                </div>
+            </div>
+
+            <!-- ---------- TAB: HISTORY (115C) ---------- -->
+            <div id="tab-history" class="hidden-screen flex-1 flex-col overflow-y-auto no-scrollbar px-5 pt-3 pb-24">
+                <h3 class="text-xl font-extrabold text-slate-800 mb-3">Delivery History</h3>
+                <!-- summary -->
+                <div class="grid grid-cols-3 gap-2.5 mb-4">
+                    <div class="bg-white border border-slate-200/60 p-3 rounded-2xl text-center shadow-sm"><span class="text-[10px] text-slate-400 font-bold uppercase block">Deliveries</span><span id="histCount" class="text-base font-black text-slate-800 mt-1 block">0</span></div>
+                    <div class="bg-white border border-slate-200/60 p-3 rounded-2xl text-center shadow-sm"><span class="text-[10px] text-slate-400 font-bold uppercase block">Distance</span><span class="text-base font-black text-brand mt-1 block"><span id="histKm">0.0</span> km</span></div>
+                    <div class="bg-white border border-slate-200/60 p-3 rounded-2xl text-center shadow-sm"><span class="text-[10px] text-slate-400 font-bold uppercase block">Fuel</span><span class="text-base font-black text-slate-800 mt-1 block">NPR <span id="histFuel">0</span></span></div>
+                </div>
+                <div id="historyList" class="space-y-2.5"></div>
+                <div id="historyEmpty" class="text-center py-20 text-slate-400">
+                    <i class="fa-solid fa-box-archive text-3xl mb-3"></i>
+                    <p class="text-sm font-medium">No deliveries yet today.</p>
+                </div>
+            </div>
+
+            <!-- ---------- TAB: NOTIFICATIONS (history) ---------- -->
+            <div id="tab-notifications" class="hidden-screen flex-1 flex-col overflow-y-auto no-scrollbar px-5 pt-3 pb-24">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xl font-extrabold text-slate-800">Notifications</h3>
+                    <button onclick="markAllRead()" class="text-xs font-bold text-brand">Mark all read</button>
+                </div>
+                <div id="notifList" class="space-y-2.5"></div>
+                <div id="notifEmpty" class="text-center py-20 text-slate-400">
+                    <i class="fa-regular fa-bell text-3xl mb-3"></i>
+                    <p class="text-sm font-medium">No notifications yet.</p>
+                </div>
+            </div>
+
+            <!-- ---------- TAB: PROFILE ---------- -->
+            <div id="tab-profile" class="hidden-screen flex-1 flex-col overflow-y-auto no-scrollbar px-5 pt-3 pb-24">
+                <div class="flex items-center justify-between mb-3">
+                    <h3 class="text-xl font-extrabold text-slate-800">Profile</h3>
+                    <button onclick="switchTab('orders')" class="text-xs font-bold text-slate-400"><i class="fa-solid fa-xmark"></i> Close</button>
+                </div>
+                <div class="bg-white border border-slate-200/60 p-5 rounded-2xl text-center mb-4 shadow-sm">
+                    <img src="https://placehold.co/100x100/0B8570/ffffff?text=BK" class="w-20 h-20 rounded-full mx-auto object-cover border-2 border-slate-100 mb-2" alt="rider">
+                    <h4 class="text-base font-bold text-slate-800">Bikash Karki</h4>
+                    <span class="text-sm text-slate-400 font-semibold">Rider ID: CK-BW-0142</span>
+                    <div class="mt-3 inline-flex items-center gap-1.5 text-xs font-bold px-3 py-1 rounded-full bg-brand/10 text-brand"><i class="fa-solid fa-circle-check"></i> Verified Partner</div>
+                </div>
+
+                <!-- Account details & documents → details page -->
+                <button onclick="openProfileDetails()" class="w-full bg-white border border-slate-200/60 rounded-2xl p-3.5 shadow-sm mb-3 flex items-center gap-3 active:scale-[.99] transition-all">
+                    <div class="w-10 h-10 rounded-xl bg-brand/10 text-brand flex items-center justify-center"><i class="fa-solid fa-id-card text-lg"></i></div>
+                    <div class="flex-1 text-left">
+                        <h5 class="text-sm font-bold text-slate-800">Account Details &amp; Documents</h5>
+                        <span class="text-xs text-slate-400">Personal info · KYC · license · bluebook</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                </button>
+
+                <!-- Rider rating & performance -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-[10px] text-slate-400 font-bold uppercase">Rating from customers</span>
+                            <div class="flex items-end gap-1.5 mt-0.5">
+                                <span class="text-3xl font-black text-slate-800">4.8</span>
+                                <span class="text-amber-400 text-sm mb-1"><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star"></i><i class="fa-solid fa-star-half-stroke"></i></span>
+                            </div>
+                            <span class="text-xs text-slate-400">based on 124 reviews</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="block text-2xl font-black text-brand leading-none">312</span>
+                            <span class="text-[10px] font-bold text-slate-400 uppercase">Deliveries</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Recent customer reviews -->
+                <div class="mb-4">
+                    <h4 class="text-sm font-bold text-slate-700 mb-2">Recent Customer Reviews</h4>
+                    <div class="space-y-2.5">
+                        <div class="bg-white border border-slate-200/60 rounded-xl p-3 shadow-sm">
+                            <div class="flex items-center justify-between"><span class="text-sm font-bold text-slate-800">Sita Gurung</span><span class="text-amber-400 text-xs">★★★★★</span></div>
+                            <p class="text-xs text-slate-500 mt-1">Very fast delivery, polite rider. Items well handled!</p>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-xl p-3 shadow-sm">
+                            <div class="flex items-center justify-between"><span class="text-sm font-bold text-slate-800">Hari Thapa</span><span class="text-amber-400 text-xs">★★★★★</span></div>
+                            <p class="text-xs text-slate-500 mt-1">On time and careful. Called before arriving.</p>
+                        </div>
+                        <div class="bg-white border border-slate-200/60 rounded-xl p-3 shadow-sm">
+                            <div class="flex items-center justify-between"><span class="text-sm font-bold text-slate-800">Gita K.C.</span><span class="text-amber-400 text-xs">★★★★<span class="text-slate-200">★</span></span></div>
+                            <p class="text-xs text-slate-500 mt-1">Good service overall.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Assigned vehicle (set by admin — scope 3.7) -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <div class="flex items-center justify-between mb-3">
+                        <h4 class="text-sm font-bold text-slate-700"><i class="fa-solid fa-motorcycle text-brand mr-1.5"></i>Assigned Vehicle</h4>
+                        <span class="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-md"><i class="fa-solid fa-circle-check"></i> Active</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-12 h-12 rounded-xl bg-brand/10 text-brand flex items-center justify-center text-xl"><i class="fa-solid fa-motorcycle"></i></div>
+                        <div class="flex-1">
+                            <h5 class="text-base font-bold text-slate-800">Honda Shine</h5>
+                            <span class="text-xs text-slate-500">Plate: <strong class="text-slate-700">Lu 2 Pa 3456</strong> · Own bike</span>
+                        </div>
+                    </div>
+                    <div class="mt-3 pt-2.5 border-t border-slate-100 flex items-center gap-2 text-[11px] text-slate-400">
+                        <i class="fa-solid fa-shield-halved text-brand"></i><span>Assigned &amp; verified by Chutkima admin (Rider Management)</span>
+                    </div>
+                </div>
+
+                <!-- Edit profile -->
+                <button onclick="openEditProfile()" class="w-full bg-white border border-slate-200/60 rounded-xl p-3.5 shadow-sm mb-4 flex items-center gap-3 active:scale-[.99] transition-all">
+                    <i class="fa-solid fa-user-pen w-5 text-center text-brand"></i>
+                    <span class="flex-1 text-left text-sm font-bold text-slate-700">Edit Profile</span>
+                    <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                </button>
+
+                <!-- Preferences -->
+                <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">Preferences</h4>
+                <div class="bg-white border border-slate-200/60 rounded-2xl shadow-sm mb-4 divide-y divide-slate-100">
+                    <button onclick="toggleLang()" class="w-full p-3.5 flex items-center gap-3 active:bg-slate-50">
+                        <i class="fa-solid fa-language w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-left text-sm font-bold text-slate-700">Language</span>
+                        <span id="langValue" class="text-xs font-bold text-brand">English</span>
+                        <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                    </button>
+                    <div class="w-full p-3.5 flex items-center gap-3">
+                        <i class="fa-solid fa-bell w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-sm font-bold text-slate-700">Push notifications</span>
+                        <button onclick="toggleSetting('push')" id="tgl-push" class="relative w-12 h-7 rounded-full transition-colors"><div class="toggle-dot absolute top-1 w-5 h-5 rounded-full shadow bg-white"></div></button>
+                    </div>
+                    <div class="w-full p-3.5 flex items-center gap-3">
+                        <i class="fa-solid fa-volume-high w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-sm font-bold text-slate-700">Sound &amp; vibration</span>
+                        <button onclick="toggleSetting('sound')" id="tgl-sound" class="relative w-12 h-7 rounded-full transition-colors"><div class="toggle-dot absolute top-1 w-5 h-5 rounded-full shadow bg-white"></div></button>
+                    </div>
+                </div>
+
+                <!-- Security -->
+                <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">Security</h4>
+                <div class="bg-white border border-slate-200/60 rounded-2xl shadow-sm mb-4 divide-y divide-slate-100">
+                    <div class="w-full p-3.5 flex items-center gap-3">
+                        <i class="fa-solid fa-lock w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-sm font-bold text-slate-700">App PIN lock</span>
+                        <button onclick="toggleSetting('pin')" id="tgl-pin" class="relative w-12 h-7 rounded-full transition-colors"><div class="toggle-dot absolute top-1 w-5 h-5 rounded-full shadow bg-white"></div></button>
+                    </div>
+                    <button onclick="changePin()" class="w-full p-3.5 flex items-center gap-3 active:bg-slate-50">
+                        <i class="fa-solid fa-key w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-left text-sm font-bold text-slate-700">Change login PIN</span>
+                        <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                    </button>
+                    <div class="w-full p-3.5 flex items-center gap-3">
+                        <i class="fa-solid fa-mobile-screen w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-sm font-bold text-slate-700">Login method</span>
+                        <span class="text-xs text-slate-400">Phone OTP</span>
+                    </div>
+                </div>
+
+                <!-- About & legal -->
+                <h4 class="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2 px-1">About &amp; Legal</h4>
+                <div class="bg-white border border-slate-200/60 rounded-2xl shadow-sm mb-4 divide-y divide-slate-100">
+                    <button onclick="openDoc('about')" class="w-full p-3.5 flex items-center gap-3 active:bg-slate-50">
+                        <i class="fa-solid fa-circle-info w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-left text-sm font-bold text-slate-700">About us</span>
+                        <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                    </button>
+                    <button onclick="openDoc('privacy')" class="w-full p-3.5 flex items-center gap-3 active:bg-slate-50">
+                        <i class="fa-solid fa-shield-halved w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-left text-sm font-bold text-slate-700">Privacy Policy</span>
+                        <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                    </button>
+                    <button onclick="openDoc('terms')" class="w-full p-3.5 flex items-center gap-3 active:bg-slate-50">
+                        <i class="fa-solid fa-file-contract w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-left text-sm font-bold text-slate-700">Terms &amp; Conditions</span>
+                        <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                    </button>
+                    <button onclick="openDoc('faq')" class="w-full p-3.5 flex items-center gap-3 active:bg-slate-50">
+                        <i class="fa-solid fa-circle-question w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-left text-sm font-bold text-slate-700">FAQ</span>
+                        <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                    </button>
+                    <a href="tel:+97700000000" class="w-full p-3.5 flex items-center gap-3 active:bg-slate-50">
+                        <i class="fa-solid fa-headset w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-left text-sm font-bold text-slate-700">Help &amp; Support</span>
+                        <i class="fa-solid fa-chevron-right text-slate-300"></i>
+                    </a>
+                    <div class="w-full p-3.5 flex items-center gap-3">
+                        <i class="fa-solid fa-circle-info w-5 text-center text-brand"></i>
+                        <span class="flex-1 text-sm font-bold text-slate-700">App version</span>
+                        <span class="text-xs text-slate-400">Chutkima Rider v1.0.0</span>
+                    </div>
+                </div>
+
+                <button onclick="askLogout()" class="w-full h-14 bg-rose-50 hover:bg-rose-100 text-rose-600 border border-rose-200 rounded-2xl text-base font-extrabold transition-all active:scale-[.98]"><i class="fa-solid fa-right-from-bracket mr-2"></i>Logout</button>
+            </div>
+
+            <!-- ---------- BOTTOM NAV ---------- -->
+            <div class="absolute bottom-0 left-0 right-0 h-[72px] bg-white border-t border-slate-200/80 px-6 flex items-center justify-around z-30 select-none">
+                <button onclick="switchTab('orders')" id="nav-orders" class="flex flex-col items-center gap-1 text-brand"><i class="fa-solid fa-clipboard-list text-lg"></i><span class="text-[11px] font-bold">Orders</span></button>
+                <button onclick="switchTab('earnings')" id="nav-earnings" class="flex flex-col items-center gap-1 text-slate-400"><i class="fa-solid fa-wallet text-lg"></i><span class="text-[11px] font-semibold">Earnings</span></button>
+                <button onclick="switchTab('history')" id="nav-history" class="flex flex-col items-center gap-1 text-slate-400"><i class="fa-solid fa-clock-rotate-left text-lg"></i><span class="text-[11px] font-semibold">History</span></button>
+                <button onclick="switchTab('notifications')" id="nav-notifications" class="relative flex flex-col items-center gap-1 text-slate-400"><i class="fa-solid fa-bell text-lg"></i><span id="navNotifDot" class="hidden absolute -top-1 right-2 min-w-[16px] h-4 px-1 bg-rose-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center">0</span><span class="text-[11px] font-semibold">Alerts</span></button>
+            </div>
+        </div>
+
+        <!-- ===================== SCREEN: ORDER DETAIL (Level 2) ===================== -->
+        <div id="screen-detail" class="screen hidden-screen bg-slate-50" style="top:44px">
+            <!-- header -->
+            <div class="px-5 pt-2 pb-3 flex items-center justify-between">
+                <button onclick="closeOrder()" class="w-11 h-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-arrow-left"></i></button>
+                <div class="text-center">
+                    <span id="detailId" class="text-sm font-extrabold text-slate-800">#BW-2025-0042</span>
+                    <span id="detailStatusPill" class="block text-[10px] font-bold text-brand uppercase tracking-wider">Assigned</span>
+                </div>
+                <button onclick="openHelp()" class="w-11 h-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-circle-question"></i></button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-40">
+                <!-- badges -->
+                <div id="detailBadges" class="flex gap-2 mb-3 flex-wrap"></div>
+
+                <!-- delivery progress stepper -->
+                <div id="detailStepper" class="hidden bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3"></div>
+
+                <!-- live tracking visibility (113D) — who can see the rider live -->
+                <div id="liveTrack" class="hidden bg-emerald-50 border border-emerald-200 rounded-2xl p-3 mb-3 flex items-center gap-3">
+                    <div class="relative w-9 h-9 flex items-center justify-center flex-shrink-0">
+                        <div class="absolute inset-0 bg-emerald-400/30 rounded-full animate-ping"></div>
+                        <div class="w-6 h-6 bg-emerald-500 rounded-full flex items-center justify-center text-white text-[11px]"><i class="fa-solid fa-location-arrow"></i></div>
+                    </div>
+                    <div class="flex-1">
+                        <h5 class="text-sm font-bold text-emerald-800">Live tracking ON</h5>
+                        <p class="text-[11px] text-emerald-600 leading-tight">Customer &amp; store can see your location · updating every 10s</p>
+                    </div>
+                    <span class="px-2 py-0.5 text-[10px] font-extrabold bg-emerald-500 text-white rounded-md">LIVE</span>
+                </div>
+
+                <!-- live map (after pickup) -->
+                <div id="detailMap" class="hidden relative bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-inner h-36 mb-3">
+                    <canvas id="mapCanvas" class="w-full h-full block bg-slate-100"></canvas>
+                    <div class="absolute bottom-2 left-2 bg-white/95 backdrop-blur px-2.5 py-1 rounded-lg border border-slate-200 flex items-center gap-1.5 text-[10px] font-bold text-slate-700">
+                        <div class="w-1.5 h-1.5 bg-brand rounded-full animate-ping"></div><span>Sharing GPS · every 10s (113D)</span>
+                    </div>
+                </div>
+
+                <!-- trip summary -->
+                <div class="grid grid-cols-3 gap-2.5 mb-3">
+                    <div class="bg-white border border-slate-200/60 p-2.5 rounded-2xl text-center shadow-sm"><span class="text-[9px] text-slate-400 font-bold uppercase block">Distance</span><span class="text-sm font-black text-slate-800 mt-0.5 block"><span id="detailKm">0</span> km</span></div>
+                    <div class="bg-white border border-slate-200/60 p-2.5 rounded-2xl text-center shadow-sm"><span id="detailEtaLabel" class="text-[9px] text-slate-400 font-bold uppercase block">ETA · Store</span><span class="text-sm font-black text-brand mt-0.5 block">~<span id="detailEta">0</span> min</span></div>
+                    <div class="bg-white border border-slate-200/60 p-2.5 rounded-2xl text-center shadow-sm"><span class="text-[9px] text-slate-400 font-bold uppercase block">Items</span><span id="detailTripItems" class="text-sm font-black text-slate-800 mt-0.5 block">0</span></div>
+                </div>
+
+                <!-- route: pickup (single store) -> drop (customer) -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <div class="flex gap-3">
+                        <div class="flex flex-col items-center pt-1">
+                            <div class="w-3 h-3 rounded-full bg-blue-500"></div>
+                            <div class="w-[2px] flex-1 min-h-[26px] border-l-2 border-dashed border-slate-200"></div>
+                        </div>
+                        <div class="flex-1 -mt-0.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-[10px] font-extrabold text-blue-600 uppercase tracking-wider">Pickup</span>
+                                <span id="detailStoreEta" class="px-2 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-600 rounded-md whitespace-nowrap"><i class="fa-regular fa-clock"></i> ~0 min to store</span>
+                            </div>
+                            <h4 id="detailStore" class="text-sm font-bold text-slate-800">Chutkima Store — Traffic Chowk</h4>
+                            <p id="detailStoreAddr" class="text-xs text-slate-500">Traffic Chowk, Butwal-8</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-3">
+                        <div class="flex flex-col items-center pt-1"><div class="w-3 h-3 rounded-full bg-brand"></div></div>
+                        <div class="flex-1 -mt-0.5">
+                            <div class="flex items-center justify-between gap-2">
+                                <span class="text-[10px] font-extrabold text-brand uppercase tracking-wider">Drop</span>
+                                <span id="detailCustRep"></span>
+                            </div>
+                            <h4 id="detailCustomer" class="text-base font-bold text-slate-800">Ram Sharma</h4>
+                            <p id="detailAddress" class="text-xs text-slate-500 leading-snug">Amarpath · House 42</p>
+                            <span id="detailCustEta" class="inline-block mt-1 px-2 py-0.5 text-[10px] font-bold bg-brand/10 text-brand rounded-md whitespace-nowrap"><i class="fa-regular fa-clock"></i> ~0 min to customer</span>
+                            <div id="detailInstruction" class="hidden mt-2 p-2 bg-amber-500/10 border border-amber-500/20 rounded-lg text-xs text-amber-800"><i class="fa-solid fa-circle-info mr-1"></i><span></span></div>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2 mt-3">
+                        <button onclick="callCustomer()" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold flex items-center justify-center gap-2 transition-colors"><i class="fa-solid fa-phone text-brand"></i> Call</button>
+                        <button onclick="navigateMaps()" class="h-12 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold flex items-center justify-center gap-2 transition-colors"><i class="fa-solid fa-diamond-turn-right text-brand"></i> Navigate</button>
+                    </div>
+                </div>
+
+                <!-- team portion note (112D) -->
+                <div id="detailTeam" class="hidden bg-indigo-50 border border-indigo-200 rounded-2xl p-3.5 mb-3">
+                    <h4 class="text-sm font-bold text-indigo-800 flex items-center gap-1.5"><i class="fa-solid fa-people-carry-box"></i> Team Order — Your Portion</h4>
+                    <p id="detailPortion" class="text-sm text-indigo-700 mt-1">Rider 1: beverages</p>
+                </div>
+
+                <!-- additional admin note -->
+                <div id="detailAdminNote" class="hidden bg-amber-50 border border-amber-200 rounded-2xl p-3.5 mb-3">
+                    <h4 class="text-sm font-bold text-amber-800 flex items-center gap-1.5"><i class="fa-solid fa-note-sticky"></i> Note from Admin</h4>
+                    <p id="detailAdminNoteText" class="text-sm text-amber-700 mt-1"></p>
+                </div>
+
+                <!-- payment / COD (114A) -->
+                <div id="detailPay" class="rounded-2xl p-4 mb-3 border"></div>
+
+                <!-- items (112B) -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <div class="flex justify-between items-center mb-3">
+                        <h4 class="text-sm font-bold text-slate-700">Items <span class="text-xs font-normal text-slate-400">(112B)</span></h4>
+                        <span id="detailItemCount" class="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-bold rounded-md">3 items</span>
+                    </div>
+                    <div id="detailItems" class="space-y-2.5"></div>
+                </div>
+
+                <!-- scheduled lock note -->
+                <div id="detailScheduledNote" class="hidden bg-violet-50 border border-violet-200 rounded-2xl p-4 text-center mb-3">
+                    <i class="fa-solid fa-lock text-violet-500 text-2xl mb-2"></i>
+                    <h4 class="text-sm font-bold text-violet-800">Scheduled Order Locked</h4>
+                    <p class="text-xs text-violet-600 mt-1">Do not process until 7:00 AM. It will activate automatically and notify you.</p>
+                </div>
+            </div>
+
+            <!-- sticky action footer -->
+            <div id="detailFooter" class="absolute bottom-0 left-0 right-0 px-5 pt-3 pb-5 bg-gradient-to-t from-slate-50 via-slate-50 to-transparent">
+                <!-- not responding (113F) -->
+                <button id="btnNotResponding" onclick="openNotResponding()" class="hidden w-full h-12 mb-2.5 rounded-2xl bg-white border border-rose-200 text-rose-600 text-sm font-bold transition-all active:scale-[.98]"><i class="fa-solid fa-phone-slash mr-2"></i>Customer Not Responding (113F)</button>
+                <!-- confirm / reject on assignment (112A) -->
+                <div id="confirmReject" class="hidden grid grid-cols-2 gap-3">
+                    <button onclick="rejectOrder()" class="h-14 rounded-2xl bg-white border-2 border-rose-200 text-rose-600 text-base font-extrabold active:scale-[.98] transition-all"><i class="fa-solid fa-xmark mr-2"></i>Reject</button>
+                    <button onclick="confirmOrder()" class="h-14 rounded-2xl bg-brand hover:bg-brand-dark text-white text-base font-extrabold active:scale-[.98] transition-all glow-brand"><i class="fa-solid fa-check mr-2"></i>Confirm</button>
+                </div>
+                <!-- waiting for store to pack the parcel (Ready for Pickup gate) -->
+                <div id="packingWait" class="hidden w-full h-14 rounded-2xl bg-amber-50 border border-amber-200 flex items-center justify-center gap-3 text-amber-700">
+                    <i class="fa-solid fa-box-open animate-pulse"></i>
+                    <span class="text-sm font-bold">Store is packing your parcel…</span>
+                </div>
+                <!-- swipe action -->
+                <div id="swipeTrack" class="relative bg-slate-200 rounded-2xl h-14 flex items-center p-1 overflow-hidden select-none">
+                    <div id="swipeText" class="absolute inset-0 flex items-center justify-center text-base font-bold text-slate-500 pointer-events-none tracking-wide">Swipe to confirm</div>
+                    <div id="swipeHandle" class="w-12 h-12 bg-brand rounded-xl flex items-center justify-center text-white cursor-grab active:cursor-grabbing transition-transform glow-brand z-20 touch-none"><i class="fa-solid fa-angles-right text-lg"></i></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SCREEN: HISTORY DETAIL — Delivery Receipt (Level 2) ===================== -->
+        <div id="screen-history-detail" class="screen hidden-screen bg-slate-50" style="top:44px">
+            <div class="px-5 pt-2 pb-3 flex items-center justify-between">
+                <button onclick="closeHistory()" class="w-11 h-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-arrow-left"></i></button>
+                <div class="text-center">
+                    <span id="hdId" class="text-sm font-extrabold text-slate-800">#BW-2025-0039</span>
+                    <span class="block text-[10px] font-bold text-emerald-600 uppercase tracking-wider">Delivered</span>
+                </div>
+                <div class="w-11"></div>
+            </div>
+            <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-10">
+                <!-- receipt header -->
+                <div class="bg-brand rounded-2xl p-5 text-white shadow-lg mb-3 glow-brand text-center">
+                    <i class="fa-solid fa-circle-check text-3xl mb-1"></i>
+                    <h3 class="text-base font-bold">Delivery Completed</h3>
+                    <p id="hdTime" class="text-xs opacity-85 mt-0.5">Today · 8:05 AM</p>
+                    <div class="flex justify-center gap-6 mt-3 pt-3 border-t border-white/20 text-center">
+                        <div><span class="block text-[10px] opacity-80 uppercase">Distance</span><span class="font-black"><span id="hdKm">0</span> km</span></div>
+                        <div><span class="block text-[10px] opacity-80 uppercase">You earned</span><span class="font-black">NPR <span id="hdFuel">0</span></span></div>
+                    </div>
+                </div>
+
+                <!-- customer -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <span class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Delivered to</span>
+                    <h4 id="hdCustomer" class="text-base font-bold text-slate-800 mt-0.5">Sita Gurung</h4>
+                    <p id="hdAddress" class="text-sm text-slate-500">Milanchowk, Butwal · House 24</p>
+                </div>
+
+                <!-- items -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <h4 class="text-sm font-bold text-slate-700 mb-3">Items <span id="hdItemCount" class="text-xs font-normal text-slate-400"></span></h4>
+                    <div id="hdItems" class="space-y-2.5"></div>
+                </div>
+
+                <!-- bill / payment -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <div class="flex items-center justify-between mb-2"><h4 class="text-sm font-bold text-slate-700">Bill &amp; payment</h4><span id="hdPayChip"></span></div>
+                    <div class="flex justify-between text-sm py-1"><span class="text-slate-500">Item subtotal</span><span class="font-semibold text-slate-700">NPR <span id="hdSub">0</span></span></div>
+                    <div class="flex justify-between text-sm py-1 border-b border-slate-100"><span class="text-slate-500">Delivery fee</span><span class="font-semibold text-slate-700">NPR <span id="hdFee">0</span></span></div>
+                    <div class="flex justify-between text-sm pt-2"><span class="font-bold text-slate-800">Order total</span><span class="font-black text-slate-900">NPR <span id="hdTotal">0</span></span></div>
+                </div>
+
+                <!-- customer review of the rider -->
+                <div id="hdReview" class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3"></div>
+            </div>
+        </div>
+
+        <!-- ===================== SCREEN: ACCOUNT DETAILS (Level 2 from Profile) ===================== -->
+        <div id="screen-profile-detail" class="screen hidden-screen bg-slate-50" style="top:44px">
+            <div class="px-5 pt-2 pb-3 flex items-center justify-between">
+                <button onclick="closeProfileDetails()" class="w-11 h-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-arrow-left"></i></button>
+                <span class="text-sm font-extrabold text-slate-800">Account Details</span>
+                <div class="w-11"></div>
+            </div>
+            <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-10">
+                <!-- identity -->
+                <div class="bg-white border border-slate-200/60 p-4 rounded-2xl shadow-sm mb-3 flex items-center gap-3">
+                    <img src="https://placehold.co/100x100/0B8570/ffffff?text=BK" class="w-14 h-14 rounded-full object-cover border-2 border-slate-100" alt="rider">
+                    <div class="flex-1">
+                        <h4 class="text-base font-bold text-slate-800">Bikash Karki</h4>
+                        <span class="text-xs text-slate-400">Rider ID: CK-BW-0142</span>
+                        <div class="mt-1 inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700"><i class="fa-solid fa-circle-check"></i> Active partner</div>
+                    </div>
+                </div>
+
+                <!-- personal info -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <h4 class="text-sm font-bold text-slate-700 mb-2">Personal information</h4>
+                    <div class="flex justify-between text-sm py-1.5 border-b border-slate-100"><span class="text-slate-500">Full name</span><span class="font-semibold text-slate-800">Bikash Karki</span></div>
+                    <div class="flex justify-between text-sm py-1.5 border-b border-slate-100"><span class="text-slate-500">Phone</span><span class="font-semibold text-slate-800">+977 9845012345</span></div>
+                    <div class="flex justify-between text-sm py-1.5 border-b border-slate-100"><span class="text-slate-500">Date of birth</span><span class="font-semibold text-slate-800">2056-04-12 BS</span></div>
+                    <div class="flex justify-between text-sm py-1.5 border-b border-slate-100"><span class="text-slate-500">Address</span><span class="font-semibold text-slate-800">Sukhanagar, Butwal-11</span></div>
+                    <div class="flex justify-between text-sm py-1.5"><span class="text-slate-500">Emergency contact</span><span class="font-semibold text-slate-800">+977 9801122334</span></div>
+                </div>
+
+                <!-- documents / KYC -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <h4 class="text-sm font-bold text-slate-700 mb-3">Documents (KYC)</h4>
+                    <div class="space-y-2.5">
+                        <div class="flex items-center gap-3 p-2.5 bg-amber-50 border border-amber-200 rounded-xl">
+                            <div class="w-9 h-9 rounded-lg bg-white border border-amber-200 flex items-center justify-center text-amber-500"><i class="fa-solid fa-id-card"></i></div>
+                            <div class="flex-1"><p class="text-sm font-bold text-slate-700">Driving License</p><p class="text-[11px] text-amber-600">Not on file — please submit</p></div>
+                            <button onclick="toast('Upload','Document upload would open here.','fa-upload','text-amber-500')" class="text-[10px] font-bold text-white bg-amber-500 px-2 py-1 rounded-md">Upload</button>
+                        </div>
+                        <div class="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl">
+                            <div class="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500"><i class="fa-solid fa-address-card"></i></div>
+                            <div class="flex-1"><p class="text-sm font-bold text-slate-700">Citizenship / National ID</p><p class="text-[11px] text-slate-400">Rupandehi · 27-01-75-09876</p></div>
+                            <span class="text-[10px] font-bold text-emerald-600"><i class="fa-solid fa-circle-check"></i> Verified</span>
+                        </div>
+                        <div class="flex items-center gap-3 p-2.5 bg-slate-50 rounded-xl">
+                            <div class="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-500"><i class="fa-solid fa-book"></i></div>
+                            <div class="flex-1"><p class="text-sm font-bold text-slate-700">Vehicle Bluebook</p><p class="text-[11px] text-slate-400">Honda Shine · Lu 2 Pa 3456</p></div>
+                            <span class="text-[10px] font-bold text-emerald-600"><i class="fa-solid fa-circle-check"></i> Verified</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- work info -->
+                <div class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm mb-3">
+                    <h4 class="text-sm font-bold text-slate-700 mb-2">Work details</h4>
+                    <div class="flex justify-between text-sm py-1.5 border-b border-slate-100"><span class="text-slate-500">Joined</span><span class="font-semibold text-slate-800">15 Mar 2026</span></div>
+                    <div class="flex justify-between text-sm py-1.5 border-b border-slate-100"><span class="text-slate-500">Assigned store</span><span class="font-semibold text-slate-800">Traffic Chowk</span></div>
+                    <div class="flex justify-between text-sm py-1.5 border-b border-slate-100"><span class="text-slate-500">Assigned zone</span><span class="font-semibold text-slate-800">Traffic Chowk</span></div>
+                    <div class="flex justify-between text-sm py-1.5"><span class="text-slate-500">Status</span><span class="font-semibold text-emerald-600">Active</span></div>
+                </div>
+
+                <div class="bg-brand-light border border-brand/20 rounded-2xl p-3.5 text-sm text-brand-dark flex items-center gap-2.5">
+                    <i class="fa-solid fa-lock"></i><span>Details are managed by Chutkima admin. Contact support to update.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== SCREEN: EDIT PROFILE (Level 2) ===================== -->
+        <div id="screen-edit-profile" class="screen hidden-screen bg-slate-50" style="top:44px">
+            <div class="px-5 pt-2 pb-3 flex items-center justify-between">
+                <button onclick="closeEditProfile()" class="w-11 h-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-arrow-left"></i></button>
+                <span class="text-sm font-extrabold text-slate-800">Edit Profile</span>
+                <button onclick="saveProfile()" class="text-sm font-bold text-brand">Save</button>
+            </div>
+            <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-10">
+                <div class="text-center mb-4">
+                    <div class="relative inline-block">
+                        <img src="https://placehold.co/100x100/0B8570/ffffff?text=BK" class="w-20 h-20 rounded-full object-cover border-2 border-slate-100" alt="rider">
+                        <button onclick="toast('Photo','Camera/gallery would open here.','fa-camera')" class="absolute bottom-0 right-0 w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center text-xs border-2 border-white"><i class="fa-solid fa-camera"></i></button>
+                    </div>
+                </div>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Full name <span class="text-slate-300 normal-case">(admin-managed)</span></label>
+                        <input value="Bikash Karki" disabled class="mt-1 w-full h-12 bg-slate-100 border border-slate-200 rounded-xl px-4 text-sm font-bold text-slate-400">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Phone</label>
+                        <input value="+977 9845012345" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Emergency contact</label>
+                        <input value="+977 9801122334" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Address</label>
+                        <input value="Sukhanagar, Butwal-11" class="mt-1 w-full h-12 bg-white border-2 border-slate-200 focus:border-brand rounded-xl px-4 text-sm font-bold text-slate-800 focus:outline-none">
+                    </div>
+                </div>
+                <p class="text-xs text-slate-400 mt-3"><i class="fa-solid fa-circle-info mr-1"></i>Name, documents &amp; vehicle are managed by Chutkima admin.</p>
+                <button onclick="saveProfile()" class="mt-5 w-full h-14 rounded-2xl bg-brand hover:bg-brand-dark text-white text-base font-extrabold active:scale-[.98] transition-all glow-brand">Save Changes</button>
+            </div>
+        </div>
+
+        <!-- ===================== SCREEN: DOC READER (Privacy / Terms) ===================== -->
+        <div id="screen-doc" class="screen hidden-screen bg-slate-50" style="top:44px">
+            <div class="px-5 pt-2 pb-3 flex items-center justify-between">
+                <button onclick="closeDoc()" class="w-11 h-11 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600"><i class="fa-solid fa-arrow-left"></i></button>
+                <span id="docTitle" class="text-sm font-extrabold text-slate-800">Privacy Policy</span>
+                <div class="w-11"></div>
+            </div>
+            <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-10">
+                <div id="docBody" class="bg-white border border-slate-200/60 rounded-2xl p-4 shadow-sm text-sm text-slate-600 leading-relaxed space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: DELIVERY SHEET (114B/114C) ===================== -->
+        <div id="overlay-deliver" class="absolute inset-0 z-40 hidden">
+            <div class="absolute inset-0 bg-black/40" onclick="closeDeliver()"></div>
+            <div id="deliverSheet" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-5 pb-7 fade translate-y-full">
+                <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4"></div>
+                <h3 class="text-xl font-extrabold text-slate-800">Complete Delivery</h3>
+                <p class="text-sm text-slate-500 mt-1" id="deliverSub">Confirm hand-over to the customer.</p>
+
+                <!-- COD block -->
+                <div id="deliverCod" class="hidden mt-4">
+                    <div class="bg-orange-50 border border-orange-200 rounded-2xl p-4 text-center">
+                        <span class="text-xs font-bold text-orange-600 uppercase tracking-wide">Collect Cash (114A)</span>
+                        <h2 class="text-4xl font-black text-orange-700 mt-1">NPR <span id="deliverCodAmt">0</span></h2>
+                    </div>
+                    <div class="grid grid-cols-2 gap-2.5 mt-4">
+                        <button onclick="openCashConfirm()" class="h-14 rounded-2xl bg-brand hover:bg-brand-dark text-white text-base font-extrabold flex items-center justify-center gap-2 active:scale-[.98] transition-all"><i class="fa-solid fa-money-bill-wave"></i> Cash (114B)</button>
+                        <button onclick="showQR()" class="h-14 rounded-2xl bg-slate-800 hover:bg-slate-900 text-white text-base font-extrabold flex items-center justify-center gap-2 active:scale-[.98] transition-all"><i class="fa-solid fa-qrcode"></i> Show QR (114C)</button>
+                    </div>
+                </div>
+
+                <!-- prepaid block -->
+                <div id="deliverPrepaid" class="hidden mt-4">
+                    <div class="bg-brand-light border border-brand/20 rounded-2xl p-4 text-center">
+                        <i class="fa-solid fa-circle-check text-brand text-3xl mb-1"></i>
+                        <p class="text-sm font-bold text-brand-dark">Already paid online — no cash to collect.</p>
+                    </div>
+                    <button onclick="openDeliveredConfirm('prepaid')" class="mt-4 w-full h-14 rounded-2xl bg-brand hover:bg-brand-dark text-white text-base font-extrabold active:scale-[.98] transition-all">Mark as Delivered (113C)</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: HELP / REPORT ISSUE ===================== -->
+        <div id="overlay-help" class="absolute inset-0 z-[58] hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeHelp()"></div>
+            <div id="helpSheet" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-5 pb-7 fade translate-y-full">
+                <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4"></div>
+                <h3 class="text-xl font-extrabold text-slate-800">Help &amp; Report</h3>
+                <p class="text-sm text-slate-500 mt-1">Report an issue — admin gets notified instantly.</p>
+                <div class="space-y-2.5 mt-4">
+                    <button onclick="reportIssue('Item missing / damaged')" class="w-full h-12 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-sm font-bold text-left px-4 flex items-center gap-3"><i class="fa-solid fa-box-open text-slate-400"></i> Item missing / damaged</button>
+                    <button onclick="reportIssue('Cannot find address')" class="w-full h-12 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-sm font-bold text-left px-4 flex items-center gap-3"><i class="fa-solid fa-map-location-dot text-slate-400"></i> Cannot find address</button>
+                    <button onclick="reportIssue('Customer refused order')" class="w-full h-12 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-sm font-bold text-left px-4 flex items-center gap-3"><i class="fa-solid fa-ban text-slate-400"></i> Customer refused order</button>
+                    <a href="tel:+97700000000" class="w-full h-12 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-600 text-sm font-bold text-left px-4 flex items-center gap-3"><i class="fa-solid fa-headset"></i> Call Support (SOS)</a>
+                </div>
+                <button onclick="closeHelp()" class="w-full h-11 text-slate-500 text-sm font-bold mt-3">Cancel</button>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: QR ===================== -->
+        <div id="overlay-qr" class="absolute inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="hideQR()"></div>
+            <div class="absolute inset-x-6 top-1/2 -translate-y-1/2 bg-white rounded-3xl p-6 text-center">
+                <h3 class="text-lg font-extrabold text-slate-800">Scan to Pay</h3>
+                <p class="text-sm text-slate-500 mt-1">Customer scans with eSewa / Khalti</p>
+                <div id="qrBox" class="w-52 h-52 mx-auto my-5 bg-white border-2 border-slate-200 rounded-2xl p-3 grid grid-cols-[repeat(13,1fr)] gap-[2px]"></div>
+                <div class="text-2xl font-black text-slate-800 mb-4">NPR <span id="qrAmt">0</span></div>
+                <button onclick="qrPaid()" class="w-full h-14 rounded-2xl bg-brand hover:bg-brand-dark text-white text-base font-extrabold active:scale-[.98] transition-all">Customer Paid — Confirm</button>
+                <button onclick="hideQR()" class="w-full h-11 text-slate-500 text-sm font-bold mt-2">Back</button>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: COD CASH CONFIRMATION (114B) ===================== -->
+        <div id="overlay-cash" class="absolute inset-0 z-[56] hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeCashConfirm()"></div>
+            <div class="absolute inset-x-6 top-1/2 -translate-y-1/2 bg-white rounded-3xl p-6">
+                <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-money-bill-wave text-xl"></i></div>
+                <h3 class="text-lg font-extrabold text-slate-800 text-center">Confirm Cash Collected</h3>
+                <p class="text-sm text-slate-500 mt-1 text-center">Count the cash before confirming.</p>
+                <div class="bg-orange-50 border border-orange-200 rounded-2xl p-4 text-center my-4">
+                    <span class="text-xs font-bold text-orange-600 uppercase">Amount to collect</span>
+                    <h2 class="text-4xl font-black text-orange-700 mt-1">NPR <span id="cashConfirmAmt">0</span></h2>
+                </div>
+                <label class="flex items-center gap-2.5 p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-700 cursor-pointer">
+                    <input type="checkbox" id="cashReconfirm" class="w-5 h-5 accent-brand"> I received the full amount in cash
+                </label>
+                <button onclick="confirmCash()" class="mt-4 w-full h-14 rounded-2xl bg-brand hover:bg-brand-dark text-white text-base font-extrabold active:scale-[.98] transition-all glow-brand">Confirm Cash Received</button>
+                <button onclick="closeCashConfirm()" class="w-full h-11 text-slate-500 text-sm font-bold mt-2">Cancel</button>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: DAILY CASH SETTLEMENT (114D) ===================== -->
+        <div id="overlay-settle" class="absolute inset-0 z-[56] hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeSettle()"></div>
+            <div id="settleSheet" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-5 pb-7 fade translate-y-full">
+                <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4"></div>
+                <div class="w-12 h-12 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-hand-holding-dollar text-xl"></i></div>
+                <h3 class="text-xl font-extrabold text-slate-800 text-center">Daily Cash Settlement</h3>
+                <p class="text-sm text-slate-500 mt-1 text-center">Hand the collected COD cash to the store / admin.</p>
+                <div class="bg-orange-50 border border-orange-200 rounded-2xl p-4 text-center my-4">
+                    <span class="text-xs font-bold text-orange-600 uppercase">Cash to hand over</span>
+                    <h2 class="text-4xl font-black text-orange-700 mt-1">NPR <span id="settleAmt">0</span></h2>
+                </div>
+                <div class="bg-slate-50 rounded-2xl p-3 space-y-1.5 mb-4">
+                    <div class="flex justify-between text-sm"><span class="text-slate-500">COD cash collected</span><span class="font-bold text-slate-800">NPR <span id="settleCash">0</span></span></div>
+                    <div class="flex justify-between text-sm"><span class="text-slate-500">COD orders</span><span class="font-bold text-slate-800"><span id="settleOrders">0</span></span></div>
+                    <div class="flex justify-between text-sm"><span class="text-slate-500">Digital (QR) — auto-settled</span><span class="font-bold text-emerald-600">NPR <span id="settleQr">0</span></span></div>
+                </div>
+                <label class="flex items-center gap-2.5 p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-700 cursor-pointer">
+                    <input type="checkbox" id="settleConfirm" class="w-5 h-5 accent-orange-600"> I handed over the full cash amount
+                </label>
+                <button onclick="confirmSettle()" class="mt-4 w-full h-14 rounded-2xl bg-orange-600 hover:bg-orange-700 text-white text-base font-extrabold active:scale-[.98] transition-all"><i class="fa-solid fa-check mr-2"></i>Confirm Deposit</button>
+                <button onclick="closeSettle()" class="w-full h-11 text-slate-500 text-sm font-bold mt-2">Cancel</button>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: FINAL DELIVERY CONFIRMATION (113C) ===================== -->
+        <div id="overlay-delivered" class="absolute inset-0 z-[57] hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeDeliveredConfirm()"></div>
+            <div class="absolute inset-x-6 top-1/2 -translate-y-1/2 bg-white rounded-3xl p-6">
+                <div class="w-12 h-12 rounded-full bg-brand/10 text-brand flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-flag-checkered text-xl"></i></div>
+                <h3 class="text-lg font-extrabold text-slate-800 text-center">Confirm Delivery?</h3>
+                <p class="text-sm text-slate-500 mt-1 text-center">Mark this order as delivered to the customer.</p>
+                <div id="deliveredSummary" class="bg-slate-50 rounded-2xl p-4 my-4 space-y-2 text-sm"></div>
+                <button onclick="confirmFinalDelivery()" class="w-full h-14 rounded-2xl bg-brand hover:bg-brand-dark text-white text-base font-extrabold active:scale-[.98] transition-all glow-brand"><i class="fa-solid fa-check mr-2"></i>Yes, Delivered (113C)</button>
+                <button onclick="closeDeliveredConfirm()" class="w-full h-11 text-slate-500 text-sm font-bold mt-2">Not yet</button>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: NOT RESPONDING (113F) ===================== -->
+        <div id="overlay-nr" class="absolute inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeNotResponding()"></div>
+            <div class="absolute inset-x-6 top-1/2 -translate-y-1/2 bg-white rounded-3xl p-6">
+                <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-phone-slash text-xl"></i></div>
+                <h3 class="text-lg font-extrabold text-slate-800 text-center">Customer Not Responding?</h3>
+                <p class="text-sm text-slate-500 mt-2 text-center">Please confirm you called the customer first. This is logged against the customer's <strong>Trust Badge</strong> (3.8).</p>
+                <label class="flex items-center gap-2.5 mt-4 p-3 bg-slate-50 rounded-xl text-sm font-medium text-slate-700">
+                    <input type="checkbox" id="nrCalled" class="w-5 h-5 accent-brand"> I called the customer at least once
+                </label>
+                <button onclick="confirmNotResponding()" class="mt-4 w-full h-14 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-base font-extrabold active:scale-[.98] transition-all">Log & Report</button>
+                <button onclick="closeNotResponding()" class="w-full h-11 text-slate-500 text-sm font-bold mt-2">Cancel</button>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: TEAM WAITING (85) ===================== -->
+        <div id="overlay-team" class="absolute inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50"></div>
+            <div class="absolute inset-x-6 top-1/2 -translate-y-1/2 bg-white rounded-3xl p-6 text-center">
+                <div class="w-14 h-14 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-people-group text-2xl"></i></div>
+                <h3 class="text-lg font-extrabold text-slate-800">Your Portion Delivered ✓</h3>
+                <p class="text-sm text-slate-500 mt-2">Order closes only when <strong>all riders</strong> confirm (Feature 85).</p>
+                <div id="teamRiderList" class="my-4 space-y-2 text-left"></div>
+                <button onclick="simOtherRiders()" class="w-full h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-bold mb-2">Simulate other riders confirming</button>
+                <button onclick="closeTeamWait()" class="w-full h-12 text-slate-500 text-sm font-bold">Back to Orders</button>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: LOGOUT ===================== -->
+        <div id="overlay-logout" class="absolute inset-0 z-50 hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeLogout()"></div>
+            <div class="absolute inset-x-6 top-1/2 -translate-y-1/2 bg-white rounded-3xl p-6 text-center">
+                <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-triangle-exclamation text-xl"></i></div>
+                <h3 class="text-lg font-extrabold text-slate-800">Logout?</h3>
+                <p id="logoutBody" class="text-sm text-slate-500 mt-2">Are you sure you want to logout?</p>
+                <div class="grid grid-cols-2 gap-2.5 mt-5">
+                    <button onclick="closeLogout()" class="h-14 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-base font-bold">Stay</button>
+                    <button onclick="doLogout()" class="h-14 rounded-2xl bg-rose-500 hover:bg-rose-600 text-white text-base font-extrabold">Logout</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: INCOMING ASSIGNMENT (112A) — Confirm/Reject ===================== -->
+        <div id="overlay-incoming" class="absolute inset-0 z-[55] hidden">
+            <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
+            <div class="absolute inset-x-5 top-1/2 -translate-y-1/2 bg-white rounded-3xl overflow-hidden shadow-2xl">
+                <!-- header -->
+                <div class="bg-brand text-white px-5 py-4 flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center text-xl animate-pulse"><i class="fa-solid fa-bell"></i></div>
+                    <div class="flex-1">
+                        <h3 class="text-base font-extrabold">New Order Assigned!</h3>
+                        <p class="text-xs text-white/80">Confirm within <span id="incomingTimer" class="font-bold">30</span>s</p>
+                    </div>
+                    <span id="incomingPay" class="px-2.5 py-1 text-xs font-bold bg-white/20 rounded-lg">COD</span>
+                </div>
+                <!-- body -->
+                <div class="p-5">
+                    <div id="incomingBadges" class="flex gap-2 mb-2 flex-wrap"></div>
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">Order <span id="incomingId">#BW-2025-0043</span></span>
+                    <h2 id="incomingCustomer" class="text-lg font-bold text-slate-800 mt-0.5">Ram Sharma</h2>
+                    <p id="incomingAddress" class="text-sm text-slate-500">Amarpath, Traffic Chowk</p>
+                    <div class="grid grid-cols-3 gap-2 mt-4 text-center">
+                        <div class="bg-slate-50 rounded-xl p-2.5"><span class="block text-[10px] text-slate-400 font-bold uppercase">Distance</span><span id="incomingKm" class="text-sm font-black text-slate-800">2.4 km</span></div>
+                        <div class="bg-slate-50 rounded-xl p-2.5"><span class="block text-[10px] text-slate-400 font-bold uppercase">Items</span><span id="incomingItems" class="text-sm font-black text-slate-800">3</span></div>
+                        <div class="bg-slate-50 rounded-xl p-2.5"><span class="block text-[10px] text-slate-400 font-bold uppercase">Collect</span><span id="incomingCollect" class="text-sm font-black text-orange-600">NPR 0</span></div>
+                    </div>
+                </div>
+                <!-- actions -->
+                <div class="grid grid-cols-2 gap-3 px-5 pb-5">
+                    <button onclick="incomingReject()" class="h-14 rounded-2xl bg-white border-2 border-rose-200 text-rose-600 text-base font-extrabold active:scale-[.98] transition-all"><i class="fa-solid fa-xmark mr-2"></i>Reject</button>
+                    <button onclick="incomingConfirm()" class="h-14 rounded-2xl bg-brand hover:bg-brand-dark text-white text-base font-extrabold active:scale-[.98] transition-all glow-brand"><i class="fa-solid fa-check mr-2"></i>Confirm</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: PARCEL READY ===================== -->
+        <div id="overlay-parcel-ready" class="absolute inset-0 z-[55] hidden">
+            <div class="absolute inset-0 bg-slate-900/70 backdrop-blur-sm"></div>
+            <div class="absolute inset-x-5 top-1/2 -translate-y-1/2 bg-white rounded-3xl overflow-hidden shadow-2xl">
+                <!-- header -->
+                <div class="bg-emerald-600 text-white px-5 py-4 flex items-center gap-3">
+                    <div class="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center text-xl animate-bounce">
+                        <i class="fa-solid fa-box-open"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h3 class="text-base font-extrabold">Parcel Ready for Pickup! 📦</h3>
+                        <p class="text-xs text-white/80">Store has packed the order — go collect it</p>
+                    </div>
+                </div>
+                <!-- body -->
+                <div class="p-5 space-y-3">
+                    <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">Order <span id="parcelReadyId">#BW-2025-0043</span> &nbsp;·&nbsp; <span id="parcelReadyItems">3</span> items</span>
+
+                    <!-- STEP 1: Fixed Store (Pickup) -->
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-2xl p-3.5 flex items-start gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-emerald-600 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-store text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-extrabold text-emerald-700 uppercase tracking-wide block">① Pick Up From (Fixed Store)</span>
+                            <p class="text-sm font-bold text-slate-800 mt-0.5">Chutkima Store</p>
+                            <p class="text-xs text-slate-500">Traffic Chowk, Butwal — always here</p>
+                        </div>
+                    </div>
+
+                    <!-- STEP 2: Customer delivery address -->
+                    <div class="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 flex items-start gap-3">
+                        <div class="w-9 h-9 rounded-xl bg-slate-700 flex items-center justify-center flex-shrink-0">
+                            <i class="fa-solid fa-location-dot text-white text-sm"></i>
+                        </div>
+                        <div>
+                            <span class="text-[10px] font-extrabold text-slate-500 uppercase tracking-wide block">② Deliver To (Customer)</span>
+                            <p id="parcelReadyCustomer" class="text-sm font-bold text-slate-800 mt-0.5">Ram Sharma</p>
+                            <p id="parcelReadyAddress" class="text-xs text-slate-500">Amarpath, Butwal</p>
+                        </div>
+                    </div>
+
+                    <!-- Warning -->
+                    <div class="p-3 bg-amber-50 border border-amber-100 rounded-xl flex items-start gap-2">
+                        <i class="fa-solid fa-triangle-exclamation text-amber-500 mt-0.5 flex-shrink-0"></i>
+                        <p class="text-xs text-amber-800">Check parcel seal &amp; item count before leaving the store.</p>
+                    </div>
+                </div>
+                <!-- actions -->
+                <div class="px-5 pb-5">
+                    <button onclick="closeParcelReady()" class="w-full h-14 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-base font-extrabold active:scale-[.98] transition-all" style="box-shadow:0 0 18px rgba(5,150,105,.35)">
+                        <i class="fa-solid fa-motorcycle mr-2"></i>Go to Store &amp; Pick Up
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ===================== OVERLAY: REJECT REASON ===================== -->
+        <div id="overlay-reject" class="absolute inset-0 z-[58] hidden">
+            <div class="absolute inset-0 bg-black/50" onclick="closeReject()"></div>
+            <div id="rejectSheet" class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl p-5 pb-7 fade translate-y-full">
+                <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-4"></div>
+                <h3 class="text-xl font-extrabold text-slate-800">Reject Order?</h3>
+                <p class="text-sm text-slate-500 mt-1">Pick a reason — it goes back to admin for reassignment.</p>
+                <div class="space-y-2.5 mt-4">
+                    <button onclick="rejectWithReason('Too far from me')" class="w-full h-12 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-sm font-bold text-left px-4 transition-colors">Too far from me</button>
+                    <button onclick="rejectWithReason('Vehicle issue')" class="w-full h-12 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-sm font-bold text-left px-4 transition-colors">Vehicle issue</button>
+                    <button onclick="rejectWithReason('Overloaded — too many orders')" class="w-full h-12 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-sm font-bold text-left px-4 transition-colors">Overloaded — too many orders</button>
+                    <button onclick="rejectWithReason('Other')" class="w-full h-12 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-sm font-bold text-left px-4 transition-colors">Other</button>
+                </div>
+                <button onclick="closeReject()" class="w-full h-12 text-slate-500 text-sm font-bold mt-3">Cancel</button>
+            </div>
+        </div>
+
+        <!-- toast -->
+        <div id="toast" class="absolute top-14 left-1/2 -translate-x-1/2 bg-white border-2 border-brand rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-3 z-[60] text-sm fade -translate-y-32 opacity-0 pointer-events-none max-w-[360px]">
+            <i id="toastIcon" class="fa-solid fa-circle-check text-brand text-lg"></i>
+            <div class="text-left"><h5 id="toastTitle" class="font-extrabold text-slate-800">Done</h5><p id="toastBody" class="text-slate-500 text-xs mt-0.5"></p></div>
+        </div>
+    </div>
+
+    <script>
+    /* ============================ STATE ============================ */
+    const state = {
+        online: false,
+        currentTab: 'orders',
+        orders: [],         // active assigned orders
+        history: [],
+        notifications: [],  // notification history
+        settings: { push:true, sound:true, pin:false, lang:'en' },
+        activeId: null,     // order open in detail
+        seq: 42,
+        stats: { delivered: 0, km: 0, cash: 0, codOrders: 0, qr: 0 },
+        gpsTimer: null, arrivedTimer: null,
+        // rider pay model (admin-configured): fuel = KM×rate, salary = fixed monthly, commission = per delivery
+        pay: { mode:'fuel', fuelRate:4, monthlySalary:18000, commissionRate:25 },
+        settlements: [], lastSettle: null,   // daily COD cash settlement history
+        packingTimers: {}                     // per-order "store packing → ready" timers
+    };
+
+    const AREAS = ['Amarpath, Traffic Chowk','Milanchowk, Butwal','Golpark, Butwal','Devinagar','Sukhanagar','Kalikanagar'];
+    const CUSTOMERS = ['Ram Sharma','Sita Gurung','Hari Thapa','Gita K.C.','Bishnu Pandey','Anita Rai'];
+    const CATALOG = [
+        {sku:'WW-001', name:'Wai Wai Noodles', price:30, shelf:'A-3'},
+        {sku:'TS-012', name:'Tata Salt 1kg', price:85, shelf:'B-7'},
+        {sku:'DF-005', name:'Dairy Fresh Milk 1L', price:95, shelf:'C-2'},
+        {sku:'CO-220', name:'Coca-Cola 1.5L', price:140, shelf:'D-1'},
+        {sku:'EG-010', name:'Eggs (tray of 6)', price:120, shelf:'A-1'},
+        {sku:'BR-004', name:'Brown Bread', price:75, shelf:'B-2'}
+    ];
+    const rnd = a => a[Math.floor(Math.random()*a.length)];
+    const npr = n => 'NPR ' + Number(n).toLocaleString('en-IN');
+    const ADMIN_NOTES = [
+        'Fragile items — handle with care.',
+        'Customer requested an extra carry bag.',
+        'Call admin if customer asks for change.',
+        'VIP customer — please be extra polite.',
+        'Building gate code: 1234.',
+        'Deliver to reception, not the flat.'
+    ];
+
+    /* Pre-loaded mock data so every screen (Earnings/History/stats) is populated */
+    function seedMockData(){
+        state.history = [
+            {id:'BW-2025-0039', customer:'Sita Gurung',   area:'Milanchowk, Butwal', house:'House 24', km:2.4, fuel:9.6,  payment:'COD',     method:'cash',    time:'8:05 AM', items:4, amount:460, subtotal:380, fee:80, total:460, rating:5, review:'Very fast delivery, polite rider!', itemsList:[{sku:'WW-001',name:'Wai Wai Noodles',qty:5,price:30,shelf:'A-3'},{sku:'EG-010',name:'Eggs (tray of 6)',qty:1,price:120,shelf:'A-1'},{sku:'BR-004',name:'Brown Bread',qty:1,price:75,shelf:'B-2'}]},
+            {id:'BW-2025-0038', customer:'Hari Thapa',     area:'Golpark, Butwal',    house:'House 51', km:1.8, fuel:7.2,  payment:'Prepaid', method:'prepaid', time:'7:52 AM', items:3, amount:0,   subtotal:265, fee:60, total:325, rating:5, review:'On time and careful with items.', itemsList:[{sku:'TS-012',name:'Tata Salt 1kg',qty:1,price:85,shelf:'B-7'},{sku:'DF-005',name:'Dairy Fresh Milk 1L',qty:2,price:95,shelf:'C-2'}]},
+            {id:'BW-2025-0037', customer:'Gita K.C.',      area:'Devinagar',          house:'House 9',  km:3.1, fuel:12.4, payment:'COD',     method:'qr',      time:'7:31 AM', items:5, amount:540, subtotal:500, fee:40, total:540, rating:4, review:'Good service overall.', itemsList:[{sku:'CO-220',name:'Coca-Cola 1.5L',qty:2,price:140,shelf:'D-1'},{sku:'WW-001',name:'Wai Wai Noodles',qty:4,price:30,shelf:'A-3'},{sku:'EG-010',name:'Eggs (tray of 6)',qty:1,price:120,shelf:'A-1'}]},
+            {id:'BW-2025-0036', customer:'Bishnu Pandey',  area:'Sukhanagar',         house:'House 37', km:2.0, fuel:8.0,  payment:'COD',     method:'cash',    time:'7:14 AM', items:2, amount:320, subtotal:240, fee:60, total:320, rating:null, review:null, itemsList:[{sku:'TS-012',name:'Tata Salt 1kg',qty:1,price:85,shelf:'B-7'},{sku:'DF-005',name:'Dairy Fresh Milk 1L',qty:1,price:95,shelf:'C-2'}]}
+        ];
+        state.stats = { delivered:4, km:9.3, cash:780, codOrders:2, qr:540 };
+        state.notifications = [
+            {icon:'fa-star',        color:'text-amber-500', title:'New 5★ review',        body:'Sita Gurung rated your delivery 5 stars.', time:'8:06 AM', read:false},
+            {icon:'fa-circle-check',color:'text-brand',     title:'Delivery completed',   body:'Order #BW-2025-0039 delivered successfully.', time:'8:05 AM', read:false},
+            {icon:'fa-bolt',        color:'text-violet-500',title:'Shift started',        body:'Operating hours today: 7:00 AM – 11:00 PM.', time:'7:00 AM', read:true},
+            {icon:'fa-circle-info', color:'text-sky-500',   title:'Vehicle verified',     body:'Honda Shine (Lu 2 Pa 3456) assigned & active.', time:'6:55 AM', read:true}
+        ];
+    }
+
+    /* ============================ NOTIFICATIONS ============================ */
+    function pushNotif(title, body, icon, color){
+        state.notifications.unshift({ icon:icon||'fa-bell', color:color||'text-brand', title, body, time: nowStr(), read:false });
+        updateNotifBadge();
+    }
+    function updateNotifBadge(){
+        const n = state.notifications.filter(x=>!x.read).length;
+        const dot = document.getElementById('navNotifDot');
+        if(!dot) return;
+        if(n>0){ dot.textContent = n>9?'9+':n; dot.classList.remove('hidden'); }
+        else dot.classList.add('hidden');
+    }
+    function markAllRead(){ state.notifications.forEach(n=>n.read=true); updateNotifBadge(); renderNotifications(); }
+    function renderNotifications(){
+        const wrap = document.getElementById('notifList');
+        document.getElementById('notifEmpty').classList.toggle('hidden', state.notifications.length>0);
+        wrap.innerHTML = state.notifications.map(n=>`
+            <div class="p-3.5 rounded-2xl border shadow-sm flex gap-3 ${n.read?'bg-white border-slate-200/60':'bg-brand-light border-brand/20'}">
+                <div class="w-9 h-9 rounded-full bg-white border border-slate-200 flex items-center justify-center ${n.color} flex-shrink-0"><i class="fa-solid ${n.icon}"></i></div>
+                <div class="flex-1">
+                    <div class="flex items-center justify-between"><h5 class="text-sm font-bold text-slate-800">${n.title}</h5>${n.read?'':'<span class="w-2 h-2 bg-brand rounded-full"></span>'}</div>
+                    <p class="text-xs text-slate-500 mt-0.5 leading-snug">${n.body}</p>
+                    <span class="text-[10px] text-slate-400 mt-1 block">${n.time}</span>
+                </div>
+            </div>`).join('');
+    }
+
+    /* ============================ NAV / SCREENS ============================ */
+    function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden-screen')); document.getElementById(id).classList.remove('hidden-screen'); }
+    function goSplash(){ show('screen-splash'); }
+    function goLogin(){ show('screen-login'); showAuth('signin'); }
+    function showAuth(mode){
+        const inEl=document.getElementById('auth-signin'), upEl=document.getElementById('auth-signup');
+        const inTab=document.getElementById('auth-tab-signin'), upTab=document.getElementById('auth-tab-signup');
+        if(mode==='signup'){ inEl.classList.add('hidden'); upEl.classList.remove('hidden'); suGo(1); }
+        else { upEl.classList.add('hidden'); inEl.classList.remove('hidden'); document.getElementById('login-phone').classList.remove('hidden'); document.getElementById('login-otp').classList.add('hidden'); }
+        inTab.className = 'flex-1 h-10 rounded-lg text-sm font-bold transition-all ' + (mode==='signin'?'bg-white text-brand shadow-sm':'text-slate-500');
+        upTab.className = 'flex-1 h-10 rounded-lg text-sm font-bold transition-all ' + (mode==='signup'?'bg-white text-brand shadow-sm':'text-slate-500');
+    }
+    /* ----- Sign up (rider registration) ----- */
+    const SU_NAMES = {1:'Phone',2:'Verify OTP',3:'Personal details',4:'Vehicle',5:'Documents'};
+    let suVeh = 'Bike';
+    function suGo(n){
+        [1,2,3,4,5].forEach(i=>{
+            document.getElementById('su-'+i).classList.toggle('hidden', i!==n);
+            document.getElementById('su-prog-'+i).className = 'flex-1 h-1.5 rounded-full ' + (i<=n ? 'bg-brand' : 'bg-slate-200');
+        });
+        document.getElementById('suStepNum').textContent = n;
+        document.getElementById('suStepName').textContent = SU_NAMES[n];
+        if(n===4) selectVeh(suVeh);
+    }
+    function suSendOtp(){ suGo(2); toast('OTP Sent','6-digit code via Sparrow SMS.'); }
+    function selectVeh(t){
+        suVeh = t;
+        ['Bike','Scooter','Cycle'].forEach(v=>{
+            const el=document.getElementById('veh-'+v); if(!el) return;
+            el.className = 'h-16 rounded-xl border-2 text-xs font-bold flex flex-col items-center justify-center gap-1 ' + (v===t ? 'border-brand bg-brand/10 text-brand' : 'border-slate-200 text-slate-500');
+        });
+    }
+    function suSubmit(){
+        if(!document.getElementById('suTerms').checked){ toast('Accept terms','Please accept the Terms & Conditions.','fa-triangle-exclamation','text-amber-500'); return; }
+        if(state.history.length===0) seedMockData();
+        show('screen-app'); switchTab('orders'); renderOrders(); updateNotifBadge();
+        pushNotif('Application submitted','Your documents are under admin review. You can start once verified.','fa-circle-check','text-brand');
+        toast('Welcome to Chutkima!','Application submitted — pending admin verification.','fa-circle-check');
+    }
+    function sendOtp(){
+        const p = document.getElementById('phoneInput').value || '98XXXXXXXX';
+        document.getElementById('otpPhoneLabel').textContent = '+977 ' + p;
+        document.getElementById('login-phone').classList.add('hidden');
+        document.getElementById('login-otp').classList.remove('hidden');
+        toast('OTP Sent','6-digit code via Sparrow SMS.');
+    }
+    function backToPhone(){ document.getElementById('login-otp').classList.add('hidden'); document.getElementById('login-phone').classList.remove('hidden'); }
+    function verifyOtp(){ if(state.history.length===0) seedMockData(); show('screen-app'); switchTab('orders'); renderOrders(); updateNotifBadge(); toast('Welcome, Bikash!','Logged in as Rider (111A).'); }
+
+    function switchTab(t){
+        state.currentTab = t;
+        ['orders','earnings','history','notifications','profile'].forEach(x=>{
+            const el = document.getElementById('tab-'+x);
+            el.classList.add('hidden-screen'); el.classList.remove('flex');
+        });
+        // nav highlight (Profile is opened via the avatar, not the nav)
+        ['orders','earnings','history','notifications'].forEach(x=>{
+            const nav = document.getElementById('nav-'+x);
+            const active = (x===t);
+            nav.className = 'relative flex flex-col items-center gap-1 ' + (active ? 'text-brand' : 'text-slate-400');
+            nav.querySelector('span:last-child').className = 'text-[11px] ' + (active ? 'font-bold' : 'font-semibold');
+        });
+        const cur = document.getElementById('tab-'+t);
+        cur.classList.remove('hidden-screen'); cur.classList.add('flex');
+        if(t==='earnings') renderEarnings();
+        if(t==='history') renderHistory();
+        if(t==='notifications'){ renderNotifications(); }
+        if(t==='profile') renderSettings();
+    }
+
+    /* ============================ ONLINE TOGGLE (111B) ============================ */
+    function toggleOnline(){
+        state.online = !state.online;
+        const dot = document.getElementById('toggleDot'), tog = document.getElementById('onlineToggle');
+        const icon = document.getElementById('toggleIcon'), lbl = document.getElementById('onlineLabel'), pd = document.getElementById('presenceDot');
+        if(state.online){
+            tog.classList.remove('bg-slate-200'); tog.classList.add('bg-brand');
+            dot.style.left = 'calc(100% - 28px)'; dot.classList.remove('bg-slate-400'); dot.classList.add('bg-white');
+            icon.classList.remove('text-white'); icon.classList.add('text-brand');
+            lbl.textContent = 'ONLINE'; lbl.classList.remove('text-slate-400'); lbl.classList.add('text-brand');
+            pd.classList.remove('bg-slate-400'); pd.classList.add('bg-brand','animate-pulse');
+            document.getElementById('ordersOffline').classList.add('hidden');
+            document.getElementById('ordersOnline').classList.remove('hidden');
+            if(state.orders.length===0){ seedOrders(); }
+        } else {
+            tog.classList.add('bg-slate-200'); tog.classList.remove('bg-brand');
+            dot.style.left = '4px'; dot.classList.add('bg-slate-400'); dot.classList.remove('bg-white');
+            icon.classList.add('text-white'); icon.classList.remove('text-brand');
+            lbl.textContent = 'OFFLINE'; lbl.classList.add('text-slate-400'); lbl.classList.remove('text-brand');
+            pd.classList.add('bg-slate-400'); pd.classList.remove('bg-brand','animate-pulse');
+            document.getElementById('ordersOffline').classList.remove('hidden');
+            document.getElementById('ordersOnline').classList.add('hidden');
+        }
+        renderOrders();
+    }
+
+    /* ============================ ORDER FACTORY ============================ */
+    const STORE = { name:'Chutkima Store — Traffic Chowk', addr:'Traffic Chowk, Butwal-8 (Pickup point)' };
+    // tiered delivery fee (scope feature 13)
+    function deliveryFee(sub){ if(sub>=800) return 0; if(sub>=600) return 20; if(sub>=400) return 40; if(sub>=200) return 60; return 80; }
+    // customer Trust Badge (scope 3.8) — system/behaviour based (NOT rated by riders)
+    function custProfile(){
+        const orders = Math.floor(Math.random()*40);
+        const r = Math.random();
+        let trust = 'Green';
+        if(orders<3) trust = 'New';
+        else if(r<0.12) trust = 'Red';
+        else if(r<0.30) trust = 'Gray';
+        return { orders, trust };
+    }
+    function makeOrder(type){
+        const id = 'BW-2025-' + String(++state.seq).padStart(4,'0');
+        const nItems = 2 + Math.floor(Math.random()*3);
+        const items = [];
+        for(let i=0;i<nItems;i++){ const c = rnd(CATALOG); items.push({...c, qty: 1+Math.floor(Math.random()*4)}); }
+        const subtotal = items.reduce((s,i)=>s+i.price*i.qty,0);
+        const fee = deliveryFee(subtotal);
+        const total = subtotal + fee;
+        const isCod = type==='COD';
+        const km = +(1.2 + Math.random()*3).toFixed(1);
+        const o = {
+            id, type, customer: rnd(CUSTOMERS), area: rnd(AREAS),
+            house: 'House ' + (10+Math.floor(Math.random()*80)),
+            phone: '9845012345', items, subtotal, fee, total,
+            payment: isCod ? 'COD' : 'Prepaid',
+            codAmount: isCod ? total : 0,
+            km,
+            storeEta: 2 + Math.floor(Math.random()*5),   // mins to reach the dark store (pickup)
+            custEta: Math.round(km*4 + 4),                // mins to reach the customer (drop)
+            eta: Math.round(km*4 + 4),
+            storeArrived: false,
+            cust: custProfile(),
+            status: 'assigned',
+            scheduled: type==='Scheduled',
+            scheduledTime: '7:15 AM',
+            team: type==='Team',
+            portion: 'Rider 1: beverages & cold items',
+            teamRiders: type==='Team' ? [{name:'You (Bikash)', done:false},{name:'Suresh (Rider 2)', done:false}] : null,
+            instruction: Math.random()>0.6 ? 'Baby sleeping — please call from the gate, don\'t ring the bell.' : null,
+            adminNote: Math.random()>0.55 ? rnd(ADMIN_NOTES) : null,
+            times: { confirmed: nowStr() } // Order Placed stamped on creation; Packing stamped when rider confirms
+        };
+        if(type==='Scheduled'){ o.payment = Math.random()>.5?'COD':'Prepaid'; o.codAmount = o.payment==='COD'? total:0; }
+        return o;
+    }
+    function seedOrders(){ state.orders.push(makeOrder('Prepaid')); state.orders.push(makeOrder('COD')); renderOrders(); }
+
+    /* ============================ RENDER ORDER LIST (111C) ============================ */
+    function renderOrders(){
+        document.getElementById('statDelivered').textContent = state.stats.delivered;
+        document.getElementById('statKm').textContent = state.stats.km.toFixed(1);
+        document.getElementById('statCash').textContent = npr(state.stats.cash);
+        // header presence: Offline / Online / On Delivery (matches admin dashboard)
+        if(state.online){
+            const busy = state.orders.some(o=>['pickedup','outfordelivery','arrived'].includes(o.status));
+            const lbl = document.getElementById('onlineLabel');
+            lbl.textContent = busy ? 'ON DELIVERY' : 'ONLINE';
+            lbl.className = 'text-[9px] font-extrabold tracking-wider mt-1 uppercase ' + (busy ? 'text-amber-600' : 'text-brand');
+        }
+        if(!state.online) return;
+        const list = document.getElementById('orderList');
+        document.getElementById('orderCount').textContent = state.orders.length;
+        document.getElementById('ordersEmpty').classList.toggle('hidden', state.orders.length>0);
+        list.innerHTML = state.orders.map(o => {
+            const payChip = o.payment==='COD'
+                ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-orange-100 text-orange-700 rounded-md uppercase">COD '+npr(o.codAmount)+'</span>'
+                : '<span class="px-2 py-0.5 text-[10px] font-bold bg-sky-100 text-sky-700 rounded-md uppercase">Prepaid</span>';
+            const schedBadge = o.scheduled ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-violet-100 text-violet-700 rounded-md uppercase"><i class="fa-solid fa-clock"></i> Scheduled '+o.scheduledTime+'</span>' : '';
+            const teamBadge = o.team ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 rounded-md uppercase"><i class="fa-solid fa-people-group"></i> Team</span>' : '';
+            const locked = o.scheduled;
+            const statusChip = locked ? '' : (
+                o.status==='assigned'       ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-md uppercase"><i class="fa-solid fa-bell"></i> New</span>' :
+                o.status==='confirmed'      ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-md uppercase"><i class="fa-solid fa-box-open"></i> Packing</span>' :
+                o.status==='ready'          ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-md uppercase"><i class="fa-solid fa-box-open"></i> Ready for pickup</span>' :
+                o.status==='pickedup'       ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-violet-100 text-violet-700 rounded-md uppercase"><i class="fa-solid fa-box"></i> Picked up</span>' :
+                o.status==='outfordelivery' ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-blue-100 text-blue-700 rounded-md uppercase"><i class="fa-solid fa-motorcycle"></i> On the way</span>' :
+                o.status==='arrived'        ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-brand/10 text-brand rounded-md uppercase"><i class="fa-solid fa-location-dot"></i> At customer</span>' : '');
+            const actionLabel = locked ? "<i class='fa-solid fa-lock'></i> Locked"
+                : o.status==='assigned'       ? "Confirm / Reject <i class='fa-solid fa-chevron-right ml-1'></i>"
+                : o.status==='confirmed'      ? "Packing at store… <i class='fa-solid fa-chevron-right ml-1'></i>"
+                : o.status==='ready'          ? "Ready — start pickup <i class='fa-solid fa-chevron-right ml-1'></i>"
+                : o.status==='pickedup'       ? "Out for delivery <i class='fa-solid fa-chevron-right ml-1'></i>"
+                : o.status==='outfordelivery' ? "Continue delivery <i class='fa-solid fa-chevron-right ml-1'></i>"
+                : o.status==='arrived'        ? "Hand over <i class='fa-solid fa-chevron-right ml-1'></i>"
+                : "Continue <i class='fa-solid fa-chevron-right ml-1'></i>";
+            const actionColor = locked ? 'text-violet-500' : (o.status==='assigned' ? 'text-amber-600' : (o.status==='confirmed' ? 'text-amber-600' : (o.status==='outfordelivery' ? 'text-blue-600' : 'text-brand')));
+            const itemsCount = o.items.reduce((s,i)=>s+i.qty,0);
+            return `
+            <div onclick="${locked?'lockedTap()':`openOrder('${o.id}')`}" class="group bg-white border-2 ${locked?'border-violet-200 opacity-90':'border-transparent hover:border-brand'} p-4 rounded-2xl shadow-sm transition-all cursor-pointer active:scale-[.99] ${locked?'':'hover:shadow-md'}">
+                <div class="flex justify-between items-start mb-2">
+                    <div>
+                        <span class="text-xs font-bold text-slate-400">#${o.id}</span>
+                        <div class="flex flex-wrap gap-1.5 mt-1">${statusChip}${payChip}${schedBadge}${teamBadge}</div>
+                    </div>
+                    <div class="text-right">
+                        <span class="block text-[10px] text-slate-400 uppercase font-bold">Distance</span>
+                        <span class="text-sm font-extrabold text-slate-700">${o.km} km</span>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="w-2.5 h-2.5 bg-brand rounded-full flex-shrink-0"></span>
+                    <p class="text-slate-700 font-semibold truncate">${o.customer} · ${o.area}</p>
+                </div>
+                <div class="border-t border-slate-100 mt-3 pt-2.5 flex items-center justify-between text-xs text-slate-400">
+                    <span><i class="fa-solid fa-box mr-1"></i> ${itemsCount} items</span>
+                    <span class="${actionColor} font-bold group-hover:translate-x-1 transition-transform">${actionLabel}</span>
+                </div>
+            </div>`;
+        }).join('');
+    }
+    function lockedTap(){ toast('Scheduled order','Locked until 7:00 AM. It will activate automatically.','fa-lock','text-violet-500'); }
+
+    /* ============================ ORDER DETAIL (Level 2) ============================ */
+    function openOrder(id){
+        const o = state.orders.find(x=>x.id===id); if(!o) return;
+        state.activeId = id;
+        document.getElementById('detailId').textContent = '#'+o.id;
+        document.getElementById('detailCustomer').textContent = o.customer;
+        document.getElementById('detailAddress').textContent = o.area + ' · ' + o.house;
+        // trip summary + pickup store (single store)
+        document.getElementById('detailKm').textContent = o.km;
+        document.getElementById('detailEta').textContent = o.eta;
+        document.getElementById('detailTripItems').textContent = o.items.reduce((s,i)=>s+i.qty,0);
+        document.getElementById('detailStore').textContent = STORE.name;
+        document.getElementById('detailStoreAddr').textContent = STORE.addr;
+        // customer Trust Badge (scope 3.8) — reliability shown to the rider
+        const rep = document.getElementById('detailCustRep');
+        const tr = o.cust.trust;
+        if(tr==='New') rep.innerHTML = '<span class="px-2 py-0.5 text-[10px] font-bold bg-slate-100 text-slate-500 rounded-md"><i class="fa-solid fa-user-plus"></i> New customer</span>';
+        else if(tr==='Gray') rep.innerHTML = '<span class="px-2 py-0.5 text-[10px] font-bold bg-amber-100 text-amber-700 rounded-md"><i class="fa-solid fa-triangle-exclamation"></i> Gray · COD caution</span>';
+        else if(tr==='Red') rep.innerHTML = '<span class="px-2 py-0.5 text-[10px] font-bold bg-rose-100 text-rose-700 rounded-md"><i class="fa-solid fa-circle-exclamation"></i> Red · COD risk</span>';
+        else rep.innerHTML = '<span class="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-md"><i class="fa-solid fa-shield-halved"></i> Trusted · '+o.cust.orders+' orders</span>';
+        // badges
+        let b = '';
+        if(o.scheduled) b += '<span class="px-2.5 py-1 text-xs font-bold bg-violet-100 text-violet-700 rounded-lg"><i class="fa-solid fa-clock"></i> Scheduled '+o.scheduledTime+'</span>';
+        if(o.team) b += '<span class="px-2.5 py-1 text-xs font-bold bg-indigo-100 text-indigo-700 rounded-lg"><i class="fa-solid fa-people-group"></i> Team Order</span>';
+        document.getElementById('detailBadges').innerHTML = b;
+        // instruction
+        const insWrap = document.getElementById('detailInstruction');
+        if(o.instruction){ insWrap.classList.remove('hidden'); insWrap.querySelector('span').textContent = o.instruction; } else insWrap.classList.add('hidden');
+        // team
+        const teamWrap = document.getElementById('detailTeam');
+        if(o.team){ teamWrap.classList.remove('hidden'); document.getElementById('detailPortion').textContent = o.portion; } else teamWrap.classList.add('hidden');
+        // admin note
+        const anWrap = document.getElementById('detailAdminNote');
+        if(o.adminNote){ anWrap.classList.remove('hidden'); document.getElementById('detailAdminNoteText').textContent = o.adminNote; } else anWrap.classList.add('hidden');
+        // bill summary + payment status
+        const pay = document.getElementById('detailPay');
+        pay.className = 'bg-white border border-slate-200/60 rounded-2xl p-4 mb-3 shadow-sm';
+        const payChipHtml = o.payment==='COD'
+            ? '<span class="px-2 py-0.5 text-[10px] font-bold bg-orange-100 text-orange-700 rounded-md">COD — collect cash</span>'
+            : '<span class="px-2 py-0.5 text-[10px] font-bold bg-sky-100 text-sky-700 rounded-md"><i class="fa-solid fa-circle-check"></i> Prepaid</span>';
+        const codHighlight = o.payment==='COD'
+            ? '<div class="mt-2 bg-orange-50 border border-orange-200 rounded-xl p-2.5 text-center"><span class="text-[10px] font-bold text-orange-600 uppercase">Collect on delivery (114A)</span><div class="text-2xl font-black text-orange-700">'+npr(o.codAmount)+'</div></div>'
+            : '';
+        pay.innerHTML =
+            '<div class="flex items-center justify-between mb-2"><h4 class="text-sm font-bold text-slate-700">Bill summary</h4>'+payChipHtml+'</div>'+
+            '<div class="flex justify-between text-sm py-1"><span class="text-slate-500">Item subtotal</span><span class="font-semibold text-slate-700">'+npr(o.subtotal)+'</span></div>'+
+            '<div class="flex justify-between text-sm py-1 border-b border-slate-100"><span class="text-slate-500">Delivery fee</span><span class="font-semibold '+(o.fee===0?'text-emerald-600':'text-slate-700')+'">'+(o.fee===0?'FREE':npr(o.fee))+'</span></div>'+
+            '<div class="flex justify-between text-sm pt-2"><span class="font-bold text-slate-800">Order total</span><span class="font-black text-slate-900">'+npr(o.total)+'</span></div>'+
+            codHighlight;
+        // items
+        document.getElementById('detailItemCount').textContent = o.items.reduce((s,i)=>s+i.qty,0)+' items';
+        document.getElementById('detailItems').innerHTML = o.items.map(i=>`
+            <div class="flex items-center gap-3 text-sm">
+                <div class="w-9 h-9 rounded-lg bg-brand/10 text-brand flex items-center justify-center font-bold text-xs flex-shrink-0">${i.qty}×</div>
+                <div class="flex-1"><p class="font-semibold text-slate-700">${i.name}</p><p class="text-xs text-slate-400">SKU ${i.sku} · Shelf ${i.shelf}</p></div>
+                <span class="text-sm font-bold text-slate-600">${npr(i.price*i.qty)}</span>
+            </div>`).join('');
+        // scheduled lock UI
+        const schedNote = document.getElementById('detailScheduledNote');
+        const footer = document.getElementById('detailFooter');
+        if(o.scheduled){ schedNote.classList.remove('hidden'); footer.classList.add('hidden'); }
+        else { schedNote.classList.add('hidden'); footer.classList.remove('hidden'); }
+        // show screen FIRST so the map canvas has real dimensions, then render footer/map
+        show('screen-detail');
+        renderDetailFooter(o);
+    }
+    function closeOrder(){ stopGps(); show('screen-app'); }
+
+    // ORDER JOURNEY (Feature 27) — horizontal timeline with timestamps.
+    // Confirmed = Automatic, Packing = Store/Admin, the rest (Picked Up / On Way / Arrived / Delivered) = Rider.
+    const JOURNEY = [
+        {key:'confirmed',      label:'Order Placed', icon:'fa-check'},
+        {key:'packing',        label:'Packing',      icon:'fa-box-open'},
+        {key:'pickedup',       label:'Picked Up',    icon:'fa-box'},
+        {key:'outfordelivery', label:'On the Way',   icon:'fa-arrows-rotate'},
+        {key:'arrived',        label:'Arrived',      icon:'fa-location-dot'},
+        {key:'delivered',      label:'Delivered',    icon:'fa-house'}
+    ];
+    // index of the step currently IN PROGRESS for a given rider status
+    function journeyCurrent(status){
+        switch(status){
+            case 'assigned':       return 1; // Order Placed done; Packing in progress (deciding to accept)
+            case 'confirmed':      return 1; // accepted; store still packing (Packing in progress)
+            case 'ready':          return 2; // Packing done; Picked Up next
+            case 'pickedup':       return 3; // now On Way (Out for Delivery)
+            case 'outfordelivery': return 4; // now Arrived
+            case 'arrived':        return 5; // now Delivered
+            case 'delivered':      return 6; // all done
+            default:               return -1; // scheduled
+        }
+    }
+    function renderStepper(o){
+        const box = document.getElementById('detailStepper');
+        const cur = journeyCurrent(o.status);
+        if(cur < 0){ box.classList.add('hidden'); return; }
+        box.classList.remove('hidden');
+        const t = o.times || {};
+        box.innerHTML = '<h4 class="text-sm font-extrabold text-slate-800 mb-3">Order journey</h4><div class="flex">' + JOURNEY.map((s,i)=>{
+            const done = i < cur, current = i === cur;
+            const line = i===0 ? '' : `<div class="absolute top-[13px] h-[3px] ${i<=cur?'bg-brand':'bg-slate-200'}" style="left:-50%;width:100%"></div>`;
+            const circle = done
+                ? '<div class="relative z-10 w-7 h-7 rounded-full bg-brand text-white flex items-center justify-center text-[11px]"><i class="fa-solid fa-check"></i></div>'
+                : current
+                ? '<div class="relative z-10 w-7 h-7 rounded-full bg-white border-[3px] border-brand text-brand flex items-center justify-center text-[10px]"><i class="fa-solid '+s.icon+'"></i></div>'
+                : '<div class="relative z-10 w-7 h-7 rounded-full bg-slate-100 border-2 border-slate-200 text-slate-300 flex items-center justify-center text-[10px]"><i class="fa-solid '+s.icon+'"></i></div>';
+            const lblColor = (done||current) ? 'text-brand' : 'text-slate-400';
+            const time = t[s.key] ? `<span class="text-[8px] text-slate-400 leading-tight mt-0.5">${t[s.key]}</span>`
+                       : (current ? '<span class="text-[8px] text-brand font-bold leading-tight mt-0.5">now</span>' : '');
+            return `<div class="flex-1 flex flex-col items-center relative">${line}${circle}<span class="text-[9px] font-bold mt-1.5 ${lblColor} text-center leading-tight">${s.label}</span>${time}</div>`;
+        }).join('') + '</div>';
+    }
+
+    function renderDetailFooter(o){
+        const pill = document.getElementById('detailStatusPill');
+        const map = document.getElementById('detailMap');
+        const nr = document.getElementById('btnNotResponding');
+        const cr = document.getElementById('confirmReject');
+        const swipe = document.getElementById('swipeTrack');
+        const live = document.getElementById('liveTrack');
+        const pack = document.getElementById('packingWait');
+        renderStepper(o);
+        updateEtaContext(o);
+        // sensible defaults, then override per status
+        pack.classList.add('hidden');
+        if(o.status==='assigned'){
+            // driver must Confirm or Reject the assignment (112A)
+            pill.textContent = 'Awaiting your confirmation';
+            map.classList.add('hidden'); live.classList.add('hidden'); nr.classList.add('hidden');
+            cr.classList.remove('hidden'); swipe.classList.add('hidden');
+        } else if(o.status==='confirmed'){
+            // accepted → store is packing; pickup is gated until parcel is Ready
+            pill.textContent = 'Confirmed · store is packing';
+            map.classList.add('hidden'); live.classList.add('hidden'); nr.classList.add('hidden');
+            cr.classList.add('hidden'); swipe.classList.add('hidden'); pack.classList.remove('hidden');
+        } else if(o.status==='ready'){
+            // parcel packed → rider can now pick up
+            pill.textContent = 'Ready for Pickup · collect parcel';
+            map.classList.add('hidden'); live.classList.add('hidden'); nr.classList.add('hidden');
+            cr.classList.add('hidden'); swipe.classList.remove('hidden');
+            setupSwipe('Swipe → Picked Up (113B)', ()=>doPickup(o), '#0B8570');
+        } else if(o.status==='pickedup'){
+            pill.textContent = 'Picked up · start delivery';
+            map.classList.remove('hidden'); live.classList.remove('hidden'); nr.classList.add('hidden');
+            cr.classList.add('hidden'); swipe.classList.remove('hidden');
+            startGps();
+            setupSwipe('Swipe → Out for Delivery', ()=>doOutForDelivery(o), '#7c3aed');
+        } else if(o.status==='outfordelivery'){
+            pill.textContent = o.nearby ? 'Near customer’s block 📍' : 'On the way to customer';
+            map.classList.remove('hidden'); live.classList.remove('hidden'); nr.classList.add('hidden');
+            cr.classList.add('hidden'); swipe.classList.remove('hidden');
+            startGps(); scheduleNearby(o);
+            setupSwipe('Swipe → Arrived at doorstep', ()=>doArrived(o), '#3b82f6');
+        } else if(o.status==='arrived'){
+            pill.textContent = 'Arrived at doorstep · hand over';
+            map.classList.remove('hidden'); live.classList.remove('hidden'); nr.classList.remove('hidden');
+            cr.classList.add('hidden'); swipe.classList.remove('hidden');
+            startGps();
+            setupSwipe('Swipe → Hand over & Deliver (113C)', ()=>openDeliver(o), '#0B8570');
+        }
+    }
+
+    // context-aware ETA: to the store before pickup, to the customer after pickup
+    function updateEtaContext(o){
+        const beforePickup = ['assigned','confirmed','ready'].includes(o.status);
+        const lbl = document.getElementById('detailEtaLabel');
+        const val = document.getElementById('detailEta');
+        if(o.status==='delivered'){ lbl.textContent = 'Delivered'; val.textContent = '—'; }
+        else if(beforePickup){ lbl.textContent = 'ETA · Store'; val.textContent = o.storeEta; }
+        else { lbl.textContent = 'ETA · Customer'; val.textContent = o.custEta; }
+        // route: pickup store ETA → becomes "Picked up" once collected
+        const se = document.getElementById('detailStoreEta');
+        if(beforePickup){ se.className = 'px-2 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-600 rounded-md whitespace-nowrap'; se.innerHTML = '<i class="fa-regular fa-clock"></i> ~'+o.storeEta+' min to store'; }
+        else { se.className = 'px-2 py-0.5 text-[10px] font-bold bg-emerald-50 text-emerald-600 rounded-md whitespace-nowrap'; se.innerHTML = '<i class="fa-solid fa-check"></i> Picked up'; }
+        // route: customer ETA → becomes "Arrived" at the doorstep
+        const ce = document.getElementById('detailCustEta');
+        if(o.status==='arrived'){ ce.className = 'inline-block mt-1 px-2 py-0.5 text-[10px] font-bold bg-brand/10 text-brand rounded-md whitespace-nowrap'; ce.innerHTML = '<i class="fa-solid fa-location-dot"></i> Arrived'; }
+        else { ce.className = 'inline-block mt-1 px-2 py-0.5 text-[10px] font-bold bg-brand/10 text-brand rounded-md whitespace-nowrap'; ce.innerHTML = '<i class="fa-regular fa-clock"></i> ~'+o.custEta+' min to customer'; }
+    }
+
+    /* ============================ CONFIRM / REJECT (from Order Detail) ============================ */
+    function confirmOrder(){
+        const o = cur(); if(!o) return;
+        o.status = 'confirmed';
+        if(!o.times.packing) o.times.packing = nowStr(); // store starts packing when rider accepts
+        startPackingTimer(o);                             // → auto flips to Ready for Pickup
+        renderDetailFooter(o); renderOrders();
+        toast('Order Confirmed ✓','#'+o.id+' accepted — store is packing your parcel.','fa-check');
+    }
+
+    /* ============================ READY FOR PICKUP (parcel packed) ============================ */
+    // in-app state change only — deliberately NO push notification (parcel-ready push is out of scope)
+    function markParcelReady(o){
+        if(!o || o.status!=='confirmed') return false;
+        if(!state.orders.some(x=>x.id===o.id)){ clearTimeout(state.packingTimers[o.id]); delete state.packingTimers[o.id]; return false; }
+        o.status = 'ready';
+        o.times.ready = nowStr();
+        clearTimeout(state.packingTimers[o.id]); delete state.packingTimers[o.id];
+        if(state.activeId===o.id) renderDetailFooter(o);
+        renderOrders();
+        showParcelReady(o);
+        return true;
+    }
+    function showParcelReady(o){
+        document.getElementById('parcelReadyId').textContent = '#'+o.id;
+        document.getElementById('parcelReadyCustomer').textContent = o.customer;
+        document.getElementById('parcelReadyAddress').textContent = o.area + (o.house ? ' · ' + o.house : '');
+        document.getElementById('parcelReadyItems').textContent = o.items.reduce((s,i)=>s+i.qty,0);
+        document.getElementById('overlay-parcel-ready').classList.remove('hidden');
+        pushNotif('Parcel ready for pickup', 'Order #'+o.id+' packed at store · Go collect it.', 'fa-box-open', 'text-emerald-600');
+    }
+    function closeParcelReady(){
+        document.getElementById('overlay-parcel-ready').classList.add('hidden');
+    }
+    function startPackingTimer(o){
+        clearTimeout(state.packingTimers[o.id]);
+        state.packingTimers[o.id] = setTimeout(()=>{
+            markParcelReady(o);
+        }, 4500);
+    }
+    function rejectOrder(){ const o = cur(); if(!o) return; openReject(o.id, false); }
+
+    /* ============================ REJECT REASON ============================ */
+    let rejectCtx = null;
+    function openReject(id, fromIncoming){
+        rejectCtx = { id, fromIncoming };
+        document.getElementById('overlay-reject').classList.remove('hidden');
+        setTimeout(()=>document.getElementById('rejectSheet').classList.remove('translate-y-full'),10);
+    }
+    function closeReject(){
+        document.getElementById('rejectSheet').classList.add('translate-y-full');
+        setTimeout(()=>document.getElementById('overlay-reject').classList.add('hidden'),250);
+    }
+    function rejectWithReason(reason){
+        const id = rejectCtx.id;
+        state.orders = state.orders.filter(x=>x.id!==id);
+        closeReject();
+        if(rejectCtx.fromIncoming) closeIncoming();
+        if(state.activeId===id){ state.activeId=null; stopGps(); }
+        show('screen-app'); switchTab('orders'); renderOrders();
+        toast('Order Rejected','#'+id+' sent back to admin · '+reason,'fa-xmark','text-rose-500');
+    }
+
+    /* ============================ INCOMING ASSIGNMENT POPUP (112A) ============================ */
+    let incomingId = null, incomingTimer = null;
+    function showIncoming(o){
+        incomingId = o.id;
+        pushNotif('New order assigned', '#'+o.id+' · '+o.customer+' · '+o.area, 'fa-bell', 'text-brand');
+        document.getElementById('incomingId').textContent = '#'+o.id;
+        document.getElementById('incomingCustomer').textContent = o.customer;
+        document.getElementById('incomingAddress').textContent = o.area + ' · ' + o.house;
+        document.getElementById('incomingKm').textContent = o.km + ' km';
+        document.getElementById('incomingItems').textContent = o.items.reduce((s,i)=>s+i.qty,0);
+        const pay = document.getElementById('incomingPay');
+        pay.textContent = o.payment;
+        document.getElementById('incomingCollect').textContent = o.payment==='COD' ? npr(o.codAmount) : 'Prepaid';
+        let b = '';
+        if(o.scheduled) b += '<span class="px-2 py-0.5 text-[10px] font-bold bg-violet-100 text-violet-700 rounded-md uppercase"><i class="fa-solid fa-clock"></i> Scheduled</span>';
+        if(o.team) b += '<span class="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-700 rounded-md uppercase"><i class="fa-solid fa-people-group"></i> Team</span>';
+        document.getElementById('incomingBadges').innerHTML = b;
+        document.getElementById('overlay-incoming').classList.remove('hidden');
+        // countdown (visual only — auto-dismiss to list as still 'assigned')
+        let t = 30; const el = document.getElementById('incomingTimer'); el.textContent = t;
+        clearInterval(incomingTimer);
+        incomingTimer = setInterval(()=>{ t--; el.textContent = t; if(t<=0){ clearInterval(incomingTimer); closeIncoming(); toast('Still awaiting','#'+o.id+' is in your list — confirm or reject it.','fa-clock','text-amber-500'); } }, 1000);
+    }
+    function closeIncoming(){ clearInterval(incomingTimer); document.getElementById('overlay-incoming').classList.add('hidden'); }
+    function incomingConfirm(){
+        const o = state.orders.find(x=>x.id===incomingId); if(!o){ closeIncoming(); return; }
+        o.status = 'confirmed'; if(!o.times.packing) o.times.packing = nowStr();
+        startPackingTimer(o);
+        closeIncoming(); renderOrders();
+        toast('Order Confirmed ✓','#'+o.id+' accepted — store is packing the parcel.','fa-check');
+    }
+    function incomingReject(){ openReject(incomingId, true); }
+
+    function doPickup(o){
+        o.status = 'pickedup';      // parcel collected at dark store
+        o.times.pickedup = nowStr();
+        toast('Picked Up ✓','Parcel collected from store (113B).','fa-box');
+        renderDetailFooter(o); renderOrders();
+    }
+    function doOutForDelivery(o){
+        o.status = 'outfordelivery';
+        o.times.outfordelivery = nowStr();
+        toast('Out for Delivery ✓','On the way — live GPS sharing started (113D).','fa-motorcycle');
+        renderDetailFooter(o); renderOrders();
+    }
+    function doArrived(o){
+        o.status = 'arrived';
+        o.times.arrived = nowStr();
+        toast('Arrived ✓','You reached the customer’s doorstep. Hand over the parcel.','fa-location-dot');
+        renderDetailFooter(o); renderOrders();
+    }
+    // auto "nearby your block" via GPS while On the Way (no manual tap needed)
+    function scheduleNearby(o){
+        if(o.nearby) return;
+        clearTimeout(state.nearbyTimer);
+        state.nearbyTimer = setTimeout(()=>{
+            if(state.activeId===o.id && o.status==='outfordelivery'){
+                o.nearby = true; o.times.nearby = nowStr();
+                toast('Near customer 📍','You are near the customer’s block (auto-GPS).','fa-location-crosshairs','text-brand');
+                renderDetailFooter(o);
+            }
+        }, 3500);
+    }
+
+    /* ============================ SWIPE COMPONENT ============================ */
+    let swipeAction = null;
+    function setupSwipe(label, action, color){
+        swipeAction = action;
+        document.getElementById('swipeText').textContent = label;
+        const handle = document.getElementById('swipeHandle');
+        handle.style.transform = 'translateX(0)';
+        handle.style.backgroundColor = color || '#0B8570';
+    }
+    (function initSwipe(){
+        const track = document.getElementById('swipeTrack');
+        const handle = document.getElementById('swipeHandle');
+        let dragging=false, startX=0, max=0;
+        const down = e=>{ dragging=true; startX = (e.touches?e.touches[0].clientX:e.clientX); max = track.offsetWidth - handle.offsetWidth - 8; handle.style.transition='none'; };
+        const move = e=>{ if(!dragging) return; const x=(e.touches?e.touches[0].clientX:e.clientX); let d=Math.min(Math.max(0,x-startX),max); handle.style.transform='translateX('+d+'px)'; if(d>=max-4){ dragging=false; complete(); } };
+        const up = ()=>{ if(!dragging) return; dragging=false; handle.style.transition='transform .25s'; handle.style.transform='translateX(0)'; };
+        const complete = ()=>{ handle.style.transition='transform .2s'; handle.style.transform='translateX('+max+'px)'; setTimeout(()=>{ handle.style.transform='translateX(0)'; if(swipeAction) swipeAction(); },180); };
+        handle.addEventListener('mousedown',down); window.addEventListener('mousemove',move); window.addEventListener('mouseup',up);
+        handle.addEventListener('touchstart',down,{passive:true}); window.addEventListener('touchmove',move,{passive:true}); window.addEventListener('touchend',up);
+        // click fallback for quick demo
+        handle.addEventListener('click',()=>{ if(swipeAction) swipeAction(); });
+    })();
+
+    /* ============================ HELP / REPORT ISSUE ============================ */
+    function openHelp(){ document.getElementById('overlay-help').classList.remove('hidden'); setTimeout(()=>document.getElementById('helpSheet').classList.remove('translate-y-full'),10); }
+    function closeHelp(){ document.getElementById('helpSheet').classList.add('translate-y-full'); setTimeout(()=>document.getElementById('overlay-help').classList.add('hidden'),250); }
+    function reportIssue(reason){ closeHelp(); toast('Issue reported','“'+reason+'” — admin notified.','fa-flag','text-rose-500'); }
+
+
+    /* ============================ LIVE MAP (113D) ============================ */
+    function startGps(){
+        // don't restart the animation if it's already running for the current order
+        if(state.gpsTimer && state.gpsOrderId===state.activeId) return;
+        stopGps();
+        state.gpsOrderId = state.activeId;
+        const cv = document.getElementById('mapCanvas'); const ctx = cv.getContext('2d');
+        cv.width = cv.offsetWidth || 360; cv.height = cv.offsetHeight || 144;
+        const store={x:40,y:cv.height-30}, cust={x:cv.width-40,y:30};
+        let t=0;
+        const draw=()=>{
+            ctx.clearRect(0,0,cv.width,cv.height);
+            // grid
+            ctx.strokeStyle='#e2e8f0'; ctx.lineWidth=1;
+            for(let i=0;i<cv.width;i+=28){ ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,cv.height);ctx.stroke(); }
+            for(let j=0;j<cv.height;j+=28){ ctx.beginPath();ctx.moveTo(0,j);ctx.lineTo(cv.width,j);ctx.stroke(); }
+            // route
+            ctx.strokeStyle='#0B8570'; ctx.lineWidth=3; ctx.setLineDash([6,5]);
+            ctx.beginPath();ctx.moveTo(store.x,store.y);ctx.lineTo(cust.x,cust.y);ctx.stroke(); ctx.setLineDash([]);
+            // store & cust
+            ctx.fillStyle='#3b82f6'; ctx.beginPath();ctx.arc(store.x,store.y,7,0,7);ctx.fill();
+            ctx.fillStyle='#ef4444'; ctx.beginPath();ctx.arc(cust.x,cust.y,7,0,7);ctx.fill();
+            // rider
+            t=(t+0.012); if(t>1)t=1;
+            const rx=store.x+(cust.x-store.x)*t, ry=store.y+(cust.y-store.y)*t;
+            ctx.fillStyle='#0f172a'; ctx.beginPath();ctx.arc(rx,ry,9,0,7);ctx.fill();
+            ctx.fillStyle='#fff'; ctx.font='9px Inter'; ctx.textAlign='center'; ctx.fillText('🏍',rx,ry+3);
+        };
+        state.gpsTimer = setInterval(draw, 60); draw();
+    }
+    function stopGps(){ if(state.gpsTimer){ clearInterval(state.gpsTimer); state.gpsTimer=null; } state.gpsOrderId=null; clearTimeout(state.nearbyTimer); }
+
+    /* ============================ NAVIGATE / CALL ============================ */
+    function navigateMaps(){ toast('Opening Google Maps','Address pre-loaded for navigation (113A).','fa-diamond-turn-right'); }
+    function callCustomer(){ const o=cur(); if(o) window.location.href='tel:+977'+o.phone; toast('Calling…','Opening dialer (113E).','fa-phone'); }
+    function cur(){ return state.orders.find(x=>x.id===state.activeId); }
+
+    /* ============================ NOT RESPONDING (113F) ============================ */
+    function openNotResponding(){ document.getElementById('nrCalled').checked=false; document.getElementById('overlay-nr').classList.remove('hidden'); }
+    function closeNotResponding(){ document.getElementById('overlay-nr').classList.add('hidden'); }
+    function confirmNotResponding(){
+        if(!document.getElementById('nrCalled').checked){ toast('Confirm first','Please confirm you called the customer.','fa-triangle-exclamation','text-rose-500'); return; }
+        closeNotResponding();
+        toast('Reported','Logged against customer Trust Badge (3.8).','fa-flag','text-rose-500');
+    }
+
+    /* ============================ DELIVERY SHEET (114B/114C/113C) ============================ */
+    function openDeliver(o){
+        document.getElementById('deliverCod').classList.toggle('hidden', o.payment!=='COD');
+        document.getElementById('deliverPrepaid').classList.toggle('hidden', o.payment==='COD');
+        if(o.payment==='COD'){ document.getElementById('deliverCodAmt').textContent = Number(o.codAmount).toLocaleString('en-IN'); document.getElementById('deliverSub').textContent='Collect payment, then mark delivered.'; }
+        else document.getElementById('deliverSub').textContent='Already paid online. Confirm hand-over.';
+        document.getElementById('overlay-deliver').classList.remove('hidden');
+        setTimeout(()=>document.getElementById('deliverSheet').classList.remove('translate-y-full'),10);
+    }
+    function closeDeliver(){ document.getElementById('deliverSheet').classList.add('translate-y-full'); setTimeout(()=>document.getElementById('overlay-deliver').classList.add('hidden'),250); }
+
+    /* ----- Payment confirmation chain: Cash → re-confirm → Delivery confirm ----- */
+    let deliverMethod = null;
+    function openCashConfirm(){
+        const o = cur(); if(!o) return;
+        deliverMethod = 'cash';
+        document.getElementById('cashConfirmAmt').textContent = Number(o.codAmount).toLocaleString('en-IN');
+        document.getElementById('cashReconfirm').checked = false;
+        document.getElementById('overlay-cash').classList.remove('hidden');
+    }
+    function closeCashConfirm(){ document.getElementById('overlay-cash').classList.add('hidden'); }
+    function confirmCash(){
+        if(!document.getElementById('cashReconfirm').checked){ toast('Re-confirm needed','Tick the box to confirm you received the full cash.','fa-triangle-exclamation','text-amber-500'); return; }
+        closeCashConfirm();
+        openDeliveredConfirm('cash');
+    }
+    function qrPaid(){ hideQR(); openDeliveredConfirm('qr'); }
+
+    function openDeliveredConfirm(method){
+        const o = cur(); if(!o) return;
+        deliverMethod = method;
+        let payLine;
+        if(method==='cash') payLine = '<span class="font-bold text-emerald-600">Cash collected · NPR '+Number(o.codAmount).toLocaleString('en-IN')+'</span>';
+        else if(method==='qr') payLine = '<span class="font-bold text-emerald-600">Paid via QR · NPR '+Number(o.codAmount).toLocaleString('en-IN')+'</span>';
+        else payLine = '<span class="font-bold text-sky-600">Prepaid — no cash</span>';
+        document.getElementById('deliveredSummary').innerHTML =
+            '<div class="flex justify-between"><span class="text-slate-500">Order</span><span class="font-bold text-slate-800">#'+o.id+'</span></div>'+
+            '<div class="flex justify-between"><span class="text-slate-500">Customer</span><span class="font-bold text-slate-800">'+o.customer+'</span></div>'+
+            '<div class="flex justify-between"><span class="text-slate-500">Payment</span>'+payLine+'</div>';
+        closeDeliver();
+        document.getElementById('overlay-delivered').classList.remove('hidden');
+    }
+    function closeDeliveredConfirm(){ document.getElementById('overlay-delivered').classList.add('hidden'); }
+    function confirmFinalDelivery(){
+        const o = cur(); if(!o){ closeDeliveredConfirm(); return; }
+        const method = deliverMethod;
+        closeDeliveredConfirm();
+        // team order: only close when ALL riders confirm (money counted once at finalize)
+        if(o.team){ o.teamRiders[0].done = true; showTeamWait(o, method); return; }
+        finalizeDelivery(o, method);
+    }
+
+    function finalizeDelivery(o, method){
+        stopGps();
+        // record cash/QR exactly once, at true completion (no double-count for team orders)
+        if(method==='cash'){ state.stats.cash += o.codAmount; state.stats.codOrders++; }
+        if(method==='qr'){ state.stats.qr += o.codAmount; }
+        state.stats.delivered++; state.stats.km += o.km;
+        state.history.unshift({ id:o.id, customer:o.customer, area:o.area, house:o.house, km:o.km, fuel:o.km*4, payment:o.payment, method, time: nowStr(),
+            items:o.items.reduce((s,i)=>s+i.qty,0), itemsList:o.items, subtotal:o.subtotal, fee:o.fee, total:o.total,
+            amount:(o.payment==='COD'?o.codAmount:0), times:o.times, rating:null, review:null }); // customer hasn't reviewed yet
+        state.orders = state.orders.filter(x=>x.id!==o.id);
+        state.activeId = null;
+        show('screen-app'); switchTab('orders'); renderOrders();
+        toast('Delivered ✓','Order '+o.id+' complete. +'+o.km+' km logged.','fa-circle-check');
+        pushNotif('Delivery completed', 'Order #'+o.id+' delivered. +NPR '+Math.round(o.km*4)+' fuel.', 'fa-circle-check', 'text-brand');
+    }
+
+    /* ============================ TEAM WAIT (85) ============================ */
+    let teamCtx = null;
+    function showTeamWait(o, method){
+        teamCtx = {o, method};
+        renderTeamRiders(o);
+        document.getElementById('overlay-team').classList.remove('hidden');
+    }
+    function renderTeamRiders(o){
+        document.getElementById('teamRiderList').innerHTML = o.teamRiders.map(r=>`
+            <div class="flex items-center justify-between p-2.5 rounded-xl ${r.done?'bg-emerald-50 border border-emerald-200':'bg-slate-50 border border-slate-200'}">
+                <span class="text-sm font-semibold ${r.done?'text-emerald-700':'text-slate-600'}">${r.name}</span>
+                <span class="text-xs font-bold ${r.done?'text-emerald-600':'text-slate-400'}">${r.done? "<i class='fa-solid fa-check'></i> Confirmed" : "Pending"}</span>
+            </div>`).join('');
+    }
+    function simOtherRiders(){
+        const o = teamCtx.o; o.teamRiders.forEach(r=>r.done=true); renderTeamRiders(o);
+        toast('All riders confirmed','Order can now be closed (Feature 85).','fa-people-group');
+    }
+    function closeTeamWait(){
+        const {o, method} = teamCtx;
+        document.getElementById('overlay-team').classList.add('hidden');
+        if(o.teamRiders.every(r=>r.done)){ finalizeDelivery(o, method); }
+        else { show('screen-app'); switchTab('orders'); toast('Portion done','Waiting for other riders to confirm.','fa-hourglass-half'); }
+    }
+
+    /* ============================ QR (114C) ============================ */
+    function showQR(){
+        const o = cur(); document.getElementById('qrAmt').textContent = Number(o.codAmount).toLocaleString('en-IN');
+        buildQR(); document.getElementById('overlay-qr').classList.remove('hidden');
+    }
+    function hideQR(){ document.getElementById('overlay-qr').classList.add('hidden'); }
+    function buildQR(){
+        const box = document.getElementById('qrBox'); box.innerHTML='';
+        const N=13; const cells=[];
+        for(let i=0;i<N*N;i++) cells.push(Math.random()>0.5);
+        // finder patterns
+        const setFinder=(r,c)=>{ for(let dr=0;dr<7;dr++)for(let dc=0;dc<7;dc++){ const edge=dr===0||dr===6||dc===0||dc===6; const center=dr>=2&&dr<=4&&dc>=2&&dc<=4; cells[(r+dr)*N+(c+dc)]= edge||center; } };
+        setFinder(0,0); setFinder(0,6); setFinder(6,0);
+        cells.forEach(v=>{ const d=document.createElement('div'); d.className='w-full aspect-square rounded-[1px] '+(v?'bg-slate-900':'bg-transparent'); box.appendChild(d); });
+    }
+
+    /* ============================ DAILY CASH SETTLEMENT (114D) ============================ */
+    function openSettle(){
+        if(state.stats.cash <= 0){ toast('No cash to settle','No COD cash collected yet today.','fa-circle-info'); return; }
+        document.getElementById('settleAmt').textContent    = state.stats.cash.toLocaleString('en-IN');
+        document.getElementById('settleCash').textContent   = state.stats.cash.toLocaleString('en-IN');
+        document.getElementById('settleOrders').textContent = state.stats.codOrders;
+        document.getElementById('settleQr').textContent     = state.stats.qr.toLocaleString('en-IN');
+        document.getElementById('settleConfirm').checked = false;
+        document.getElementById('overlay-settle').classList.remove('hidden');
+        setTimeout(()=>document.getElementById('settleSheet').classList.remove('translate-y-full'),10);
+    }
+    function closeSettle(){ document.getElementById('settleSheet').classList.add('translate-y-full'); setTimeout(()=>document.getElementById('overlay-settle').classList.add('hidden'),250); }
+    function confirmSettle(){
+        if(!document.getElementById('settleConfirm').checked){ toast('Confirm first','Tick the box to confirm you handed over the cash.','fa-triangle-exclamation','text-amber-500'); return; }
+        const amount = state.stats.cash, orders = state.stats.codOrders, time = nowStr();
+        state.settlements.unshift({ amount, orders, time });
+        state.lastSettle = { amount, time };
+        // physical COD cash handed over → resets; QR is digital and already company-settled
+        state.stats.cash = 0; state.stats.codOrders = 0;
+        closeSettle();
+        renderOrders();                 // refresh header COD-cash mini stat
+        if(state.currentTab==='earnings') renderEarnings();
+        pushNotif('Cash settled', 'Deposited NPR '+amount.toLocaleString('en-IN')+' ('+orders+' COD orders) to the store.', 'fa-hand-holding-dollar', 'text-orange-600');
+        toast('Cash settled ✓','NPR '+amount.toLocaleString('en-IN')+' deposited. Reconciliation cleared.','fa-circle-check');
+    }
+    function renderCashDeposit(){
+        document.getElementById('cashToDeposit').textContent = state.stats.cash.toLocaleString('en-IN');
+        document.getElementById('codCollected').textContent  = state.stats.cash.toLocaleString('en-IN');
+        document.getElementById('codOrders').textContent     = state.stats.codOrders;
+        document.getElementById('qrCollected').textContent   = state.stats.qr.toLocaleString('en-IN');
+        // settled note + settle button state
+        const note = document.getElementById('settleDoneNote');
+        const btn  = document.getElementById('settleBtn');
+        if(state.lastSettle){
+            note.classList.remove('hidden');
+            document.getElementById('settleLastAmt').textContent  = 'NPR '+state.lastSettle.amount.toLocaleString('en-IN');
+            document.getElementById('settleLastTime').textContent = state.lastSettle.time;
+        } else note.classList.add('hidden');
+        const has = state.stats.cash > 0;
+        btn.disabled = !has;
+        btn.className = 'mt-3 w-full h-12 rounded-2xl text-sm font-extrabold flex items-center justify-center gap-2 transition-all ' +
+            (has ? 'bg-orange-600 hover:bg-orange-700 text-white active:scale-[.98]' : 'bg-slate-100 text-slate-400 cursor-not-allowed');
+        btn.innerHTML = has
+            ? '<i class="fa-solid fa-hand-holding-dollar"></i> Settle / Deposit Cash'
+            : '<i class="fa-solid fa-circle-check"></i> All cash settled';
+    }
+
+    /* ============================ EARNINGS / HISTORY RENDER ============================ */
+    let earnPeriod = 'week';
+    function setEarnPeriod(p){ earnPeriod = p; renderEarnings(); }
+    function renderEarnings(){
+        const fmt = n => 'NPR ' + Math.round(n).toLocaleString('en-IN');
+        const pay = state.pay;
+        const fuelToday = Math.round(state.stats.km * pay.fuelRate);
+
+        // base activity datasets (values are fuel NPR; reused / scaled per pay mode)
+        const week  = [{l:'Sun',v:220},{l:'Mon',v:180},{l:'Tue',v:260},{l:'Wed',v:200},{l:'Thu',v:300},{l:'Fri',v:240},{l:'Sat',v:fuelToday,now:true}];
+        const weekTotal = week.reduce((s,b)=>s+b.v,0);
+        const month = [{l:'W1',v:1180},{l:'W2',v:1320},{l:'W3',v:1090},{l:'W4',v:weekTotal,now:true}];
+        const monthTotal = month.reduce((s,b)=>s+b.v,0);
+        const all   = [{l:'Jan',v:4100},{l:'Feb',v:4800},{l:'Mar',v:5200},{l:'Apr',v:4600},{l:'May',v:5430},{l:'Jun',v:monthTotal,now:true}];
+        const allTotal = all.reduce((s,b)=>s+b.v,0);
+
+        const CFG = {
+            week:  {title:'This Week',  bars:week,  fuelTotal:weekTotal,  prev:1180, deliveries:92+state.stats.delivered,  km:305+state.stats.km,  prevLabel:'last week',  salaryFactor:1/4.345},
+            month: {title:'This Month', bars:month, fuelTotal:monthTotal, prev:3590, deliveries:380+state.stats.delivered, km:1240+state.stats.km, prevLabel:'last month', salaryFactor:1},
+            all:   {title:'All-time',   bars:all,   fuelTotal:allTotal,   prev:0,    deliveries:312,                       km:980,                  prevLabel:'',           salaryFactor:6}
+        };
+        const cfg = CFG[earnPeriod];
+
+        // segmented control active state
+        ['week','month','all'].forEach(p=>{
+            document.getElementById('seg-'+p).className = 'flex-1 h-9 rounded-lg text-xs font-bold transition-all ' + (p===earnPeriod ? 'bg-white text-brand shadow-sm' : 'text-slate-500');
+        });
+
+        // ----- resolve figures per pay mode (fuel / salary / commission) -----
+        let total, bars, sub, heroSuffix, rateLabel, modePill, todayVal, perOrder, showDelta;
+        if(pay.mode === 'salary'){
+            total = Math.round(pay.monthlySalary * cfg.salaryFactor);
+            const n = cfg.bars.length;
+            bars = cfg.bars.map((b,i)=>({ l:b.l, v: Math.round(total/n), now: i===n-1 }));  // fixed pay → flat bars
+            sub = 'Fixed monthly salary · paid by admin';
+            heroSuffix = ' · Fixed Salary';
+            rateLabel = 'Fixed NPR ' + pay.monthlySalary.toLocaleString('en-IN') + '/mo';
+            modePill = 'Salary';
+            todayVal = Math.round(pay.monthlySalary / 30);
+            perOrder = null;
+            showDelta = false;
+        } else if(pay.mode === 'commission'){
+            total = Math.round(cfg.deliveries * pay.commissionRate);
+            const ft = cfg.fuelTotal || 1;
+            bars = cfg.bars.map(b=>({ l:b.l, v: Math.round(b.v / ft * total), now: !!b.now }));  // keep trend shape at commission scale
+            sub = cfg.deliveries + ' deliveries × NPR ' + pay.commissionRate;
+            heroSuffix = ' · Commission';
+            rateLabel = 'NPR ' + pay.commissionRate + ' / delivery';
+            modePill = 'Commission';
+            todayVal = state.stats.delivered * pay.commissionRate;
+            perOrder = pay.commissionRate;
+            showDelta = false;
+        } else { // fuel (default, 115A/115B)
+            total = cfg.fuelTotal;
+            bars = cfg.bars.map(b=>({ l:b.l, v:b.v, now: !!b.now }));
+            sub = cfg.deliveries + ' deliveries · ' + Math.round(cfg.km) + ' km';
+            heroSuffix = ' · Fuel Earnings';
+            rateLabel = 'NPR ' + pay.fuelRate + ' / km · 115B';
+            modePill = 'Fuel';
+            todayVal = fuelToday;
+            perOrder = cfg.deliveries ? Math.round(total / cfg.deliveries) : 0;
+            showDelta = cfg.prev > 0;
+        }
+
+        // header mode pill + rate label
+        document.getElementById('earnModePill').textContent = modePill;
+        document.getElementById('earnRateLabel').textContent = rateLabel;
+
+        // hero
+        document.getElementById('earnTitle').textContent = cfg.title + heroSuffix;
+        document.getElementById('earnTotal').textContent = Math.round(total).toLocaleString('en-IN');
+        document.getElementById('earnSub').textContent = sub;
+        const deltaEl = document.getElementById('earnDelta');
+        if(showDelta){
+            const d = Math.round((total - cfg.prev) / cfg.prev * 100);
+            const up = d >= 0;
+            deltaEl.style.display = '';
+            deltaEl.innerHTML = '<i class="fa-solid fa-arrow-trend-'+(up?'up':'down')+'"></i> '+(up?'+':'')+d+'% vs '+cfg.prevLabel;
+        } else { deltaEl.style.display = 'none'; }
+
+        // mini bar chart
+        const max = Math.max(...bars.map(b=>b.v), 1);
+        const avg = total / bars.length;
+        document.getElementById('earnChartBars').innerHTML = bars.map(b=>{
+            const h = Math.max(6, Math.round(b.v / max * 100));
+            return '<div class="flex-1 h-full flex items-end"><div class="w-full rounded-t-md '+(b.now?'bg-brand':'bg-brand/25')+'" style="height:'+h+'%" title="'+fmt(b.v)+'"></div></div>';
+        }).join('');
+        document.getElementById('earnChartLabels').innerHTML = bars.map(b=>
+            '<div class="flex-1 text-center text-[9px] font-bold '+(b.now?'text-brand':'text-slate-400')+'">'+b.l+'</div>'
+        ).join('');
+        document.getElementById('earnAvg').textContent = fmt(avg);
+        document.getElementById('earnBest').textContent = fmt(max);
+
+        // micro KPIs
+        document.getElementById('earnToday').textContent = Math.round(todayVal).toLocaleString('en-IN');
+        document.getElementById('kmToday2').textContent = state.stats.km.toFixed(1);
+        document.getElementById('earnPerDelivery').textContent = (perOrder===null ? '—' : Math.round(perOrder).toLocaleString('en-IN'));
+
+        // cash to deposit + daily settlement (shared across all pay modes)
+        renderCashDeposit();
+    }
+    function renderHistory(){
+        const wrap = document.getElementById('historyList');
+        const totalKm = state.history.reduce((s,h)=>s+h.km,0);
+        const totalFuel = state.history.reduce((s,h)=>s+h.fuel,0);
+        document.getElementById('histCount').textContent = state.history.length;
+        document.getElementById('histKm').textContent = totalKm.toFixed(1);
+        document.getElementById('histFuel').textContent = Math.round(totalFuel).toLocaleString('en-IN');
+        document.getElementById('historyEmpty').classList.toggle('hidden', state.history.length>0);
+        wrap.innerHTML = state.history.map((h,idx)=>{
+            const payTxt = h.method==='qr' ? 'QR Paid' : (h.payment==='COD' ? 'COD '+npr(h.amount) : 'Prepaid');
+            const payColor = h.payment==='COD' ? 'text-orange-600' : 'text-sky-600';
+            const stars = n => '★★★★★'.slice(0,n) + '<span class="text-slate-200">'+'★★★★★'.slice(n)+'</span>';
+            // client review: show only when the customer actually left one
+            const reviewBlock = h.rating
+                ? `<div class="mt-2 pt-2 border-t border-slate-100">
+                       <div class="flex items-center gap-1.5"><span class="text-amber-400 text-xs">${stars(h.rating)}</span><span class="text-[10px] font-bold text-slate-500">${h.rating}.0 from customer</span></div>
+                       ${h.review?`<p class="text-[11px] text-slate-500 italic mt-0.5">"${h.review}"</p>`:''}
+                   </div>`
+                : `<div class="mt-2 pt-2 border-t border-slate-100"><span class="text-[10px] text-slate-300 font-semibold"><i class="fa-regular fa-star"></i> No customer review yet</span></div>`;
+            return `
+            <div onclick="openHistory(${idx})" class="p-3.5 bg-white border border-slate-200/60 hover:border-brand rounded-2xl shadow-sm cursor-pointer active:scale-[.99] transition-all">
+                <div class="flex justify-between items-start">
+                    <div>
+                        <h5 class="text-sm font-bold text-slate-800">#${h.id} <i class="fa-solid fa-chevron-right text-[10px] text-slate-300 ml-0.5"></i></h5>
+                        <span class="text-xs text-slate-500 font-medium">${h.customer} · ${h.area}</span>
+                    </div>
+                    <span class="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-700 rounded-md uppercase">Delivered</span>
+                </div>
+                <div class="flex items-center gap-2 mt-1.5 text-[11px] text-slate-400">
+                    <span><i class="fa-regular fa-clock"></i> ${h.time}</span>
+                    <span>·</span><span><i class="fa-solid fa-box"></i> ${h.items} items</span>
+                    <span>·</span><span class="${payColor} font-bold">${payTxt}</span>
+                </div>
+                <div class="flex items-center justify-between mt-2 text-xs">
+                    <span class="text-slate-500"><i class="fa-solid fa-route text-brand"></i> ${h.km} km</span>
+                    <span class="font-bold text-brand">+ NPR ${Math.round(h.fuel)} fuel</span>
+                </div>
+                ${reviewBlock}
+            </div>`;
+        }).join('');
+    }
+
+    /* ============================ HISTORY DETAIL (Delivery Receipt) ============================ */
+    function openHistory(idx){
+        const h = state.history[idx]; if(!h) return;
+        document.getElementById('hdId').textContent = '#'+h.id;
+        document.getElementById('hdTime').textContent = 'Delivered · ' + h.time;
+        document.getElementById('hdKm').textContent = h.km;
+        document.getElementById('hdFuel').textContent = Math.round(h.fuel);
+        document.getElementById('hdCustomer').textContent = h.customer;
+        document.getElementById('hdAddress').textContent = h.area + (h.house ? ' · ' + h.house : '');
+        // items
+        document.getElementById('hdItemCount').textContent = '· ' + h.items + ' items';
+        const list = h.itemsList || [];
+        document.getElementById('hdItems').innerHTML = list.length ? list.map(i=>`
+            <div class="flex items-center gap-3 text-sm">
+                <div class="w-8 h-8 rounded-lg bg-brand/10 text-brand flex items-center justify-center font-bold text-xs flex-shrink-0">${i.qty}×</div>
+                <div class="flex-1"><p class="font-semibold text-slate-700">${i.name}</p><p class="text-xs text-slate-400">SKU ${i.sku} · Shelf ${i.shelf}</p></div>
+                <span class="text-sm font-bold text-slate-600">${npr(i.price*i.qty)}</span>
+            </div>`).join('') : '<p class="text-sm text-slate-400">'+h.items+' items</p>';
+        // bill
+        document.getElementById('hdSub').textContent = (h.subtotal||0).toLocaleString('en-IN');
+        document.getElementById('hdFee').textContent = (h.fee||0).toLocaleString('en-IN');
+        document.getElementById('hdTotal').textContent = (h.total|| (h.subtotal||0)+(h.fee||0)).toLocaleString('en-IN');
+        const payTxt = h.method==='qr' ? 'Paid via QR' : (h.payment==='COD' ? 'COD — cash collected' : 'Prepaid online');
+        document.getElementById('hdPayChip').innerHTML = '<span class="px-2 py-0.5 text-[10px] font-bold '+(h.payment==='COD'?'bg-orange-100 text-orange-700':'bg-sky-100 text-sky-700')+' rounded-md">'+payTxt+'</span>';
+        // customer's review of the rider
+        const rv = document.getElementById('hdReview');
+        if(h.rating){
+            const stars = '★★★★★'.slice(0,h.rating) + '<span class="text-slate-200">'+'★★★★★'.slice(h.rating)+'</span>';
+            rv.innerHTML = '<h4 class="text-sm font-bold text-slate-700 mb-1.5">Customer review</h4><div class="flex items-center gap-2"><span class="text-amber-400">'+stars+'</span><span class="text-xs font-bold text-slate-500">'+h.rating+'.0 / 5</span></div>'+(h.review?'<p class="text-sm text-slate-500 italic mt-1">"'+h.review+'"</p>':'');
+        } else {
+            rv.innerHTML = '<h4 class="text-sm font-bold text-slate-700 mb-1">Customer review</h4><p class="text-sm text-slate-400"><i class="fa-regular fa-star"></i> Customer hasn\'t reviewed this delivery yet.</p>';
+        }
+        show('screen-history-detail');
+    }
+    function closeHistory(){ show('screen-app'); switchTab('history'); }
+
+    /* ============================ ACCOUNT DETAILS ============================ */
+    function openProfileDetails(){ show('screen-profile-detail'); }
+    function closeProfileDetails(){ show('screen-app'); switchTab('profile'); }
+
+    /* ============================ SETTINGS / PROFILE ============================ */
+    function applyToggle(id, on){
+        const t = document.getElementById(id); if(!t) return;
+        const d = t.querySelector('.toggle-dot');
+        t.className = 'relative w-12 h-7 rounded-full transition-colors ' + (on ? 'bg-brand' : 'bg-slate-200');
+        d.style.left = on ? 'calc(100% - 24px)' : '4px';
+    }
+    function renderSettings(){
+        applyToggle('tgl-push', state.settings.push);
+        applyToggle('tgl-sound', state.settings.sound);
+        applyToggle('tgl-pin', state.settings.pin);
+        document.getElementById('langValue').textContent = state.settings.lang==='np' ? 'नेपाली' : 'English';
+    }
+    function toggleSetting(key){
+        state.settings[key] = !state.settings[key];
+        renderSettings();
+        const names = {push:'Push notifications', sound:'Sound & vibration', pin:'App PIN lock'};
+        toast(names[key], state.settings[key] ? 'Turned ON' : 'Turned OFF', 'fa-circle-check');
+    }
+    function toggleLang(){
+        state.settings.lang = state.settings.lang==='np' ? 'en' : 'np';
+        renderSettings();
+        toast('Language', state.settings.lang==='np' ? 'नेपाली मा सेट गरियो' : 'Set to English', 'fa-language');
+    }
+    function changePin(){ toast('Change PIN','A secure PIN-change flow would open here.','fa-key'); }
+
+    function openEditProfile(){ show('screen-edit-profile'); }
+    function closeEditProfile(){ show('screen-app'); switchTab('profile'); }
+    function saveProfile(){ closeEditProfile(); toast('Profile updated','Your changes have been saved.','fa-circle-check'); }
+
+    /* ============================ DOC READER (Privacy / Terms) ============================ */
+    const DOCS = {
+        privacy: { title:'Privacy Policy', body:[
+            'Chutkima Technology Pvt. Ltd. respects your privacy. This policy explains what data we collect from riders and how we use it.',
+            'We collect your name, phone number, vehicle details, KYC documents and live GPS location while you are on duty. Location is shared only during active deliveries to let customers track their order.',
+            'Your data is used solely to operate the delivery service, calculate fuel reimbursement, and for safety. We never sell your personal data to third parties.',
+            'You may request a copy or deletion of your data by contacting Chutkima support.'
+        ]},
+        terms: { title:'Terms & Conditions', body:[
+            'By using the Chutkima Rider app you agree to deliver assigned orders responsibly and follow all traffic and safety laws.',
+            'Cash collected on COD orders is company property and must be deposited at the dark store at the end of each shift.',
+            'Fuel reimbursement is calculated at NPR 4 per km of completed deliveries and may be revised by Chutkima.',
+            'Repeated cancellations, misconduct, or failure to deposit cash may lead to suspension of your rider account.',
+            'These terms may be updated from time to time; continued use means you accept the latest version.'
+        ]},
+        about: { title:'About us', body:[
+            'Chutkima is a quick-commerce grocery delivery service based in Butwal, Nepal, operated by Chutkima Technology Pvt. Ltd.',
+            'We deliver groceries and daily essentials from our dark store to customers fast and reliably — and our riders are the heart of that promise.',
+            'This Rider app helps you receive assigned orders, navigate, collect payments and track your daily distance & fuel.',
+            'Butwal · chutkima.com'
+        ]},
+        faq: { title:'FAQ', body:[
+            'Q. How do I get orders?  — Go Online from the home screen. The dark store assigns orders to you; you confirm or reject each one.',
+            'Q. How is my fuel calculated?  — NPR 4 for every km of completed deliveries, shown live on the Earnings tab.',
+            'Q. What do I do with COD cash?  — Collect the exact amount, confirm it in the app, and deposit it at the store at end of shift.',
+            'Q. Customer not answering?  — Call first, then use “Customer Not Responding” on the order. It is logged for the customer’s trust badge.',
+            'Q. How do I update my documents?  — Documents and vehicle are managed by the Chutkima admin. Contact support to update them.'
+        ]}
+    };
+    let docReturn = 'screen-app';
+    function openDoc(type){
+        const d = DOCS[type]; if(!d) return;
+        const active = document.querySelector('.screen:not(.hidden-screen)');
+        docReturn = active ? active.id : 'screen-app';
+        document.getElementById('docTitle').textContent = d.title;
+        document.getElementById('docBody').innerHTML = d.body.map(p=>'<p>'+p+'</p>').join('') + '<p class="text-xs text-slate-400 pt-2">Last updated: June 2026 · Chutkima Technology Pvt. Ltd.</p>';
+        show('screen-doc');
+    }
+    function closeDoc(){ if(docReturn==='screen-app'){ show('screen-app'); switchTab('profile'); } else show(docReturn); }
+
+    /* ============================ LOGOUT ============================ */
+    function askLogout(){
+        const active = state.orders.some(o=>['pickedup','outfordelivery','arrived'].includes(o.status));
+        document.getElementById('logoutBody').textContent = active ? 'You have an active delivery in progress! Logging out now is not recommended.' : 'Are you sure you want to logout?';
+        document.getElementById('overlay-logout').classList.remove('hidden');
+    }
+    function closeLogout(){ document.getElementById('overlay-logout').classList.add('hidden'); }
+    function doLogout(){ closeLogout(); resetDemo(true); goSplash(); toast('Logged out','See you soon, Bikash.','fa-right-from-bracket'); }
+
+    /* ============================ SIMULATION CONSOLE ============================ */
+    function ensureOnline(){ if(!state.online){ toggleOnline(); } if(state.currentTab!=='orders' && !document.getElementById('screen-app').classList.contains('hidden-screen')) switchTab('orders'); }
+    function simAssign(type){
+        if(document.getElementById('screen-app').classList.contains('hidden-screen')){ toast('Login first','Open the app to receive orders.','fa-triangle-exclamation','text-amber-500'); return; }
+        ensureOnline();
+        const o = makeOrder(type); state.orders.unshift(o); renderOrders();
+        if(o.scheduled){ toast('Scheduled order added','#'+o.id+' locked until 7:00 AM (112C).','fa-clock','text-violet-500'); }
+        else { showIncoming(o); }   // loud assignment popup → Confirm / Reject (112A)
+    }
+    function simActivateScheduled(){
+        const sched = state.orders.filter(o=>o.scheduled);
+        if(sched.length===0){ toast('No scheduled orders','Add one first.','fa-circle-info'); return; }
+        sched.forEach(o=>{ o.scheduled=false; });
+        renderOrders();
+        pushNotif('Scheduled orders active', sched.length+' scheduled order(s) activated at 7:00 AM.', 'fa-bolt', 'text-violet-500');
+        toast('7:00 AM Cron ⏰','Scheduled orders activated & moved to queue.','fa-bolt');
+    }
+    // store packs the parcel → order becomes Ready for Pickup (simulates admin/packer action)
+    function simParcelReady(){
+        if(document.getElementById('screen-app').classList.contains('hidden-screen')){ toast('Login first','Open the app first.','fa-triangle-exclamation','text-amber-500'); return; }
+        const packing = state.orders.filter(o=>o.status==='confirmed');
+        if(packing.length===0){ toast('Nothing packing','Confirm an assigned order first.','fa-circle-info'); return; }
+        packing.forEach(o=>markParcelReady(o));
+    }
+    // rider pay model selector (admin config): fuel / fixed salary / commission
+    function setPayMode(m){
+        state.pay.mode = m;
+        renderPayModeButtons();
+        if(state.currentTab==='earnings' && !document.getElementById('screen-app').classList.contains('hidden-screen')) renderEarnings();
+        const label = m==='fuel' ? 'Fuel (KM × NPR '+state.pay.fuelRate+')' : m==='salary' ? 'Fixed monthly salary' : 'Per-delivery commission';
+        toast('Earnings mode', label,'fa-sliders','text-brand');
+    }
+    function renderPayModeButtons(){
+        ['fuel','salary','commission'].forEach(x=>{
+            const b = document.getElementById('pm-'+x); if(!b) return;
+            const active = x===state.pay.mode;
+            b.className = 'h-9 rounded-lg border font-bold transition-all ' + (active ? 'bg-brand text-white border-brand' : 'bg-slate-50 text-slate-600 border-slate-200 hover:border-brand');
+        });
+    }
+
+    function simCancelActive(){
+        if(state.orders.length===0){ toast('No orders','Nothing to cancel.','fa-circle-info'); return; }
+        const o = state.orders[0];
+        clearTimeout(state.packingTimers[o.id]); delete state.packingTimers[o.id];
+        state.orders = state.orders.filter(x=>x.id!==o.id);
+        if(state.activeId===o.id){ state.activeId=null; stopGps(); show('screen-app'); switchTab('orders'); }
+        renderOrders();
+        const a=document.getElementById('cancelAlert'); a.classList.remove('hidden');
+        document.getElementById('cancelAlertBody').textContent = 'Order #'+o.id+' was cancelled by admin while assigned.';
+        pushNotif('Order cancelled', 'Order #'+o.id+' was cancelled by admin.', 'fa-ban', 'text-rose-500');
+        toast('Order cancelled','#'+o.id+' removed (112E).','fa-ban','text-rose-500');
+    }
+    function resetDemo(silent){
+        stopGps(); state.online=false; state.orders=[]; state.activeId=null; state.seq=42;
+        Object.values(state.packingTimers).forEach(clearTimeout); state.packingTimers={};
+        state.settlements=[]; state.lastSettle=null;
+        seedMockData(); // keep mock data populated after reset
+        clearInterval(incomingTimer);
+        ['overlay-deliver','overlay-qr','overlay-cash','overlay-settle','overlay-delivered','overlay-nr','overlay-team','overlay-logout','overlay-incoming','overlay-reject','overlay-help','overlay-parcel-ready'].forEach(i=>document.getElementById(i).classList.add('hidden'));
+        document.getElementById('cancelAlert').classList.add('hidden');
+        // reset toggle visuals
+        const dot=document.getElementById('toggleDot'),tog=document.getElementById('onlineToggle');
+        tog.classList.add('bg-slate-200');tog.classList.remove('bg-brand');dot.style.left='4px';dot.classList.add('bg-slate-400');dot.classList.remove('bg-white');
+        document.getElementById('toggleIcon').classList.add('text-white');document.getElementById('toggleIcon').classList.remove('text-brand');
+        document.getElementById('onlineLabel').textContent='OFFLINE';document.getElementById('onlineLabel').classList.add('text-slate-400');document.getElementById('onlineLabel').classList.remove('text-brand');
+        document.getElementById('presenceDot').classList.add('bg-slate-400');document.getElementById('presenceDot').classList.remove('bg-brand','animate-pulse');
+        document.getElementById('ordersOffline').classList.remove('hidden');document.getElementById('ordersOnline').classList.add('hidden');
+        renderOrders(); updateNotifBadge();
+        if(!silent) toast('Demo reset','Fresh start.','fa-rotate-left');
+    }
+
+    /* ============================ TOAST + CLOCK ============================ */
+    let toastT=null;
+    function toast(title, body, icon, color){
+        document.getElementById('toastTitle').textContent=title;
+        document.getElementById('toastBody').textContent=body||'';
+        const ic=document.getElementById('toastIcon'); ic.className='fa-solid '+(icon||'fa-circle-check')+' text-lg '+(color||'text-brand');
+        const t=document.getElementById('toast'); t.classList.remove('-translate-y-32','opacity-0'); t.classList.add('translate-y-0','opacity-100');
+        clearTimeout(toastT); toastT=setTimeout(()=>{ t.classList.add('-translate-y-32','opacity-0'); t.classList.remove('translate-y-0','opacity-100'); },2600);
+    }
+    function nowStr(){ const d=new Date(); let h=d.getHours(),m=d.getMinutes(); const ap=h>=12?'PM':'AM'; h=h%12||12; return h+':'+String(m).padStart(2,'0')+' '+ap; }
+    function tickClock(){ const d=new Date(); let h=d.getHours(),m=d.getMinutes(); const ap=h>=12?'PM':'AM'; h=h%12||12; document.getElementById('clock').textContent=h+':'+String(m).padStart(2,'0'); }
+    setInterval(tickClock,10000); tickClock();
+
+    // OTP auto-advance (sign-in + sign-up)
+    ['.otp-box','.suotp-box'].forEach(sel=>{
+        const arr = document.querySelectorAll(sel);
+        arr.forEach((box,i)=>{ box.addEventListener('input',()=>{ if(box.value && arr[i+1]) arr[i+1].focus(); }); });
+    });
+
+    /* boot */
+    renderPayModeButtons();
+    goSplash();
+    </script>
+</body>
+</html>

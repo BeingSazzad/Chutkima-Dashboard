@@ -49,6 +49,13 @@ export default function DriversPage() {
   const { data: orders = [] } = useGetOrdersQuery()
   const [setDriverStatus] = useSetDriverStatusMutation()
 
+  const sortedDrivers = useMemo(() => {
+    return [...drivers].sort((a, b) => {
+      const order = { available: 1, on_delivery: 2, offline: 3 }
+      return (order[a.status] || 99) - (order[b.status] || 99)
+    })
+  }, [drivers])
+
   const counts = useMemo(
     () => ({
       available: allDrivers.filter((d) => d.status === 'available').length,
@@ -235,7 +242,7 @@ export default function DriversPage() {
       <Card>
         <DataTable
           columns={columns}
-          data={drivers}
+          data={sortedDrivers}
           rowKey={(d) => d.id}
           onRowClick={(d) => navigate(ROUTES.driverDetail(d.id))}
           loading={isLoading}

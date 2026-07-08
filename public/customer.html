@@ -1,0 +1,3130 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Chutkima — Customer App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Hind:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: '#0B8570',
+            'brand-dark': '#076d5b',
+            'brand-soft': '#E6F4F1',
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'sans-serif'],
+            deva: ['Hind', 'Plus Jakarta Sans', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    :root {
+      --brand: #0B8570;
+    }
+
+    @keyframes brandPulse {
+      0%, 100% { transform: scale(1); opacity: 0.95; }
+      50% { transform: scale(1.06); opacity: 1; filter: drop-shadow(0 0 8px rgba(11, 133, 112, 0.4)); }
+    }
+    .animate-brand-pulse {
+      animation: brandPulse 2s infinite ease-in-out;
+    }
+
+    @keyframes scaleNumber {
+      0% { transform: scale(0.6); opacity: 0; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-scale-num {
+      animation: scaleNumber 0.25s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      display: inline-block;
+    }
+
+    @keyframes spinDot {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(-360deg); }
+    }
+    .animate-spin-dot {
+      animation: spinDot 10s linear infinite;
+      transform-origin: 80px 80px;
+    }
+
+    @keyframes chutkiSnapHand {
+      0% { transform: scale(1) rotate(0deg); }
+      15% { transform: scale(0.8) rotate(-10deg); }
+      35% { transform: scale(1.2) rotate(12deg); }
+      55% { transform: scale(1) rotate(0deg); }
+      100% { transform: scale(1) rotate(0deg); }
+    }
+    @keyframes chutkiSnapSparks {
+      0% { opacity: 0; transform: scale(0.6); }
+      20% { opacity: 1; transform: scale(1.2); }
+      100% { opacity: 0; transform: scale(1.5); }
+    }
+    .animate-chutki-hand {
+      animation: chutkiSnapHand 0.45s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+      transform-origin: bottom center;
+    }
+    .animate-chutki-sparks {
+      animation: chutkiSnapSparks 0.45s ease-out forwards;
+      transform-origin: center center;
+    }
+
+    html,
+    body {
+      height: 100%;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: #d9dee2;
+      font-size: 14px;
+      color: #1e293b;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    /* The app canvas — exactly 430 x 932, no phone frame */
+    .app-canvas {
+      width: 430px;
+      height: 932px;
+      background: #F6F7F8;
+      border-radius: 36px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 30px 80px -20px rgba(11, 133, 112, 0.25), 0 10px 30px rgba(0, 0, 0, 0.12);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+
+    /* Button system per spec: 48px tall, 16px bold text */
+    .btn-primary {
+      height: 48px;
+      font-size: 16px;
+      font-weight: 700;
+      background: var(--brand);
+      color: #fff;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      transition: all .15s ease;
+    }
+
+    .btn-primary:active {
+      transform: scale(.98);
+    }
+
+    .btn-primary:disabled {
+      background: #cbd5e1;
+      color: #fff;
+    }
+
+    .btn-ghost {
+      height: 48px;
+      font-size: 16px;
+      font-weight: 700;
+      background: #fff;
+      color: var(--brand);
+      border: 1.5px solid var(--brand);
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      transition: all .15s ease;
+    }
+
+    .btn-ghost:active {
+      transform: scale(.98);
+    }
+
+    .screen {
+      display: none;
+      flex-direction: column;
+      height: 100%;
+    }
+
+    .screen.active {
+      display: flex;
+    }
+
+    @keyframes slideUp {
+      from {
+        transform: translateY(24px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateY(0);
+        opacity: 1;
+      }
+    }
+
+    .anim-up {
+      animation: slideUp .28s ease both;
+    }
+
+    @keyframes pop {
+      0% {
+        transform: scale(.85);
+        opacity: 0
+      }
+
+      100% {
+        transform: scale(1);
+        opacity: 1
+      }
+    }
+
+    .anim-pop {
+      animation: pop .25s cubic-bezier(.2, .8, .3, 1.2) both;
+    }
+
+    /* tier bar fill transition */
+    #tierFill,
+    #tierFillCart {
+      transition: width .4s cubic-bezier(.4, 0, .2, 1), background-color .3s ease;
+    }
+
+    .chip-active {
+      background: var(--brand);
+      color: #fff;
+      border-color: var(--brand);
+    }
+
+    .nav-active {
+      color: var(--brand);
+    }
+
+    .timeline-dot.done {
+      background: var(--brand);
+      color: #fff;
+    }
+
+    .timeline-line.done {
+      background: var(--brand);
+    }
+</style>
+</head>
+
+<body>
+
+  <div class="app-canvas no-scrollbar" id="appCanvas">
+
+    <!-- ============ QUICK TEST/DEBUG TRIGGER BUTTONS ============ -->
+    <div style="position: absolute; top: 60px; right: 16px; z-index: 9999; display: flex; flex-direction: column; gap: 6px; max-width: 140px;">
+      <span style="font-size: 8px; font-weight: 800; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em; background: rgba(255,255,255,0.9); padding: 2px 6px; border-radius: 4px; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">Debug Tools</span>
+      <button onclick="openAfterHours()" style="background: #f59e0b; color: white; font-size: 9px; font-weight: 800; padding: 5px 10px; border-radius: 9999px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 4px;">
+        <i class="fa-solid fa-moon"></i> Schedule Pop
+      </button>
+      <button onclick="openStoreOffline()" style="background: #ea580c; color: white; font-size: 9px; font-weight: 800; padding: 5px 10px; border-radius: 9999px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 4px;">
+        <i class="fa-solid fa-store-slash"></i> Shop Offline Pop
+      </button>
+      <button onclick="openZoneClosed()" style="background: #ef4444; color: white; font-size: 9px; font-weight: 800; padding: 5px 10px; border-radius: 9999px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 4px;">
+        <i class="fa-solid fa-location-crosshairs"></i> Zone Closed Pop
+      </button>
+      <button onclick="toggleOfflineBanner()" style="background: #3b82f6; color: white; font-size: 9px; font-weight: 800; padding: 5px 10px; border-radius: 9999px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 4px;">
+        <i class="fa-solid fa-bell"></i> Toggle Soft Banner
+      </button>
+      <button onclick="simCustomerAdj('short')" style="background: #d97706; color: white; font-size: 9px; font-weight: 800; padding: 5px 10px; border-radius: 9999px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 4px;">
+        <i class="fa-solid fa-plus"></i> Short Cash (NPR 60)
+      </button>
+      <button onclick="simCustomerAdj('excess')" style="background: #059669; color: white; font-size: 9px; font-weight: 800; padding: 5px 10px; border-radius: 9999px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 4px;">
+        <i class="fa-solid fa-check"></i> Excess Cash (NPR 45)
+      </button>
+      <button onclick="simWalletRefund()" style="background: #2563eb; color: white; font-size: 9px; font-weight: 800; padding: 5px 10px; border-radius: 9999px; border: none; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; align-items: center; gap: 4px;">
+        <i class="fa-solid fa-wallet"></i> Sim Refund (NPR 150)
+      </button>
+    </div>
+
+    <!-- ============ STATUS BAR (shared) ============ -->
+    <div
+      class="h-12 px-7 pt-3 flex items-center justify-between text-[13px] font-bold text-slate-900 select-none flex-shrink-0 z-40 bg-transparent"
+      id="statusBar">
+      <span>9:41</span>
+      <div class="flex items-center gap-1.5">
+        <i class="fa-solid fa-signal text-[11px]"></i>
+        <i class="fa-solid fa-wifi text-[11px]"></i>
+        <i class="fa-solid fa-battery-three-quarters text-[13px]"></i>
+      </div>
+    </div>
+
+    <!-- ============ SCREEN HOST ============ -->
+    <div class="flex-1 relative overflow-hidden" id="screenHost">
+
+      <!-- ====================================================== -->
+      <!-- PLACING ORDER SCREEN (Feature 5) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-placing">
+        <div class="flex-1 flex flex-col items-center justify-center px-7 text-center">
+          <div class="relative w-40 h-40 mb-8 flex items-center justify-center animate-brand-pulse">
+            <svg class="w-full h-full transform -rotate-90">
+              <circle cx="80" cy="80" r="70" stroke="#e2e8f0" stroke-width="6" fill="transparent" />
+              <circle id="placingProgressCircle" cx="80" cy="80" r="70" stroke="#0B8570" stroke-width="6"
+                fill="transparent" stroke-dasharray="440" stroke-dashoffset="0" stroke-linecap="round"
+                class="transition-all duration-1000 ease-linear" />
+              <g class="animate-spin-dot">
+                <circle cx="80" cy="10" r="6" fill="#0B8570" />
+              </g>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center pt-2">
+              <!-- Custom Finger-Snapping Hand SVG (Chutkima Logo animation) -->
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" class="w-12 h-12 text-brand" id="chutkiHand">
+                <path d="M18 11V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v3" />
+                <path d="M14 10V5a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v5" />
+                <path d="M10 10.5V6a2 2 0 0 0-2-2v0a2 2 0 0 0-2 2v8" />
+                <path d="M10 14c2-1 4.5-.5 5 1 .5 1.5-1.5 3-4 3" />
+                <g id="chutkiSparks" class="opacity-0">
+                  <path d="M18 3l1.5 1.5" stroke="#F59E0B" stroke-width="2.5" />
+                  <path d="M22 8h-2" stroke="#F59E0B" stroke-width="2.5" />
+                  <path d="M20 13l-1.5 1.5" stroke="#F59E0B" stroke-width="2.5" />
+                </g>
+              </svg>
+              <div class="flex items-baseline gap-1 mt-1">
+                <span class="text-3xl font-black text-slate-800 animate-scale-num" id="placingCountdown">10</span>
+                <span class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Sec</span>
+              </div>
+            </div>
+          </div>
+
+          <h1 class="text-xl font-extrabold text-slate-900 leading-tight">Placing your order...</h1>
+          <p class="text-slate-500 mt-2 text-sm leading-relaxed max-w-[280px]">
+            Connecting with Butwal store and preparing the rider team.
+          </p>
+
+          <button class="btn-ghost mt-10 border-red-200 !text-red-500 bg-red-50/50" onclick="cancelPlacingOrder()">
+            Cancel Order
+          </button>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- ONBOARDING (Feature 4) -->
+      <!-- ====================================================== -->
+      <div class="screen active" id="screen-onboarding">
+        <div class="flex-1 flex flex-col px-7 pt-4 pb-8">
+          <div class="flex justify-end">
+            <button onclick="go('login')" class="text-slate-400 font-semibold text-sm">Skip</button>
+          </div>
+          <div class="flex-1 flex flex-col items-center justify-center text-center" id="onbContent">
+            <div class="w-44 h-44 rounded-full bg-brand-soft flex items-center justify-center mb-9" id="onbIcon">
+              <i class="fa-solid fa-bolt text-brand text-6xl"></i>
+            </div>
+            <h1 class="text-2xl font-extrabold text-slate-900 leading-tight" id="onbTitle">Groceries in minutes</h1>
+            <p class="text-slate-500 mt-3 max-w-[300px] leading-relaxed text-sm" id="onbBody">
+              Order daily essentials and get them delivered to your door — fast, fresh, and always on time.
+            </p>
+          </div>
+          <div class="flex items-center justify-center gap-2 mb-7" id="onbDots">
+            <span class="w-6 h-1.5 rounded-full bg-brand"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+            <span class="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+          </div>
+          <button class="btn-primary" onclick="nextOnboarding()" id="onbNextBtn">Next</button>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- LOGIN / OTP (Features 1, 2) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-login">
+        <div class="flex-1 flex flex-col px-7 pt-6 pb-8 overflow-y-auto no-scrollbar">
+          <div class="flex items-center gap-3 mb-10">
+            <div class="w-11 h-11 rounded-2xl bg-brand flex items-center justify-center">
+              <i class="fa-solid fa-bolt text-white text-lg"></i>
+            </div>
+            <div>
+              <h2 class="text-xl font-extrabold text-slate-900 leading-none">Chutkima</h2>
+              <span class="text-[11px] text-slate-400 font-semibold tracking-wide">TAP · SNAP · DELIVER</span>
+            </div>
+          </div>
+
+          <!-- Phone step -->
+          <div id="loginPhoneStep">
+            <h1 class="text-2xl font-extrabold text-slate-900">Welcome 👋</h1>
+            <p class="text-slate-500 mt-2 mb-8 text-sm">Enter your phone number to continue. We'll send a 6-digit code.
+            </p>
+            <label class="text-xs font-bold text-slate-500 uppercase tracking-wide">Mobile Number</label>
+            <div
+              class="mt-2 flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 h-14 focus-within:border-brand transition-colors">
+              <span class="text-sm font-bold text-slate-700 flex items-center gap-1.5"><span class="text-lg">🇳🇵</span>
+                +977</span>
+              <div class="w-px h-6 bg-slate-200"></div>
+              <input id="phoneInput" type="tel" maxlength="10" placeholder="98XXXXXXXX"
+                class="flex-1 bg-transparent outline-none text-base font-semibold text-slate-800 tracking-wide">
+            </div>
+            <p class="text-[11px] text-slate-400 mt-2 ml-1">Max 3 OTP requests per hour for your security.</p>
+            <button class="btn-primary mt-8" onclick="sendOtp()">Send OTP</button>
+          </div>
+
+          <!-- OTP step -->
+          <div id="loginOtpStep" class="hidden">
+            <button onclick="backToPhone()" class="text-slate-400 mb-4 text-sm font-semibold"><i
+                class="fa-solid fa-arrow-left mr-1"></i> Back</button>
+            <h1 class="text-2xl font-extrabold text-slate-900">Verify code</h1>
+            <p class="text-slate-500 mt-2 mb-8 text-sm">6-digit code sent to <strong id="otpPhoneLabel"
+                class="text-slate-700">+977 98XXXXXXXX</strong>. Expires in 5:00.</p>
+            <div class="flex gap-2 justify-between" id="otpBoxes">
+              <input maxlength="1" inputmode="numeric"
+                class="otp-box w-12 h-14 text-center text-xl font-extrabold bg-white border border-slate-200 rounded-xl outline-none focus:border-brand">
+              <input maxlength="1" inputmode="numeric"
+                class="otp-box w-12 h-14 text-center text-xl font-extrabold bg-white border border-slate-200 rounded-xl outline-none focus:border-brand">
+              <input maxlength="1" inputmode="numeric"
+                class="otp-box w-12 h-14 text-center text-xl font-extrabold bg-white border border-slate-200 rounded-xl outline-none focus:border-brand">
+              <input maxlength="1" inputmode="numeric"
+                class="otp-box w-12 h-14 text-center text-xl font-extrabold bg-white border border-slate-200 rounded-xl outline-none focus:border-brand">
+              <input maxlength="1" inputmode="numeric"
+                class="otp-box w-12 h-14 text-center text-xl font-extrabold bg-white border border-slate-200 rounded-xl outline-none focus:border-brand">
+              <input maxlength="1" inputmode="numeric"
+                class="otp-box w-12 h-14 text-center text-xl font-extrabold bg-white border border-slate-200 rounded-xl outline-none focus:border-brand">
+            </div>
+            <div class="flex items-center justify-between mt-5 text-sm">
+              <span class="text-slate-400">Didn't get it?</span>
+              <button class="text-brand font-bold">Resend code</button>
+            </div>
+            <button class="btn-primary mt-8" onclick="verifyOtp()">Verify & Continue</button>
+            <p class="text-[11px] text-slate-300 text-center mt-3">Demo: type any digits, then Verify</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- HOME (Features 5,6,7,9,17) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-home">
+        <!-- Top: location + ETA banner -->
+        <div class="px-5 pt-1 pb-3 bg-white flex-shrink-0">
+          <div class="flex items-center justify-between">
+            <button onclick="go('addresses')" class="flex items-center gap-2 text-left">
+              <div class="w-9 h-9 rounded-xl bg-brand-soft flex items-center justify-center"><i
+                  class="fa-solid fa-location-dot text-brand"></i></div>
+              <div>
+                <span class="text-[11px] text-slate-400 font-semibold flex items-center gap-1">Delivering to <i
+                    class="fa-solid fa-chevron-down text-[8px]"></i></span>
+                <span id="homeLocationLabel" class="text-sm font-extrabold text-slate-800">Traffic Chowk, Butwal</span>
+              </div>
+            </button>
+            <button onclick="go('profile')"
+              class="w-10 h-10 rounded-full bg-brand text-white font-extrabold flex items-center justify-center">RS</button>
+          </div>
+
+          <!-- Zepto-style ETA banner (Feature 17) -->
+          <div class="mt-3 rounded-2xl bg-brand p-3.5 flex items-center gap-3 text-white">
+            <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center"><i
+                class="fa-solid fa-stopwatch text-xl"></i></div>
+            <div class="flex-1">
+              <h3 class="text-base font-extrabold leading-none">Delivery in 12–18 min</h3>
+              <p class="text-[12px] text-white/85 mt-1">Fast from Butwal dark store · Open till 11:00 PM</p>
+            </div>
+          </div>
+
+          <!-- Search (Feature 7) -->
+          <button onclick="go('categories')"
+            class="mt-3 w-full h-12 rounded-2xl bg-slate-100 flex items-center gap-3 px-4 text-slate-400">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <span class="text-sm font-medium">Search "Wai Wai", "milk", "rice"…</span>
+          </button>
+        </div>
+
+        <!-- Scroll body -->
+        <div class="flex-1 overflow-y-auto no-scrollbar pb-32">
+          <!-- Store Offline Banner (Feature 3) -->
+          <div id="offlineHomeBanner" class="hidden px-5 pt-4">
+            <div class="w-full bg-red-50 border-2 border-red-200 rounded-2xl p-4 flex items-start gap-3">
+              <div class="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-500 flex-shrink-0">
+                <i class="fa-solid fa-circle-xmark text-lg"></i></div>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-sm font-extrabold text-red-800 leading-tight">We are currently closed</h4>
+                <p class="text-xs text-red-600 mt-1 leading-relaxed">Store is offline. We are not accepting new orders
+                  right now.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active order banner (shown only if there's a live order) -->
+          <div id="activeOrderBanner" class="hidden px-5 pt-4">
+            <button onclick="openActiveOrder()"
+              class="w-full bg-white border-2 border-brand rounded-2xl p-3.5 flex items-center gap-3 text-left">
+              <div class="relative w-11 h-11 rounded-xl bg-brand-soft flex items-center justify-center flex-shrink-0">
+                <i class="fa-solid fa-truck-fast text-brand text-lg"></i>
+                <span
+                  class="absolute -top-0.5 -right-0.5 w-3 h-3 bg-brand rounded-full border-2 border-white animate-pulse"></span>
+              </div>
+              <div class="flex-1 min-w-0">
+                <p class="text-[11px] font-bold text-brand uppercase tracking-wide">Active order · <span
+                    id="activeOrderId">#BW-0043</span></p>
+                <p class="text-sm font-bold text-slate-800 truncate" id="activeOrderStatus">Out for delivery · arrives
+                  in 6 min</p>
+              </div>
+              <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+            </button>
+          </div>
+
+          <!-- Category chips (Feature 5) -->
+          <div class="flex gap-2 overflow-x-auto no-scrollbar px-5 py-4" id="homeChips"></div>
+
+          <!-- Reorder shortcut (Feature 9) -->
+          <div class="px-5 mb-1">
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-base font-extrabold text-slate-800">Order again</h3>
+              <button onclick="go('orders')" class="text-brand text-xs font-bold">View all</button>
+            </div>
+            <div class="flex gap-3 overflow-x-auto no-scrollbar -mx-1 px-1">
+              <div class="min-w-[150px] bg-white border border-slate-200/70 rounded-2xl p-3 flex-shrink-0">
+                <div class="flex items-center gap-1.5 mb-2">
+                  <span class="text-[10px] font-bold text-slate-400">#BW-0042 · 5 items</span>
+                </div>
+                <div class="flex -space-x-2 mb-3">
+                  <div
+                    class="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-sm border-2 border-white">
+                    🍜</div>
+                  <div
+                    class="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center text-sm border-2 border-white">
+                    🧂</div>
+                  <div
+                    class="w-8 h-8 rounded-lg bg-sky-100 flex items-center justify-center text-sm border-2 border-white">
+                    🥛</div>
+                  <div
+                    class="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-[10px] font-bold border-2 border-white text-slate-500">
+                    +2</div>
+                </div>
+                <button onclick="reorder()"
+                  class="w-full h-9 rounded-xl bg-brand-soft text-brand text-sm font-bold">Reorder</button>
+              </div>
+              <div class="min-w-[150px] bg-white border border-slate-200/70 rounded-2xl p-3 flex-shrink-0">
+                <div class="flex items-center gap-1.5 mb-2">
+                  <span class="text-[10px] font-bold text-slate-400">#BW-0039 · 3 items</span>
+                </div>
+                <div class="flex -space-x-2 mb-3">
+                  <div
+                    class="w-8 h-8 rounded-lg bg-red-100 flex items-center justify-center text-sm border-2 border-white">
+                    🥚</div>
+                  <div
+                    class="w-8 h-8 rounded-lg bg-green-100 flex items-center justify-center text-sm border-2 border-white">
+                    🍅</div>
+                  <div
+                    class="w-8 h-8 rounded-lg bg-yellow-100 flex items-center justify-center text-sm border-2 border-white">
+                    🧈</div>
+                </div>
+                <button onclick="reorder()"
+                  class="w-full h-9 rounded-xl bg-brand-soft text-brand text-sm font-bold">Reorder</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product grid (Feature 6) -->
+          <div class="px-5 mt-5">
+            <div class="flex items-center justify-between mb-2.5">
+              <h3 class="text-base font-extrabold text-slate-800" id="homeGridTitle">Popular near you</h3>
+            </div>
+            <div class="grid grid-cols-2 gap-3" id="homeGrid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- CATEGORIES / SEARCH (Features 5,7,11) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-categories">
+        <div class="px-5 pt-1 pb-3 bg-white flex-shrink-0 border-b border-slate-100">
+          <div class="flex items-center gap-3">
+            <button onclick="go('home')"
+              class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+                class="fa-solid fa-arrow-left"></i></button>
+            <div class="flex-1 h-11 rounded-2xl bg-slate-100 flex items-center gap-2.5 px-4">
+              <i class="fa-solid fa-magnifying-glass text-slate-400 text-sm"></i>
+              <input id="searchInput" oninput="runSearch()" placeholder="Search products…"
+                class="flex-1 bg-transparent outline-none text-sm font-medium text-slate-800">
+              <button onclick="clearSearch()" id="searchClear" class="text-slate-400 hidden"><i
+                  class="fa-solid fa-circle-xmark"></i></button>
+            </div>
+          </div>
+          <div class="flex gap-2 overflow-x-auto no-scrollbar pt-3" id="catChips"></div>
+        </div>
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-32">
+          <p class="text-xs text-slate-400 font-semibold mb-2.5" id="catResultCount"></p>
+          <div class="grid grid-cols-2 gap-3" id="catGrid"></div>
+          <div id="catEmpty" class="hidden flex-col items-center justify-center py-16 text-center">
+            <div class="w-20 h-20 rounded-full bg-slate-100 flex items-center justify-center mb-4"><i
+                class="fa-solid fa-box-open text-slate-300 text-2xl"></i></div>
+            <h4 class="font-bold text-slate-700">No results found</h4>
+            <p class="text-sm text-slate-400 mt-1">Try a different keyword</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- PRODUCT DETAIL (Features 8,10,11) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-product">
+        <div class="px-5 pt-1 pb-2 flex items-center justify-between flex-shrink-0">
+          <button onclick="goBack()"
+            class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-700"><i
+              class="fa-solid fa-arrow-left"></i></button>
+          <button onclick="toggleWishFromDetail()" id="pdWishBtn"
+            class="w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center text-slate-400"><i
+              class="fa-regular fa-heart"></i></button>
+        </div>
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pb-36">
+          <div class="w-full h-56 rounded-3xl bg-white border border-slate-100 flex items-center justify-center mb-5"
+            id="pdImage"><span class="text-7xl">🍜</span></div>
+          <span id="pdStock"
+            class="inline-block text-[11px] font-bold text-brand bg-brand-soft px-2.5 py-1 rounded-full">In stock</span>
+          <h1 class="text-2xl font-extrabold text-slate-900 mt-3" id="pdName">Wai Wai Noodles</h1>
+          <p class="text-sm text-slate-400 font-semibold mt-1" id="pdWeight">75g · per pack</p>
+          <p class="text-sm text-slate-500 leading-relaxed mt-4" id="pdDesc">The classic Nepali instant noodle —
+            pre-cooked, crunchy, and ready in minutes. A pantry staple in every household.</p>
+
+          <div class="mt-6 p-4 rounded-2xl bg-white border border-slate-200/70 flex items-center justify-between">
+            <div>
+              <span class="text-[11px] text-slate-400 font-bold uppercase">Price</span>
+              <p class="text-2xl font-extrabold text-slate-900" id="pdPrice">NPR 30</p>
+            </div>
+            <div id="pdQtyControl"></div>
+          </div>
+
+          <!-- Substitution suggestion (Feature 11) -->
+          <div id="pdSubBlock" class="mt-6 hidden">
+            <h4 class="text-sm font-extrabold text-slate-700 mb-2">If out of stock, try</h4>
+            <div class="p-3 rounded-2xl bg-amber-50 border border-amber-200 flex items-center gap-3">
+              <div class="w-12 h-12 rounded-xl bg-white flex items-center justify-center text-2xl">🍜</div>
+              <div class="flex-1">
+                <p class="text-sm font-bold text-slate-800">Rara White Soup Noodles</p>
+                <p class="text-[12px] text-amber-700">Similar alternative · NPR 25</p>
+              </div>
+              <button class="text-amber-700 font-bold text-sm">Add</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- CART (Features 12,13,14,18) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-cart">
+        <div class="px-5 pt-1 pb-3 flex items-center gap-3 flex-shrink-0 bg-white border-b border-slate-100">
+          <button onclick="go('home')"
+            class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+              class="fa-solid fa-arrow-left"></i></button>
+          <h2 class="text-lg font-extrabold text-slate-900">Your cart</h2>
+          <span id="cartItemCount" class="ml-auto text-xs font-bold text-slate-400"></span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-44" id="cartBody">
+          <!-- empty state -->
+          <div id="cartEmpty" class="flex flex-col items-center justify-center py-24 text-center">
+            <div class="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center mb-5"><i
+                class="fa-solid fa-basket-shopping text-slate-300 text-3xl"></i></div>
+            <h3 class="font-extrabold text-slate-800 text-lg">Your cart is empty</h3>
+            <p class="text-sm text-slate-400 mt-1 mb-6">Add items to get started</p>
+            <button onclick="go('home')" class="btn-primary !w-auto px-8">Start shopping</button>
+          </div>
+
+          <!-- delivery tier bar (Feature 13) -->
+          <div id="cartFilled" class="hidden">
+            <div class="rounded-2xl bg-white border border-slate-200/70 p-4 mb-4">
+              <p id="tierNudge" class="text-sm font-bold text-slate-800 mb-2.5"></p>
+              <div class="w-full h-2.5 rounded-full bg-slate-100 overflow-hidden">
+                <div id="tierFillCart" class="h-full rounded-full" style="width:0%; background:#ef4444"></div>
+              </div>
+              <div class="flex justify-between mt-2 text-[10px] font-bold text-slate-300">
+                <span>₨0</span><span>₨800 FREE</span>
+              </div>
+            </div>
+
+            <div class="space-y-2.5 mb-4" id="cartItems"></div>
+
+            <!-- order summary (Feature 14) -->
+            <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+              <h4 class="text-sm font-extrabold text-slate-800 mb-3">Bill summary</h4>
+              <div class="space-y-2 text-sm">
+                <div class="flex justify-between"><span class="text-slate-500">Item total</span><span
+                    class="font-bold text-slate-800" id="sumSubtotal">NPR 0</span></div>
+                <div class="flex justify-between"><span class="text-slate-500">Delivery fee</span><span
+                    class="font-bold text-slate-800" id="sumDelivery">NPR 0</span></div>
+                <div class="flex justify-between" id="sumPromoRow" style="display:none"><span
+                    class="text-brand font-semibold">Promo discount</span><span class="font-bold text-brand"
+                    id="sumPromo">– NPR 0</span></div>
+                <div class="border-t border-dashed border-slate-200 my-1"></div>
+                <div class="flex justify-between text-base"><span class="font-extrabold text-slate-900">To
+                    pay</span><span class="font-extrabold text-slate-900" id="sumTotal">NPR 0</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- sticky checkout bar -->
+        <div id="cartCheckoutBar"
+          class="hidden absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-5 pt-3 pb-6">
+          <button class="btn-primary" onclick="attemptCheckout()">
+            <span id="cartCheckoutTotal">Checkout · NPR 0</span><i class="fa-solid fa-arrow-right"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- CHECKOUT (Features 15,16,18,19-22) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-checkout">
+        <div class="px-5 pt-1 pb-3 flex items-center gap-3 flex-shrink-0 bg-white border-b border-slate-100">
+          <button onclick="go('cart')"
+            class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+              class="fa-solid fa-arrow-left"></i></button>
+          <h2 class="text-lg font-extrabold text-slate-900">Checkout</h2>
+        </div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-44 space-y-4">
+          <!-- Delivery zone (Feature 16) -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+            <div class="flex items-center justify-between mb-2">
+              <h4 class="text-sm font-extrabold text-slate-800"><i
+                  class="fa-solid fa-location-crosshairs text-brand mr-1.5"></i>Delivery zone</h4>
+              <span class="text-[11px] font-bold text-brand bg-brand-soft px-2 py-0.5 rounded-full">GPS detected</span>
+            </div>
+            <div class="relative">
+              <i
+                class="fa-solid fa-map-location-dot absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+              <i
+                class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+              <select
+                class="w-full h-11 rounded-xl bg-slate-50 border border-slate-200 pl-10 pr-9 text-sm font-semibold text-slate-700 outline-none focus:border-brand appearance-none">
+                <option>Butwal — Traffic Chowk (Zone A)</option>
+                <option>Butwal — Amarpath (Zone B)</option>
+                <option>Butwal — Golpark (Zone C)</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Address form (Feature 15) -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4 space-y-3">
+            <h4 class="text-sm font-extrabold text-slate-800"><i
+                class="fa-solid fa-house text-brand mr-1.5"></i>Delivery address</h4>
+            <div class="relative">
+              <i class="fa-solid fa-location-dot absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+              <input placeholder="Full address" value="Amarpath, Traffic Chowk"
+                class="w-full h-11 rounded-xl bg-slate-50 border border-slate-200 pl-10 pr-3 text-sm font-medium outline-none focus:border-brand">
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="relative">
+                <i class="fa-solid fa-building absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input placeholder="Building / Apt"
+                  class="w-full h-11 rounded-xl bg-slate-50 border border-slate-200 pl-10 pr-3 text-sm font-medium outline-none focus:border-brand">
+              </div>
+              <div class="relative">
+                <i class="fa-solid fa-signs-post absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input placeholder="Landmark"
+                  class="w-full h-11 rounded-xl bg-slate-50 border border-slate-200 pl-10 pr-3 text-sm font-medium outline-none focus:border-brand">
+              </div>
+            </div>
+            <div class="relative">
+              <i class="fa-solid fa-phone absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+              <input placeholder="Phone for delivery" value="+977 9847000000"
+                class="w-full h-11 rounded-xl bg-slate-50 border border-slate-200 pl-10 pr-3 text-sm font-medium outline-none focus:border-brand">
+            </div>
+          </div>
+
+          <!-- Promo / referral (Feature 18) -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+            <h4 class="text-sm font-extrabold text-slate-800 mb-2.5"><i
+                class="fa-solid fa-ticket text-brand mr-1.5"></i>Promo / referral code</h4>
+            <div class="flex gap-2">
+              <div class="relative flex-1">
+                <i class="fa-solid fa-tag absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm"></i>
+                <input id="promoInput" placeholder="Enter code (try CHUT10)"
+                  class="w-full h-11 rounded-xl bg-slate-50 border border-slate-200 pl-10 pr-3 text-sm font-semibold outline-none focus:border-brand uppercase">
+              </div>
+              <button onclick="applyPromo()"
+                class="h-11 px-4 rounded-xl bg-brand text-white text-sm font-bold">Apply</button>
+            </div>
+            <p id="promoMsg" class="text-xs font-semibold mt-2 hidden"></p>
+          </div>
+
+          <!-- Delivery Timing (Feature 4) -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+            <h4 class="text-sm font-extrabold text-slate-800 mb-3"><i
+                class="fa-solid fa-stopwatch text-brand mr-1.5"></i>Delivery timing</h4>
+            <div class="grid grid-cols-2 gap-2" id="timingOptions">
+              <button type="button" onclick="selectTiming('instant')" id="timeOptInstant"
+                class="h-12 rounded-xl border-2 border-brand bg-brand-soft text-brand text-xs font-bold flex flex-col items-center justify-center">
+                <span>Instant Delivery</span>
+                <span class="text-[9px] opacity-80 mt-0.5">12-18 mins</span>
+              </button>
+              <button type="button" onclick="selectTiming('scheduled')" id="timeOptScheduled"
+                class="h-12 rounded-xl border border-slate-200 bg-white text-slate-500 text-xs font-bold flex flex-col items-center justify-center">
+                <span>Schedule for Tomorrow</span>
+                <span class="text-[9px] opacity-80 mt-0.5">Pick time slot</span>
+              </button>
+            </div>
+
+            <div class="mt-3 hidden" id="timeSlotContainer">
+              <label class="text-[11px] font-bold text-slate-400 uppercase tracking-wide">Select Tomorrow's Time
+                Slot</label>
+              <div class="relative mt-1.5">
+                <i
+                  class="fa-solid fa-clock absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none"></i>
+                <i
+                  class="fa-solid fa-chevron-down absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-xs pointer-events-none"></i>
+                <select id="timeSlotSelect" onchange="updateScheduledSlot(this.value)"
+                  class="w-full h-11 rounded-xl bg-slate-50 border border-slate-200 pl-10 pr-9 text-sm font-semibold text-slate-700 outline-none focus:border-brand appearance-none">
+                  <option value="Tomorrow, 08:00 AM - 10:00 AM">Tomorrow, 08:00 AM - 10:00 AM</option>
+                  <option value="Tomorrow, 10:00 AM - 12:00 PM">Tomorrow, 10:00 AM - 12:00 PM</option>
+                  <option value="Tomorrow, 12:00 PM - 02:00 PM">Tomorrow, 12:00 PM - 02:00 PM</option>
+                  <option value="Tomorrow, 02:00 PM - 04:00 PM">Tomorrow, 02:00 PM - 04:00 PM</option>
+                  <option value="Tomorrow, 04:00 PM - 06:00 PM">Tomorrow, 04:00 PM - 06:00 PM</option>
+                  <option value="Tomorrow, 06:00 PM - 08:00 PM">Tomorrow, 06:00 PM - 08:00 PM</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Product Substitution (Feature 2) -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+            <h4 class="text-sm font-extrabold text-slate-800 mb-1"><i
+                class="fa-solid fa-tag text-brand mr-1.5"></i>Substitution Preference</h4>
+            <p class="text-[11px] text-slate-400 mb-3">If any item goes out of stock at the store</p>
+            <div class="space-y-2" id="subPreferences"></div>
+          </div>
+
+          <!-- Wallet Apply Card (Feature 6) -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg text-brand bg-brand-soft flex items-center justify-center"><i
+                    class="fa-solid fa-wallet"></i></div>
+                <div>
+                  <p class="text-sm font-bold text-slate-800">Use Wallet Balance</p>
+                  <p class="text-[11px] text-slate-400" id="walletLabelCheckout">NPR 100 available</p>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer select-none">
+                <input type="checkbox" id="walletCheckoutToggle" onchange="toggleWalletUsage(this.checked)"
+                  class="sr-only peer">
+                <div
+                  class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand">
+                </div>
+              </label>
+            </div>
+          </div>
+
+          <!-- Payment (Features 19,20,21,22) -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+            <h4 class="text-sm font-extrabold text-slate-800 mb-3"><i
+                class="fa-solid fa-wallet text-brand mr-1.5"></i>Payment method</h4>
+            <div class="space-y-2" id="payMethods"></div>
+          </div>
+
+          <!-- summary mini -->
+          <div class="rounded-2xl bg-brand-soft p-4">
+            <div class="flex justify-between text-sm mb-1"><span class="text-slate-600">Items</span><span
+                class="font-bold text-slate-800" id="coSubtotal">NPR 0</span></div>
+            <div class="flex justify-between text-sm mb-1"><span class="text-slate-600">Delivery</span><span
+                class="font-bold text-slate-800" id="coDelivery">NPR 0</span></div>
+            <div class="flex justify-between text-sm mb-1" id="coPromoRow" style="display:none"><span
+                class="text-brand">Discount</span><span class="font-bold text-brand" id="coPromo">– NPR 0</span></div>
+            <!-- wallet row -->
+            <div class="flex justify-between text-sm mb-1 text-slate-600" id="coWalletRow" style="display:none">
+              <span>Wallet Used</span><span class="font-bold text-slate-800" id="coWallet">– NPR 0</span></div>
+            <div class="flex justify-between text-base pt-1.5 mt-1.5 border-t border-brand/20"><span
+                class="font-extrabold text-slate-900">Total</span><span class="font-extrabold text-brand"
+                id="coTotal">NPR 0</span></div>
+          </div>
+        </div>
+
+        <div class="absolute bottom-0 left-0 right-0 bg-white border-t border-slate-100 px-5 pt-3 pb-6">
+          <button class="btn-primary" onclick="placeOrder()"><span id="placeOrderLabel">Place order · NPR
+              0</span></button>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- ORDER SUCCESS (Feature 25) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-success">
+        <div class="flex-1 flex flex-col items-center justify-center px-7 text-center">
+          <div class="w-28 h-28 rounded-full bg-brand-soft flex items-center justify-center mb-6 anim-pop">
+            <div class="w-20 h-20 rounded-full bg-brand flex items-center justify-center"><i
+                class="fa-solid fa-check text-white text-4xl"></i></div>
+          </div>
+          <h1 class="text-2xl font-extrabold text-slate-900">Order confirmed!</h1>
+          <p class="text-slate-500 mt-2 text-sm">Order <strong id="successOrderId"
+              class="text-slate-800">#BW-0043</strong> is confirmed and being packed.</p>
+          <div class="mt-7 w-full rounded-2xl bg-white border border-slate-200/70 p-4 text-left">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-brand-soft flex items-center justify-center"><i
+                  class="fa-solid fa-stopwatch text-brand text-lg"></i></div>
+              <div>
+                <p class="text-[11px] text-slate-400 font-bold uppercase">Estimated arrival</p>
+                <p class="text-base font-extrabold text-slate-800" id="successEta">12–18 minutes</p>
+              </div>
+            </div>
+          </div>
+          <button class="btn-primary mt-7" onclick="go('tracking')">Track order</button>
+          <button class="btn-ghost mt-3 border-none !text-slate-400" onclick="go('home')">Back to home</button>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- TRACKING (Features 27,28,29,30) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-tracking">
+        <div class="px-5 pt-1 pb-3 flex items-center gap-3 flex-shrink-0 bg-white border-b border-slate-100">
+          <button onclick="go('orders')"
+            class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+              class="fa-solid fa-arrow-left"></i></button>
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900 leading-none">Track order</h2>
+            <span class="text-[11px] text-slate-400 font-semibold" id="trackOrderId">#BW-0043</span>
+          </div>
+          <span
+            class="ml-auto text-[11px] font-bold text-brand bg-brand-soft px-2.5 py-1 rounded-full flex items-center gap-1"><span
+              class="w-1.5 h-1.5 bg-brand rounded-full animate-pulse"></span> Live</span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar pb-6">
+          <!-- live map (Feature 29) -->
+          <div class="relative h-56 bg-slate-100">
+            <canvas id="trackMap" class="w-full h-full block"></canvas>
+            <div
+              class="absolute bottom-3 left-3 bg-white/95 backdrop-blur px-3 py-1.5 rounded-xl border border-slate-200 text-[11px] font-bold text-slate-700 flex items-center gap-1.5">
+              <span class="w-1.5 h-1.5 bg-brand rounded-full animate-ping"></span> Rider GPS · updates every 10s
+            </div>
+          </div>
+
+          <div class="px-5 pt-4">
+            <!-- rider contact (Feature 30) -->
+            <div class="rounded-2xl bg-white border border-slate-200/70 p-3.5 flex items-center gap-3 mb-4">
+              <div class="w-12 h-12 rounded-full bg-brand text-white font-extrabold flex items-center justify-center">BK
+              </div>
+              <div class="flex-1">
+                <p class="text-sm font-extrabold text-slate-800">Bikash Karki</p>
+                <p class="text-[12px] text-slate-400">Your delivery rider · Bike</p>
+              </div>
+              <a href="tel:9847000000"
+                class="w-11 h-11 rounded-full bg-brand-soft text-brand flex items-center justify-center text-lg"><i
+                  class="fa-solid fa-phone"></i></a>
+            </div>
+
+            <!-- 6-step timeline (Feature 27) -->
+            <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+              <h4 class="text-sm font-extrabold text-slate-800 mb-4">Order progress</h4>
+              <div id="timeline"></div>
+            </div>
+
+            <button onclick="go('orders')" class="btn-ghost mt-4">View order details</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- ORDERS / HISTORY (Features 31,32,26) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-orders">
+        <div class="px-5 pt-1 pb-3 flex-shrink-0 bg-white border-b border-slate-100">
+          <h2 class="text-lg font-extrabold text-slate-900">My orders</h2>
+          <div class="flex gap-2 mt-3 overflow-x-auto no-scrollbar">
+            <button id="btn-orders-all" onclick="filterOrdersTab('All')"
+              class="chip-active px-4 h-9 rounded-full text-sm font-bold border border-slate-200 whitespace-nowrap">All</button>
+            <button id="btn-orders-active" onclick="filterOrdersTab('Active')"
+              class="bg-white text-slate-500 px-4 h-9 rounded-full text-sm font-bold border border-slate-200 whitespace-nowrap">Active</button>
+            <button id="btn-orders-delivered" onclick="filterOrdersTab('Delivered')"
+              class="bg-white text-slate-500 px-4 h-9 rounded-full text-sm font-bold border border-slate-200 whitespace-nowrap">Delivered</button>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-32 space-y-3" id="ordersList"></div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- WISHLIST (Feature 10) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-wishlist">
+        <div class="px-5 pt-1 pb-3 flex items-center gap-3 flex-shrink-0 bg-white border-b border-slate-100">
+          <button onclick="go('profile')"
+            class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+              class="fa-solid fa-arrow-left"></i></button>
+          <h2 class="text-lg font-extrabold text-slate-900">Favourites</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-32">
+          <div id="wishEmpty" class="flex flex-col items-center justify-center py-24 text-center">
+            <div class="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center mb-5"><i
+                class="fa-regular fa-heart text-slate-300 text-3xl"></i></div>
+            <h3 class="font-extrabold text-slate-800 text-lg">No favourites yet</h3>
+            <p class="text-sm text-slate-400 mt-1">Tap the heart on any product to save it</p>
+          </div>
+          <div class="grid grid-cols-2 gap-3" id="wishGrid"></div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- PROFILE (Features 33,34,35,35B,36,37) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-profile">
+        <div class="flex-1 overflow-y-auto no-scrollbar pb-32">
+          <div class="bg-brand px-5 pt-3 pb-7 text-white">
+            <div class="flex items-center gap-4">
+              <div class="w-16 h-16 rounded-full bg-white/15 flex items-center justify-center text-2xl font-extrabold">
+                RS</div>
+              <div>
+                <h2 class="text-xl font-extrabold">Ram Sharma</h2>
+                <p class="text-white/80 text-sm">+977 9847000000</p>
+              </div>
+            </div>
+            <!-- Wallet (Feature 35B) -->
+            <div
+              class="mt-5 rounded-2xl bg-white/12 backdrop-blur p-4 flex items-center justify-between border border-white/15">
+              <div>
+                <p class="text-[11px] text-white/70 font-bold uppercase tracking-wide">Wallet balance</p>
+                <p class="text-2xl font-extrabold" id="profileWalletBalance">NPR 100</p>
+                <p class="text-[10px] text-white/60 mt-0.5">From referrals · 60-day expiry</p>
+              </div>
+              <i class="fa-solid fa-wallet text-3xl text-white/40"></i>
+            </div>
+          </div>
+
+          <!-- Referral (Feature 35) -->
+          <div class="px-5 -mt-4">
+            <div class="rounded-2xl bg-white border border-slate-200/70 p-4 shadow-sm">
+              <div class="flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl bg-brand-soft flex items-center justify-center text-brand text-lg"><i
+                    class="fa-solid fa-gift"></i></div>
+                <div class="flex-1">
+                  <p class="text-sm font-extrabold text-slate-800">Refer & earn</p>
+                  <p class="text-[12px] text-slate-400">Friend gets 5% off · you earn wallet credit</p>
+                </div>
+              </div>
+              <div
+                class="mt-3 flex items-center gap-2 bg-slate-50 border border-dashed border-slate-300 rounded-xl px-3 h-11">
+                <span class="font-extrabold tracking-widest text-slate-700 flex-1">RAM-CHUT24</span>
+                <button onclick="toast('Code copied','Share with friends to earn credit')"
+                  class="text-brand font-bold text-sm">Copy</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Wallet History Card -->
+          <div class="px-5 mt-5">
+            <div class="rounded-2xl bg-white border border-slate-200/70 p-4 shadow-sm">
+              <div class="flex items-center gap-2 mb-3">
+                <div class="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center text-sm">
+                  <i class="fa-solid fa-clock-rotate-left"></i>
+                </div>
+                <h3 class="font-bold text-slate-800 text-sm">Wallet History</h3>
+              </div>
+              <div class="space-y-3 max-h-[160px] overflow-y-auto pr-1" id="walletHistoryList">
+                <!-- Dynamically populated -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Menu -->
+          <div class="px-5 mt-5 space-y-2">
+            <button onclick="go('addresses')"
+              class="w-full bg-white border border-slate-200/70 rounded-2xl p-4 flex items-center gap-3 text-left">
+              <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+                  class="fa-solid fa-location-dot"></i></div>
+              <span class="flex-1 text-sm font-bold text-slate-800">Saved addresses</span>
+              <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+            </button>
+            <button onclick="go('wishlist')"
+              class="w-full bg-white border border-slate-200/70 rounded-2xl p-4 flex items-center gap-3 text-left">
+              <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+                  class="fa-regular fa-heart"></i></div>
+              <span class="flex-1 text-sm font-bold text-slate-800">Favourites</span>
+              <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+            </button>
+            <button onclick="go('orders')"
+              class="w-full bg-white border border-slate-200/70 rounded-2xl p-4 flex items-center gap-3 text-left">
+              <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+                  class="fa-solid fa-box"></i></div>
+              <span class="flex-1 text-sm font-bold text-slate-800">My orders</span>
+              <i class="fa-solid fa-chevron-right text-slate-300 text-xs"></i>
+            </button>
+            <button onclick="toast('Notifications','Order updates arrive via push & WhatsApp')"
+              class="w-full bg-white border border-slate-200/70 rounded-2xl p-4 flex items-center gap-3 text-left">
+              <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+                  class="fa-solid fa-bell"></i></div>
+              <span class="flex-1 text-sm font-bold text-slate-800">Notifications</span>
+              <span class="text-[10px] font-bold text-brand">Push · WhatsApp</span>
+            </button>
+
+            <!-- Store Offline Simulation Toggle (Feature 3) -->
+            <div class="w-full bg-white border border-slate-200/70 rounded-2xl p-4 flex items-center justify-between">
+              <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-xl bg-amber-50 flex items-center justify-center text-amber-500"><i
+                    class="fa-solid fa-moon"></i></div>
+                <div>
+                  <p class="text-sm font-bold text-slate-800">Simulate Store Offline</p>
+                  <p class="text-[10px] text-slate-400">Force closed state for testing</p>
+                </div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer select-none">
+                <input type="checkbox" id="offlineSimToggle" onchange="toggleOfflineSimulation(this.checked)"
+                  class="sr-only peer">
+                <div
+                  class="w-11 h-6 bg-slate-200 rounded-full peer peer-checked:after:translate-x-full after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500">
+                </div>
+              </label>
+            </div>
+
+            <!-- Simulation Substitution Panel -->
+            <div class="w-full bg-white border border-slate-200/70 rounded-2xl p-4 space-y-3">
+              <p class="text-xs font-bold text-slate-400 uppercase tracking-wide">Simulation Controls (Dev)</p>
+              <div class="grid grid-cols-2 gap-2">
+                <button onclick="simCustomerAdj('short')"
+                  class="h-9 rounded-xl bg-amber-50 text-amber-700 text-xs font-bold border border-amber-200 active:scale-[.98] transition-transform">➕
+                  Short Cash (NPR 60)</button>
+                <button onclick="simCustomerAdj('excess')"
+                  class="h-9 rounded-xl bg-emerald-50 text-emerald-700 text-xs font-bold border border-emerald-200 active:scale-[.98] transition-transform">🟢
+                  Excess Cash (NPR 45)</button>
+                <button onclick="simWalletRefund()"
+                  class="col-span-2 h-9 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200 active:scale-[.98] transition-transform">💰
+                  Simulate Refund (NPR 150)</button>
+              </div>
+            </div>
+            <!-- language toggle (Feature 40) -->
+            <div class="w-full bg-white border border-slate-200/70 rounded-2xl p-4 flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+                  class="fa-solid fa-language"></i></div>
+              <span class="flex-1 text-sm font-bold text-slate-800">Language</span>
+              <div class="flex bg-slate-100 rounded-lg p-0.5 text-xs font-bold">
+                <button id="langNp" onclick="setLang('np')"
+                  class="px-3 py-1 rounded-md bg-white text-brand shadow-sm">नेपाली</button>
+                <button id="langEn" onclick="setLang('en')" class="px-3 py-1 rounded-md text-slate-400">EN</button>
+              </div>
+            </div>
+            <button onclick="go('login')"
+              class="w-full bg-white border border-slate-200/70 rounded-2xl p-4 flex items-center gap-3 text-left">
+              <div class="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500"><i
+                  class="fa-solid fa-right-from-bracket"></i></div>
+              <span class="flex-1 text-sm font-bold text-red-500">Log out</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- SAVED ADDRESSES (Feature 34) -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-addresses">
+        <div class="px-5 pt-1 pb-3 flex items-center gap-3 flex-shrink-0 bg-white border-b border-slate-100">
+          <button onclick="go('profile')"
+            class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+              class="fa-solid fa-arrow-left"></i></button>
+          <h2 class="text-lg font-extrabold text-slate-900">Saved addresses</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-32 space-y-3">
+          <div onclick="selectAddress('Traffic Chowk, Butwal')" class="rounded-2xl bg-white border-2 border-brand p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-sm font-extrabold text-slate-800"><i
+                  class="fa-solid fa-house text-brand mr-1.5"></i>Home</span>
+              <span class="text-[10px] font-bold text-brand bg-brand-soft px-2 py-0.5 rounded-full">Default</span>
+            </div>
+            <p class="text-sm text-slate-500">Amarpath, Traffic Chowk, Butwal · Near Nepal Bank</p>
+          </div>
+          <div onclick="selectAddress('Golpark, Butwal')" class="rounded-2xl bg-white border border-slate-200/70 p-4 cursor-pointer hover:bg-slate-50 transition-colors">
+            <span class="text-sm font-extrabold text-slate-800"><i
+                class="fa-solid fa-briefcase text-slate-500 mr-1.5"></i>Work</span>
+            <p class="text-sm text-slate-500 mt-1">Golpark, Butwal · Office building 2nd floor</p>
+          </div>
+          <button class="btn-ghost mt-2" onclick="toast('Demo Feature', 'Add new address dialog goes here')"><i class="fa-solid fa-plus"></i> Add new address</button>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- ORDER DETAIL — full receipt + all actions -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-order-detail">
+        <div class="px-5 pt-1 pb-3 flex items-center gap-3 flex-shrink-0 bg-white border-b border-slate-100">
+          <button onclick="go('orders')"
+            class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+              class="fa-solid fa-arrow-left"></i></button>
+          <div>
+            <h2 class="text-base font-extrabold text-slate-900 leading-none">Order details</h2>
+            <span class="text-[11px] text-slate-400 font-semibold" id="odOrderId">#BW-0043</span>
+          </div>
+          <span id="odStatusBadge" class="ml-auto text-[11px] font-bold px-2.5 py-1 rounded-full"></span>
+        </div>
+
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-4 pb-32 space-y-4">
+          <!-- live status mini -->
+          <div id="odLiveBlock" class="hidden rounded-2xl bg-brand p-4 text-white">
+            <div class="flex items-center gap-3">
+              <div class="w-11 h-11 rounded-xl bg-white/15 flex items-center justify-center"><i
+                  class="fa-solid fa-stopwatch text-xl"></i></div>
+              <div class="flex-1">
+                <p class="text-[11px] font-bold uppercase opacity-80">Estimated arrival</p>
+                <p class="text-base font-extrabold" id="odEta">6 minutes</p>
+              </div>
+              <button onclick="go('tracking')"
+                class="h-9 px-3 rounded-lg bg-white text-brand text-xs font-extrabold">Track live</button>
+            </div>
+          </div>
+
+          <!-- delivered hero -->
+          <div id="odDeliveredBlock" class="hidden rounded-2xl bg-brand-soft p-4 flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-brand flex items-center justify-center text-white"><i
+                class="fa-solid fa-circle-check text-xl"></i></div>
+            <div class="flex-1">
+              <p class="text-sm font-extrabold text-slate-800">Delivered successfully</p>
+              <p class="text-[12px] text-slate-500" id="odDeliveredAt">Today, 12:42 PM</p>
+            </div>
+          </div>
+
+          <!-- refund info block -->
+          <div id="odRefundDetailBlock" class="hidden rounded-2xl bg-emerald-50 border border-emerald-100 p-4 flex items-center gap-3">
+            <div class="w-11 h-11 rounded-xl bg-emerald-500 flex items-center justify-center text-white"><i
+                class="fa-solid fa-wallet text-xl"></i></div>
+            <div class="flex-1">
+              <p class="text-sm font-extrabold text-slate-800">Refund Processed</p>
+              <p class="text-[12px] text-slate-500" id="odRefundDetailText"></p>
+            </div>
+          </div>
+
+          <!-- substitution adjustment card -->
+          <div id="odSubAdjustmentCard" class="hidden rounded-2xl bg-white border border-slate-200/70 p-4 shadow-sm">
+            <div class="flex items-start gap-3">
+              <div id="odSubAdjIcon" class="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0"></div>
+              <div class="flex-1 min-w-0">
+                <h4 id="odSubAdjTitle" class="text-sm font-extrabold text-slate-800"></h4>
+                <p id="odSubAdjDesc" class="text-xs text-slate-500 mt-1 leading-relaxed"></p>
+                <div id="odSubAdjActions" class="mt-3 flex flex-col gap-2"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- rider card -->
+          <div id="odRiderCard"
+            class="hidden rounded-2xl bg-white border border-slate-200/70 p-3.5 flex items-center gap-3">
+            <div class="w-12 h-12 rounded-full bg-brand text-white font-extrabold flex items-center justify-center">BK
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-extrabold text-slate-800">Bikash Karki</p>
+              <p class="text-[12px] text-slate-400">Delivery partner</p>
+            </div>
+            <a href="tel:9847000000"
+              class="w-10 h-10 rounded-full bg-brand-soft text-brand flex items-center justify-center"><i
+                class="fa-solid fa-phone"></i></a>
+          </div>
+
+          <!-- items -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+            <h4 class="text-sm font-extrabold text-slate-800 mb-3">Items</h4>
+            <div id="odItems" class="space-y-2.5"></div>
+          </div>
+
+          <!-- bill summary -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+            <h4 class="text-sm font-extrabold text-slate-800 mb-3.5 flex items-center justify-between">
+              <span>Bill summary</span>
+              <span id="odPayBadge" class="text-[10px] font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1"></span>
+            </h4>
+            <div class="space-y-2.5 text-sm">
+              <div class="flex justify-between"><span class="text-slate-500">Item subtotal</span><span class="font-bold text-slate-800" id="odSubtotal">NPR 0</span></div>
+              <div class="flex justify-between border-b border-slate-100 pb-2.5"><span class="text-slate-500">Delivery fee</span><span class="font-bold text-slate-800" id="odDelivery">NPR 0</span></div>
+              <div class="hidden justify-between text-sm font-bold text-emerald-600" id="odRefundRow"><span>Refunded (Wallet)</span><span id="odRefundAmount">– NPR 0</span></div>
+              <div class="flex justify-between text-sm pt-1"><span class="font-bold text-slate-850">Order total</span><span class="font-black text-slate-900" id="odTotal">NPR 0</span></div>
+              <div id="odAdjustmentCard"></div>
+            </div>
+          </div>
+
+          <!-- delivery address -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4">
+            <h4 class="text-sm font-extrabold text-slate-800 mb-2"><i
+                class="fa-solid fa-location-dot text-brand mr-1.5"></i>Delivered to</h4>
+            <p class="text-sm text-slate-500 leading-relaxed">Amarpath, Traffic Chowk, Butwal · +977 9847000000</p>
+          </div>
+
+          <!-- substitution preference (Feature 2) -->
+          <div class="rounded-2xl bg-white border border-slate-200/70 p-4" id="odSubPreferenceBlock">
+            <h4 class="text-sm font-extrabold text-slate-800 mb-2"><i
+                class="fa-solid fa-tag text-brand mr-1.5"></i>Substitution Preference</h4>
+            <p class="text-sm text-slate-500 leading-relaxed" id="odSubPreferenceVal">Call me to choose</p>
+          </div>
+
+          <!-- action buttons -->
+          <div class="space-y-2">
+            <!-- rate rider CTA (delivered, not rated) -->
+            <button id="odRateBtn"
+              class="hidden w-full bg-amber-50 border-2 border-amber-300 rounded-2xl p-3.5 flex items-center gap-3"
+              onclick="openRateRider()">
+              <div class="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center text-amber-600"><i
+                  class="fa-solid fa-bolt"></i></div>
+              <div class="flex-1 text-left">
+                <p class="text-sm font-extrabold text-slate-800">Rate your rider</p>
+                <p class="text-[12px] text-slate-500">Help us improve · 10 sec</p>
+              </div>
+              <i class="fa-solid fa-chevron-right text-slate-400 text-xs"></i>
+            </button>
+            <button onclick="reorder()" class="btn-ghost"><i class="fa-solid fa-basket-shopping"></i> Reorder</button>
+            <button id="odCancelBtn"
+              class="hidden w-full h-12 rounded-2xl border border-red-200 bg-white text-red-500 text-base font-bold"
+              onclick="openCancelSheet()">Cancel order</button>
+            <button onclick="openReport()"
+              class="w-full h-12 rounded-2xl border border-slate-200 bg-white text-slate-600 text-base font-bold">Report
+              an issue</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- RATE RIDER -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-rate-rider">
+        <div class="px-5 pt-1 pb-3 flex items-center gap-3 flex-shrink-0 bg-white border-b border-slate-100">
+          <button onclick="goBackFromRate()"
+            class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+              class="fa-solid fa-arrow-left"></i></button>
+          <h2 class="text-lg font-extrabold text-slate-900">Rate your rider</h2>
+        </div>
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-6 pb-6">
+          <div class="flex flex-col items-center text-center mb-6">
+            <div
+              class="w-20 h-20 rounded-full bg-brand text-white text-2xl font-extrabold flex items-center justify-center mb-3">
+              BK</div>
+            <p class="text-base font-extrabold text-slate-800">Bikash Karki</p>
+            <p class="text-[12px] text-slate-400">Delivered <span id="rateOrderId">#BW-0043</span></p>
+          </div>
+
+          <p class="text-center text-sm font-bold text-slate-700 mb-3">How was your delivery experience?</p>
+          <div class="flex justify-center gap-2 mb-5" id="ratingStars">
+            <button onclick="setRating(1)" class="rate-star w-12 h-12 text-3xl text-slate-200" data-v="1">★</button>
+            <button onclick="setRating(2)" class="rate-star w-12 h-12 text-3xl text-slate-200" data-v="2">★</button>
+            <button onclick="setRating(3)" class="rate-star w-12 h-12 text-3xl text-slate-200" data-v="3">★</button>
+            <button onclick="setRating(4)" class="rate-star w-12 h-12 text-3xl text-slate-200" data-v="4">★</button>
+            <button onclick="setRating(5)" class="rate-star w-12 h-12 text-3xl text-slate-200" data-v="5">★</button>
+          </div>
+          <p id="rateLabel" class="text-center text-sm font-bold text-slate-400 mb-6 h-5"></p>
+
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">What stood out?</p>
+          <div class="flex flex-wrap gap-2 mb-5" id="rateTags"></div>
+
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Anything to add?</p>
+          <textarea id="rateComment" placeholder="Optional note for the rider…"
+            class="w-full h-24 rounded-2xl bg-white border border-slate-200 p-3 text-sm font-medium outline-none focus:border-brand resize-none"></textarea>
+
+          <div id="rateTipBlock" class="mt-4">
+            <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Add a tip?</p>
+            <div class="grid grid-cols-4 gap-2" id="rateTips">
+              <button onclick="setTip(0)" data-tip="0"
+                class="tip-btn h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600">None</button>
+              <button onclick="setTip(20)" data-tip="20"
+                class="tip-btn h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600">₨20</button>
+              <button onclick="setTip(50)" data-tip="50"
+                class="tip-btn h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600">₨50</button>
+              <button onclick="setTip(100)" data-tip="100"
+                class="tip-btn h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600">₨100</button>
+            </div>
+          </div>
+
+          <button class="btn-primary mt-6" onclick="submitRating()">Submit rating</button>
+        </div>
+      </div>
+
+      <!-- ====================================================== -->
+      <!-- REPORT ISSUE -->
+      <!-- ====================================================== -->
+      <div class="screen" id="screen-report">
+        <div class="px-5 pt-1 pb-3 flex items-center gap-3 flex-shrink-0 bg-white border-b border-slate-100">
+          <button onclick="go('order-detail')"
+            class="w-9 h-9 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i
+              class="fa-solid fa-arrow-left"></i></button>
+          <div>
+            <h2 class="text-lg font-extrabold text-slate-900 leading-none">Report an issue</h2>
+            <span class="text-[11px] text-slate-400 font-semibold" id="reportOrderId">#BW-0043</span>
+          </div>
+        </div>
+        <div class="flex-1 overflow-y-auto no-scrollbar px-5 pt-5 pb-6">
+          <p class="text-sm text-slate-500 leading-relaxed mb-4">Sorry that something went wrong. Please tell us what
+            happened — we'll get back within 24 hours via WhatsApp.</p>
+
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">What's the issue?</p>
+          <div class="space-y-2 mb-5" id="reportCategories"></div>
+
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mb-2">Tell us more</p>
+          <textarea id="reportText" placeholder="Describe the issue in detail…"
+            class="w-full h-32 rounded-2xl bg-white border border-slate-200 p-3 text-sm font-medium outline-none focus:border-brand resize-none"></textarea>
+
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mt-5 mb-2">Add photo (optional)</p>
+          <button
+            class="w-full h-20 rounded-2xl border-2 border-dashed border-slate-300 bg-white flex flex-col items-center justify-center gap-1 text-slate-400">
+            <i class="fa-solid fa-plus text-lg"></i>
+            <span class="text-xs font-semibold">Tap to upload</span>
+          </button>
+
+          <button class="btn-primary mt-6" onclick="submitReport()">Submit report</button>
+          <p class="text-[11px] text-slate-400 text-center mt-3">Refund (if applicable) processed within 3 business days
+          </p>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ============ BOTTOM NAV (shared) ============ -->
+    <div id="bottomNav"
+      class="h-[72px] bg-white border-t border-slate-100 px-3 pb-3 pt-2 flex items-center justify-around flex-shrink-0 z-40">
+      <button onclick="go('home')" data-nav="home" class="nav-btn flex flex-col items-center gap-1 text-slate-400 w-16">
+        <i class="fa-solid fa-house text-lg"></i><span class="text-[10px] font-bold">Home</span>
+      </button>
+      <button onclick="go('categories')" data-nav="categories"
+        class="nav-btn flex flex-col items-center gap-1 text-slate-400 w-16">
+        <i class="fa-solid fa-grip text-lg"></i><span class="text-[10px] font-bold">Categories</span>
+      </button>
+      <button onclick="go('cart')" data-nav="cart"
+        class="nav-btn relative flex flex-col items-center gap-1 text-slate-400 w-16">
+        <i class="fa-solid fa-basket-shopping text-lg"></i><span class="text-[10px] font-bold">Cart</span>
+        <span id="navCartBadge"
+          class="hidden absolute -top-0.5 right-2 min-w-[16px] h-4 px-1 bg-red-500 text-white text-[9px] font-extrabold rounded-full flex items-center justify-center"></span>
+      </button>
+      <button onclick="go('orders')" data-nav="orders"
+        class="nav-btn flex flex-col items-center gap-1 text-slate-400 w-16">
+        <i class="fa-solid fa-receipt text-lg"></i><span class="text-[10px] font-bold">Orders</span>
+      </button>
+      <button onclick="go('profile')" data-nav="profile"
+        class="nav-btn flex flex-col items-center gap-1 text-slate-400 w-16">
+        <i class="fa-solid fa-user text-lg"></i><span class="text-[10px] font-bold">Profile</span>
+      </button>
+    </div>
+
+    <!-- ============ CANCEL ORDER BOTTOM SHEET (Feature 26) ============ -->
+    <div id="cancelSheet" class="hidden absolute inset-0 z-50 bg-black/40 flex items-end">
+      <div class="w-full bg-white rounded-t-3xl p-6 anim-up max-h-[80%] overflow-y-auto no-scrollbar">
+        <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5"></div>
+        <div class="flex items-start gap-3 mb-4">
+          <div class="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center text-red-500 flex-shrink-0"><i
+              class="fa-solid fa-circle-xmark text-xl"></i></div>
+          <div class="flex-1">
+            <h3 class="text-lg font-extrabold text-slate-900">Cancel order?</h3>
+            <p class="text-sm text-slate-500 leading-relaxed">Refund (if paid) is processed automatically to your
+              eSewa/Khalti within 3 business days.</p>
+          </div>
+        </div>
+
+        <p class="text-xs font-bold text-slate-500 uppercase tracking-wide mt-2 mb-2">Reason (required)</p>
+        <div class="space-y-2 mb-5" id="cancelReasons"></div>
+
+        <button class="w-full h-12 rounded-2xl bg-red-500 text-white text-base font-bold"
+          onclick="confirmCancel()">Confirm cancellation</button>
+        <button class="btn-ghost mt-2 border-none !text-slate-400" onclick="closeCancelSheet()">Keep my order</button>
+      </div>
+    </div>
+
+    <!-- ============ AFTER-HOURS POPUP (Feature 113) ============ -->
+    <div id="afterHoursModal" class="hidden absolute inset-0 z-50 bg-black/40 flex items-end">
+      <div class="w-full bg-white rounded-t-3xl p-6 anim-up">
+        <div class="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-5"></div>
+        <div class="w-16 h-16 rounded-full bg-amber-100 flex items-center justify-center mx-auto mb-4"><i
+            class="fa-solid fa-moon text-amber-500 text-2xl"></i></div>
+        <h3 class="text-lg font-extrabold text-slate-900 text-center">We're closed for today</h3>
+        <p class="text-sm text-slate-500 text-center mt-2 leading-relaxed">
+          Our service ended at 10:30 PM today. Operating hours: 7:00 AM - 11:00 PM. Would you like to schedule your order for tomorrow?
+        </p>
+        <div class="mt-4">
+          <label class="text-xs font-bold text-slate-500 uppercase tracking-wide block mb-2">Select Delivery Time Slot</label>
+          <select id="afterHoursTimeSlot" style="width: 100%; height: 44px; border-radius: 12px; border: 1.5px solid #cbd5e1; padding: 0 12px; font-size: 14px; font-weight: 600; color: #334155; outline: none; background: #f8fafc; font-family: 'Plus Jakarta Sans', sans-serif;">
+            <option value="Tomorrow, 07:15 AM - 07:30 AM">Tomorrow, 07:15 AM - 07:30 AM</option>
+            <option value="Tomorrow, 07:30 AM - 07:45 AM">Tomorrow, 07:30 AM - 07:45 AM</option>
+            <option value="Tomorrow, 07:45 AM - 08:00 AM">Tomorrow, 07:45 AM - 08:00 AM</option>
+            <option value="Tomorrow, 08:00 AM - 09:00 AM">Tomorrow, 08:00 AM - 09:00 AM</option>
+            <option value="Tomorrow, 09:00 AM - 10:00 AM">Tomorrow, 09:00 AM - 10:00 AM</option>
+            <option value="Tomorrow, 10:00 AM - 11:00 AM">Tomorrow, 10:00 AM - 11:00 AM</option>
+          </select>
+        </div>
+        <button class="btn-primary mt-6" onclick="scheduleOrder()">Yes, Schedule Delivery</button>
+        <button class="btn-ghost mt-3 border-none !text-slate-400" onclick="closeAfterHours()">Cancel</button>
+      </div>
+    </div>
+
+    <!-- ============ ZONE-CLOSED POPUP ============ -->
+    <div id="zoneClosedModal" class="hidden absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
+      <div class="w-full max-w-[320px] bg-white rounded-[28px] p-6 text-center shadow-2xl anim-scale" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+        <div class="w-16 h-16 rounded-full bg-teal-50 flex items-center justify-center mx-auto mb-5">
+          <i class="fa-solid fa-house-chimney-window text-teal-600 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-extrabold text-slate-900 leading-tight">Delivery Zone Unavailable</h3>
+        <p class="text-sm font-bold text-slate-700 mt-2"><span class="font-extrabold text-slate-800">Traffic Chowk</span> is currently unavailable.</p>
+        
+        <div class="my-4 inline-block bg-red-50 text-red-600 text-xs font-bold px-4 py-2 rounded-full border border-red-100">
+          Reason: Heavy rain in Butwal
+        </div>
+
+        <p class="text-xs text-slate-400 leading-relaxed mb-6">
+          Please select another location or try again later.
+        </p>
+        
+        <div class="space-y-3">
+          <button class="w-full h-12 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold active:scale-[.98] transition-transform" onclick="closeZoneClosed(); go('addresses');">Change Delivery Location</button>
+          <button class="w-full h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold active:scale-[.98] transition-transform" onclick="closeZoneClosed()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ STORE-OFFLINE POPUP ============ -->
+    <div id="storeOfflineModal" class="hidden absolute inset-0 z-50 bg-black/60 flex items-center justify-center p-6">
+      <div class="w-full max-w-[320px] bg-white rounded-[28px] p-6 text-center shadow-2xl anim-scale" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+        <div class="w-16 h-16 rounded-full bg-amber-50 flex items-center justify-center mx-auto mb-5">
+          <i class="fa-solid fa-store-slash text-amber-600 text-2xl"></i>
+        </div>
+        <h3 class="text-xl font-extrabold text-slate-900 leading-tight">हाम्रो सेवा बन्द छ</h3>
+        <p class="text-sm font-bold text-slate-700 mt-2">हामी अहिले बन्द छौं। बिहान ७ बजे फेरि सेवा सुरु हुनेछ।</p>
+        
+        <div class="my-4 inline-block bg-amber-50 text-amber-700 text-xs font-bold px-4 py-2 rounded-full border border-amber-100">
+          Reason: Store Offline (प्रशासक द्वारा बन्द)
+        </div>
+
+        <p class="text-xs text-slate-400 leading-relaxed mb-6">
+          Please check back later or browse items to schedule your delivery for tomorrow.
+        </p>
+        
+        <div class="space-y-3">
+          <button class="w-full h-12 rounded-2xl bg-teal-600 hover:bg-teal-700 text-white text-sm font-bold active:scale-[.98] transition-transform" onclick="closeStoreOfflineModal(); go('home');">Browse & Schedule</button>
+          <button class="w-full h-12 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-sm font-bold active:scale-[.98] transition-transform" onclick="closeStoreOfflineModal()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ============ REFUND MODAL ============ -->
+    <div id="refundReceivedModal" class="hidden absolute inset-0 bg-slate-900/60 z-50 flex items-center justify-center p-6">
+      <div class="bg-white rounded-3xl w-full max-w-sm p-6 shadow-2xl text-center transition-all duration-300 transform scale-95 opacity-0" id="refundReceivedModalContent">
+        <div class="w-16 h-16 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto mb-4 text-3xl">
+          <i class="fa-solid fa-circle-check"></i>
+        </div>
+        <h3 class="text-xl font-extrabold text-slate-800">Refund Received!</h3>
+        <p class="text-slate-400 text-xs mt-1" id="refundModalOrderId">Order #BW-0043</p>
+        
+        <div class="my-5 bg-slate-50 border border-slate-100 rounded-2xl p-4">
+          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Refunded Amount</p>
+          <p class="text-3xl font-extrabold text-emerald-600 mt-1" id="refundModalAmount">NPR 150</p>
+          <p class="text-xs text-slate-500 mt-2 font-medium" id="refundModalReason">Reason: Damaged items</p>
+        </div>
+        
+        <div class="flex justify-between text-xs text-slate-400 font-semibold px-2 mb-6">
+          <span>New Wallet Balance</span>
+          <span class="text-slate-800 font-bold" id="refundModalNewBalance">NPR 250</span>
+        </div>
+        
+        <button onclick="closeRefundModal()" class="w-full bg-brand hover:bg-brand-dark text-white font-bold py-3 rounded-2xl transition focus-ring">Awesome, thanks!</button>
+      </div>
+    </div>
+
+    <!-- ============ TOAST ============ -->
+    <div id="toast"
+      class="absolute top-16 left-1/2 -translate-x-1/2 bg-white border-2 border-brand rounded-2xl px-5 py-3 shadow-2xl flex items-center gap-3 z-[60] transition-all duration-300 -translate-y-32 opacity-0 pointer-events-none max-w-[90%]">
+      <i class="fa-solid fa-circle-check text-brand text-lg"></i>
+      <div class="text-left">
+        <h5 class="font-extrabold text-slate-800 text-sm" id="toastTitle">Done</h5>
+        <p id="toastBody" class="text-slate-500 text-xs mt-0.5">Updated</p>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    /* ============================================================
+       CHUTKIMA CUSTOMER APP — front-end logic
+       Currency: NPR. Brand: #0B8570. Tokens per client spec.
+       ============================================================ */
+
+    const PRODUCTS = [
+      { id: 'WW', name: 'Wai Wai Noodles', w: '75g', price: 30, cat: 'Snacks', emoji: '🍜', desc: 'The classic Nepali instant noodle — pre-cooked, crunchy, ready in minutes.', sub: true },
+      { id: 'TS', name: 'Tata Salt', w: '1kg', price: 85, cat: 'Staples', emoji: '🧂', desc: 'Iodised, vacuum-evaporated salt for everyday cooking.' },
+      { id: 'DM', name: 'Dairy Fresh Milk', w: '1L', price: 95, cat: 'Dairy', emoji: '🥛', desc: 'Fresh pasteurised full-cream milk, delivered cold.' },
+      { id: 'RC', name: ' Miniket Rice', w: '5kg', price: 560, cat: 'Staples', emoji: '🍚', desc: 'Premium fine miniket rice, daily-meal grade.' },
+      { id: 'EG', name: 'Farm Eggs', w: 'tray/30', price: 430, cat: 'Dairy', emoji: '🥚', desc: 'Farm-fresh eggs, carefully packed.' },
+      { id: 'TM', name: 'Fresh Tomato', w: '1kg', price: 70, cat: 'Vegetables', emoji: '🍅', desc: 'Ripe red tomatoes, hand-picked.' },
+      { id: 'PT', name: 'Potato', w: '1kg', price: 55, cat: 'Vegetables', emoji: '🥔', desc: 'Clean graded potatoes.' },
+      { id: 'ON', name: 'Onion', w: '1kg', price: 90, cat: 'Vegetables', emoji: '🧅', desc: 'Fresh red onions.' },
+      { id: 'OIL', name: 'Sunflower Oil', w: '1L', price: 285, cat: 'Staples', emoji: '🛢️', desc: 'Refined sunflower cooking oil.' },
+      { id: 'CK', name: 'Coca-Cola', w: '250ml', price: 55, cat: 'Beverages', emoji: '🥤', desc: 'Chilled soft drink can.' },
+      { id: 'BR', name: 'Borhani Drink', w: '1L', price: 120, cat: 'Beverages', emoji: '🧉', desc: 'Special spiced yogurt drink, cold.' },
+      { id: 'BS', name: 'Britannia Biscuit', w: '200g', price: 60, cat: 'Snacks', emoji: '🍪', desc: 'Crisp tea-time biscuits.' },
+    ];
+
+    const CATEGORIES = ['All', 'Staples', 'Vegetables', 'Dairy', 'Snacks', 'Beverages'];
+
+    // delivery tiers (Feature 13)
+    const TIERS = [
+      { min: 0, max: 799, fee: 60, color: '#ef4444', next: 'FREE' },
+      { min: 800, max: Infinity, fee: 0, color: '#0B8570', next: null },
+    ];
+
+    let cart = { 'WW': 3, 'DM': 2, 'TS': 1 };   // seeded so cart/checkout show data
+    let wishlist = new Set(['RC', 'EG']); // seeded favourites
+    let promo = null;         // {code, pct, max}
+    let currentCat = 'All';
+    let payMethod = 'esewa';
+    let prevScreen = 'home';
+    let onbStep = 0;
+
+    // Features state variables
+    let serviceOffline = false;
+    let subPreference = 'call';
+    let deliveryTiming = 'instant';
+    let scheduledSlot = 'Tomorrow, 08:00 AM - 10:00 AM';
+
+    if (!localStorage.getItem('chutkima_wallet_balance')) {
+      localStorage.setItem('chutkima_wallet_balance', '100');
+    }
+    let walletBalance = parseFloat(localStorage.getItem('chutkima_wallet_balance'));
+    let walletApplied = false;
+    let walletUsedAmount = 0;
+
+    let walletTransactions = JSON.parse(localStorage.getItem('chutkima_wallet_transactions')) || [
+      { id: 'wtx1', amount: 100, type: 'compensation', reason: 'Welcome bonus & referral reward', orderId: 'Welcome', at: new Date(Date.now() - 5*24*60*60*1000).toISOString() }
+    ];
+    if (!localStorage.getItem('chutkima_wallet_transactions')) {
+      localStorage.setItem('chutkima_wallet_transactions', JSON.stringify(walletTransactions));
+    }
+
+    const ONB = [
+      { icon: 'fa-bolt', title: 'Groceries in minutes', body: 'Order daily essentials and get them delivered to your door — fast, fresh, and always on time.' },
+      { icon: 'fa-truck-fast', title: 'Live order tracking', body: 'Watch your rider on the map in real time and know exactly when your order arrives.' },
+      { icon: 'fa-location-dot', title: 'Right to your zone', body: 'We deliver across Butwal. Pick your zone and we handle the rest.' },
+    ];
+
+    /* ---------------- navigation ---------------- */
+    function go(name) {
+      const flow = ['onboarding', 'login', 'success']; // hide nav on these
+      document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+      const el = document.getElementById('screen-' + name);
+      if (el) { el.classList.add('active'); el.scrollTop = 0; }
+      // bottom nav visibility
+      const showNav = !flow.includes(name) && !['product', 'checkout', 'success', 'rate-rider', 'report', 'order-detail'].includes(name);
+      document.getElementById('bottomNav').style.display = showNav ? 'flex' : 'none';
+      // status bar tone
+      document.getElementById('statusBar').className = 'h-12 px-7 pt-3 flex items-center justify-between text-[13px] font-bold select-none flex-shrink-0 z-40 ' + (name === 'profile' ? 'text-white' : 'text-slate-900');
+      // active nav highlight
+      document.querySelectorAll('.nav-btn').forEach(b => {
+        b.classList.toggle('nav-active', b.dataset.nav === name);
+        b.classList.toggle('text-slate-400', b.dataset.nav !== name);
+      });
+      // per-screen renders
+      if (name === 'home') {
+        renderHome();
+        refreshActiveBanner();
+        const banner = document.getElementById('offlineHomeBanner');
+        if (banner) banner.classList.toggle('hidden', !serviceOffline);
+      }
+      if (name === 'categories') renderCategories();
+      if (name === 'cart') renderCart();
+      if (name === 'checkout') renderCheckout();
+      if (name === 'orders') renderOrders();
+      if (name === 'wishlist') renderWishlist();
+      if (name === 'tracking') startTracking();
+      if (name === 'profile') {
+        walletBalance = parseFloat(localStorage.getItem('chutkima_wallet_balance')) || 100;
+        walletTransactions = JSON.parse(localStorage.getItem('chutkima_wallet_transactions')) || [];
+        const balEl = document.getElementById('profileWalletBalance');
+        if (balEl) balEl.textContent = 'NPR ' + walletBalance;
+        const simToggle = document.getElementById('offlineSimToggle');
+        if (simToggle) simToggle.checked = serviceOffline;
+        renderWalletHistory();
+      }
+      prevScreen = name;
+    }
+    let backStack = ['home'];
+    function goBack() { go(prevBeforeProduct || 'home'); }
+    let prevBeforeProduct = 'home';
+
+    /* ---------------- onboarding ---------------- */
+    function nextOnboarding() {
+      onbStep++;
+      if (onbStep >= ONB.length) { go('login'); onbStep = 0; renderOnb(); return; }
+      renderOnb();
+    }
+    function renderOnb() {
+      const o = ONB[onbStep];
+      document.getElementById('onbIcon').innerHTML = `<i class="fa-solid ${o.icon} text-brand text-6xl"></i>`;
+      document.getElementById('onbTitle').textContent = o.title;
+      document.getElementById('onbBody').textContent = o.body;
+      document.getElementById('onbNextBtn').textContent = onbStep === ONB.length - 1 ? 'Get started' : 'Next';
+      document.getElementById('onbDots').innerHTML = ONB.map((_, i) =>
+        `<span class="${i === onbStep ? 'w-6 bg-brand' : 'w-1.5 bg-slate-300'} h-1.5 rounded-full transition-all"></span>`).join('');
+    }
+
+    /* ---------------- login ---------------- */
+    function sendOtp() {
+      const p = document.getElementById('phoneInput').value || '98XXXXXXXX';
+      document.getElementById('otpPhoneLabel').textContent = '+977 ' + p;
+      document.getElementById('loginPhoneStep').classList.add('hidden');
+      document.getElementById('loginOtpStep').classList.remove('hidden');
+      document.querySelectorAll('.otp-box')[0].focus();
+    }
+    function backToPhone() {
+      document.getElementById('loginOtpStep').classList.add('hidden');
+      document.getElementById('loginPhoneStep').classList.remove('hidden');
+    }
+    function verifyOtp() { go('home'); toast('Welcome to Chutkima', 'Logged in successfully'); }
+    // otp auto-advance
+    document.addEventListener('input', e => {
+      if (e.target.classList.contains('otp-box') && e.target.value) {
+        const boxes = [...document.querySelectorAll('.otp-box')];
+        const i = boxes.indexOf(e.target);
+        if (i < boxes.length - 1) boxes[i + 1].focus();
+      }
+    });
+
+    /* ---------------- product cards ---------------- */
+    function productCard(p) {
+      const inWish = wishlist.has(p.id);
+      const qty = cart[p.id] || 0;
+      return `<div class="bg-white border border-slate-200/70 rounded-2xl p-3 relative">
+    <button onclick="event.stopPropagation();toggleWish('${p.id}')" class="absolute top-2.5 right-2.5 w-7 h-7 rounded-full bg-white shadow-sm flex items-center justify-center ${inWish ? 'text-red-500' : 'text-slate-300'}">
+      <i class="fa-${inWish ? 'solid' : 'regular'} fa-heart text-sm"></i>
+    </button>
+    <div onclick="openProduct('${p.id}')" class="h-24 flex items-center justify-center text-5xl mb-2 cursor-pointer">${p.emoji}</div>
+    <p onclick="openProduct('${p.id}')" class="text-sm font-bold text-slate-800 leading-tight cursor-pointer line-clamp-2 min-h-[36px]">${p.name.trim()}</p>
+    <p class="text-[11px] text-slate-400 font-semibold mt-0.5">${p.w}</p>
+    <div class="flex items-center justify-between mt-2">
+      <span class="text-sm font-extrabold text-slate-900">NPR ${p.price}</span>
+      ${qty > 0
+          ? `<div class="flex items-center gap-2 bg-brand rounded-lg h-8 px-1.5">
+             <button onclick="event.stopPropagation();dec('${p.id}')" class="w-6 h-6 text-white font-bold">−</button>
+             <span class="text-white text-sm font-extrabold w-4 text-center">${qty}</span>
+             <button onclick="event.stopPropagation();inc('${p.id}')" class="w-6 h-6 text-white font-bold">+</button>
+           </div>`
+          : `<button onclick="event.stopPropagation();inc('${p.id}')" class="h-8 px-3 rounded-lg border border-brand text-brand text-sm font-bold">ADD</button>`
+        }
+    </div>
+  </div>`;
+    }
+
+    /* ---------------- home ---------------- */
+    function renderHome() {
+      document.getElementById('homeChips').innerHTML = CATEGORIES.map(c =>
+        `<button onclick="filterHome('${c}')" class="px-4 h-9 rounded-full text-sm font-bold border whitespace-nowrap ${c === currentCat ? 'chip-active' : 'bg-white text-slate-500 border-slate-200'}">${c}</button>`).join('');
+      const list = currentCat === 'All' ? PRODUCTS : PRODUCTS.filter(p => p.cat === currentCat);
+      document.getElementById('homeGridTitle').textContent = currentCat === 'All' ? 'Popular near you' : currentCat;
+      document.getElementById('homeGrid').innerHTML = list.map(productCard).join('');
+      updateBadges();
+    }
+    function filterHome(c) { currentCat = c; renderHome(); }
+
+    /* ---------------- categories / search ---------------- */
+    function renderCategories() {
+      document.getElementById('catChips').innerHTML = CATEGORIES.map(c =>
+        `<button onclick="filterCat('${c}')" class="px-4 h-9 rounded-full text-sm font-bold border whitespace-nowrap ${c === currentCat ? 'chip-active' : 'bg-white text-slate-500 border-slate-200'}">${c}</button>`).join('');
+      runSearch();
+    }
+    function filterCat(c) { currentCat = c; renderCategories(); }
+    function runSearch() {
+      const q = (document.getElementById('searchInput').value || '').toLowerCase().trim();
+      document.getElementById('searchClear').classList.toggle('hidden', !q);
+      let list = currentCat === 'All' ? PRODUCTS : PRODUCTS.filter(p => p.cat === currentCat);
+      if (q) list = list.filter(p => p.name.toLowerCase().includes(q) || p.cat.toLowerCase().includes(q));
+      document.getElementById('catResultCount').textContent = list.length + ' product' + (list.length !== 1 ? 's' : '');
+      document.getElementById('catGrid').innerHTML = list.map(productCard).join('');
+      document.getElementById('catEmpty').classList.toggle('hidden', list.length > 0);
+      document.getElementById('catEmpty').classList.toggle('flex', list.length === 0);
+    }
+    function clearSearch() { document.getElementById('searchInput').value = ''; runSearch(); }
+
+    /* ---------------- product detail ---------------- */
+    function openProduct(id) {
+      prevBeforeProduct = document.querySelector('.screen.active').id.replace('screen-', '');
+      const p = PRODUCTS.find(x => x.id === id);
+      document.getElementById('pdImage').innerHTML = `<span class="text-7xl">${p.emoji}</span>`;
+      document.getElementById('pdName').textContent = p.name.trim();
+      document.getElementById('pdWeight').textContent = p.w + ' · per pack';
+      document.getElementById('pdDesc').textContent = p.desc;
+      document.getElementById('pdPrice').textContent = 'NPR ' + p.price;
+      document.getElementById('pdSubBlock').classList.toggle('hidden', !p.sub);
+      renderPdQty(id);
+      const wb = document.getElementById('pdWishBtn');
+      const w = wishlist.has(id);
+      wb.className = 'w-10 h-10 rounded-full bg-white shadow-sm flex items-center justify-center ' + (w ? 'text-red-500' : 'text-slate-400');
+      wb.innerHTML = `<i class="fa-${w ? 'solid' : 'regular'} fa-heart"></i>`;
+      wb.dataset.id = id;
+      go('product');
+    }
+    function renderPdQty(id) {
+      const qty = cart[id] || 0;
+      document.getElementById('pdQtyControl').innerHTML = qty > 0
+        ? `<div class="flex items-center gap-3 bg-brand rounded-xl h-12 px-2">
+         <button onclick="dec('${id}');renderPdQty('${id}')" class="w-8 h-8 text-white text-xl font-bold">−</button>
+         <span class="text-white text-lg font-extrabold w-6 text-center">${qty}</span>
+         <button onclick="inc('${id}');renderPdQty('${id}')" class="w-8 h-8 text-white text-xl font-bold">+</button>
+       </div>`
+        : `<button onclick="inc('${id}');renderPdQty('${id}')" class="btn-primary !w-auto px-7">Add to cart</button>`;
+    }
+    function toggleWishFromDetail() { const id = document.getElementById('pdWishBtn').dataset.id; toggleWish(id); openProduct(id); }
+
+    /* ---------------- cart ops ---------------- */
+    function inc(id) { cart[id] = (cart[id] || 0) + 1; refreshAll(); }
+    function dec(id) { if (!cart[id]) return; cart[id]--; if (cart[id] <= 0) delete cart[id]; refreshAll(); }
+    function cartCount() { return Object.values(cart).reduce((a, b) => a + b, 0); }
+    function subtotal() { return Object.entries(cart).reduce((s, [id, q]) => s + (PRODUCTS.find(p => p.id === id).price * q), 0); }
+    function currentTier(st) { return TIERS.find(t => st >= t.min && st <= t.max); }
+    function deliveryFee() { return currentTier(subtotal()).fee; }
+    function promoDiscount() { if (!promo) return 0; const d = Math.round(subtotal() * promo.pct); return Math.min(d, promo.max); }
+    function grandTotal() {
+      let total = Math.max(0, subtotal() + deliveryFee() - promoDiscount());
+      if (walletApplied) {
+        walletUsedAmount = Math.min(walletBalance, total);
+        total -= walletUsedAmount;
+      } else {
+        walletUsedAmount = 0;
+      }
+      return Math.max(0, total);
+    }
+
+    function refreshAll() {
+      const active = document.querySelector('.screen.active').id.replace('screen-', '');
+      if (active === 'home') renderHome();
+      if (active === 'categories') runSearch();
+      if (active === 'cart') renderCart();
+      if (active === 'checkout') renderCheckout();
+      if (active === 'wishlist') renderWishlist();
+      updateBadges();
+    }
+    function updateBadges() {
+      const c = cartCount();
+      const b = document.getElementById('navCartBadge');
+      b.textContent = c; b.classList.toggle('hidden', c === 0);
+    }
+
+    /* ---------------- tier bar ---------------- */
+    function renderTierBar() {
+      const st = subtotal();
+      const tier = currentTier(st);
+      const fill = document.getElementById('tierFillCart');
+      const pct = Math.min(100, (st / 800) * 100);
+      fill.style.width = pct + '%';
+      fill.style.background = tier.color;
+      let nudge;
+      if (tier.next === null) { nudge = '🎉 You unlocked FREE delivery!'; }
+      else if (tier.next === 'FREE') { const need = 800 - st; nudge = `Add NPR ${need} more — delivery becomes FREE`; }
+      else { const need = (tier.max + 1) - st; nudge = `Add NPR ${need} more — delivery drops from NPR ${tier.fee} to ${tier.next}`; }
+      document.getElementById('tierNudge').textContent = nudge;
+    }
+
+    /* ---------------- cart render ---------------- */
+    function renderCart() {
+      const empty = cartCount() === 0;
+      document.getElementById('cartEmpty').style.display = empty ? 'flex' : 'none';
+      document.getElementById('cartFilled').classList.toggle('hidden', empty);
+      document.getElementById('cartCheckoutBar').classList.toggle('hidden', empty);
+      document.getElementById('cartItemCount').textContent = empty ? '' : cartCount() + ' items';
+      if (empty) { updateBadges(); return; }
+
+      document.getElementById('cartItems').innerHTML = Object.entries(cart).map(([id, q]) => {
+        const p = PRODUCTS.find(x => x.id === id);
+        return `<div class="bg-white border border-slate-200/70 rounded-2xl p-3 flex items-center gap-3">
+      <div class="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-2xl">${p.emoji}</div>
+      <div class="flex-1 min-w-0">
+        <p class="text-sm font-bold text-slate-800 truncate">${p.name.trim()}</p>
+        <p class="text-[11px] text-slate-400 font-semibold">${p.w} · NPR ${p.price}</p>
+      </div>
+      <div class="flex items-center gap-2 bg-brand-soft rounded-lg h-8 px-1.5">
+        <button onclick="dec('${id}')" class="w-6 h-6 text-brand font-bold">−</button>
+        <span class="text-brand text-sm font-extrabold w-4 text-center">${q}</span>
+        <button onclick="inc('${id}')" class="w-6 h-6 text-brand font-bold">+</button>
+      </div>
+      <span class="text-sm font-extrabold text-slate-900 w-16 text-right">NPR ${p.price * q}</span>
+    </div>`;
+      }).join('');
+
+      renderTierBar();
+      const st = subtotal(), df = deliveryFee(), pr = promoDiscount(), gt = grandTotal();
+      document.getElementById('sumSubtotal').textContent = 'NPR ' + st;
+      document.getElementById('sumDelivery').innerHTML = df === 0 ? '<span class="text-brand font-extrabold">FREE</span>' : 'NPR ' + df;
+      document.getElementById('sumPromoRow').style.display = pr > 0 ? 'flex' : 'none';
+      document.getElementById('sumPromo').textContent = '– NPR ' + pr;
+      document.getElementById('sumTotal').textContent = 'NPR ' + gt;
+      document.getElementById('cartCheckoutTotal').textContent = 'Checkout · NPR ' + gt;
+      updateBadges();
+    }
+
+    /* ---------------- after-hours (Feature 113) ---------------- */
+    // Demo trigger: if "after hours" simulated. We expose a manual check via checkout.
+    let simulateAfterHours = false; // flip to true to demo closed-store flow
+     function attemptCheckout() {
+      if (serviceOffline) {
+        openStoreOffline();
+        return;
+      }
+      if (simulateAfterHours) { openAfterHours(); return; }
+      go('checkout');
+    }
+    function toggleOfflineSimulation(checked) {
+      serviceOffline = checked;
+      toast(checked ? 'Store Offline' : 'Store Online', checked ? 'Customers will see offline banner' : 'Normal service resumed');
+    }
+    function openAfterHours() { document.getElementById('afterHoursModal').classList.remove('hidden'); }
+    function closeAfterHours() { document.getElementById('afterHoursModal').classList.add('hidden'); }
+    function scheduleOrder() {
+      const selectedSlot = document.getElementById('afterHoursTimeSlot').value;
+      closeAfterHours();
+      toast('Scheduled', 'Order saved for ' + selectedSlot);
+      cart = {};
+      deliveryTiming = 'scheduled';
+      scheduledSlot = selectedSlot;
+      go('orders');
+    }
+
+    function openZoneClosed() { document.getElementById('zoneClosedModal').classList.remove('hidden'); }
+    function closeZoneClosed() { document.getElementById('zoneClosedModal').classList.add('hidden'); }
+    function openStoreOffline() { document.getElementById('storeOfflineModal').classList.remove('hidden'); }
+    function closeStoreOfflineModal() { document.getElementById('storeOfflineModal').classList.add('hidden'); }
+    function toggleOfflineBanner() {
+      go('home');
+      const banner = document.getElementById('offlineHomeBanner');
+      if (banner) {
+        banner.classList.toggle('hidden');
+      }
+    }
+
+    /* ---------------- checkout ---------------- */
+    const PAY = [
+      { id: 'esewa', name: 'eSewa', sub: 'Pay via eSewa wallet', icon: 'fa-mobile-screen', tint: 'text-green-600 bg-green-50' },
+      { id: 'khalti', name: 'Khalti', sub: 'Pay via Khalti', icon: 'fa-wallet', tint: 'text-purple-600 bg-purple-50' },
+      { id: 'neppay', name: 'NepPay / ConnectIPS', sub: 'Bank transfer', icon: 'fa-building-columns', tint: 'text-blue-600 bg-blue-50' },
+      { id: 'cod', name: 'Cash on Delivery', sub: 'Pay rider in cash', icon: 'fa-money-bill-wave', tint: 'text-amber-600 bg-amber-50' },
+    ];
+    const SUB_OPTIONS = [
+      { id: 'call', name: 'Call me to choose', sub: 'Rider will call for alternatives', icon: 'fa-phone', tint: 'text-brand bg-brand-soft' },
+      { id: 'replace', name: 'Replace with similar item', sub: 'Replace with best available match', icon: 'fa-repeat', tint: 'text-blue-600 bg-blue-50' },
+      { id: 'refund', name: 'Don\'t substitute, refund', sub: 'Refund original item cost', icon: 'fa-circle-xmark', tint: 'text-red-600 bg-red-50' },
+    ];
+
+    function renderSubPreferences() {
+      document.getElementById('subPreferences').innerHTML = SUB_OPTIONS.map(opt => {
+        const sel = subPreference === opt.id;
+        return `<button type="button" onclick="selectSubPref('${opt.id}')" class="w-full flex items-center gap-3 p-3 rounded-xl border ${sel ? 'border-brand bg-brand-soft' : 'border-slate-200 bg-white'} text-left">
+      <div class="w-9 h-9 rounded-lg ${opt.tint} flex items-center justify-center"><i class="fa-solid ${opt.icon}"></i></div>
+      <div class="flex-1"><p class="text-sm font-bold text-slate-800">${opt.name}</p><p class="text-[11px] text-slate-400">${opt.sub}</p></div>
+      <i class="fa-${sel ? 'solid fa-circle-check text-brand' : 'regular fa-circle text-slate-300'}"></i>
+    </button>`;
+      }).join('');
+    }
+
+    function selectSubPref(id) {
+      subPreference = id;
+      renderSubPreferences();
+    }
+
+    function selectTiming(mode) {
+      deliveryTiming = mode;
+      const ins = document.getElementById('timeOptInstant');
+      const sch = document.getElementById('timeOptScheduled');
+      const slotDiv = document.getElementById('timeSlotContainer');
+
+      if (mode === 'instant') {
+        ins.className = 'h-12 rounded-xl border-2 border-brand bg-brand-soft text-brand text-xs font-bold flex flex-col items-center justify-center';
+        sch.className = 'h-12 rounded-xl border border-slate-200 bg-white text-slate-500 text-xs font-bold flex flex-col items-center justify-center';
+        slotDiv.classList.add('hidden');
+      } else {
+        ins.className = 'h-12 rounded-xl border border-slate-200 bg-white text-slate-500 text-xs font-bold flex flex-col items-center justify-center';
+        sch.className = 'h-12 rounded-xl border-2 border-brand bg-brand-soft text-brand text-xs font-bold flex flex-col items-center justify-center';
+        slotDiv.classList.remove('hidden');
+      }
+    }
+
+    function updateScheduledSlot(val) {
+      scheduledSlot = val;
+    }
+
+    function toggleWalletUsage(checked) {
+      walletApplied = checked;
+      renderCheckout();
+    }
+
+    function toggleOfflineSimulation(checked) {
+      serviceOffline = checked;
+      const banner = document.getElementById('offlineHomeBanner');
+      if (banner) banner.classList.toggle('hidden', !serviceOffline);
+      refreshAll();
+    }
+
+    function renderCheckout() {
+      document.getElementById('payMethods').innerHTML = PAY.map(m => {
+        const sel = payMethod === m.id;
+        return `<button onclick="selectPay('${m.id}')" class="w-full flex items-center gap-3 p-3 rounded-xl border ${sel ? 'border-brand bg-brand-soft' : 'border-slate-200 bg-white'} text-left">
+      <div class="w-9 h-9 rounded-lg ${m.tint} flex items-center justify-center"><i class="fa-solid ${m.icon}"></i></div>
+      <div class="flex-1"><p class="text-sm font-bold text-slate-800">${m.name}</p><p class="text-[11px] text-slate-400">${m.sub}</p></div>
+      <i class="fa-${sel ? 'solid fa-circle-check text-brand' : 'regular fa-circle text-slate-300'}"></i>
+    </button>`;
+      }).join('');
+
+      // Wallet info update on checkout
+      document.getElementById('walletLabelCheckout').textContent = walletBalance + ' NPR available';
+      document.getElementById('walletCheckoutToggle').checked = walletApplied;
+      document.getElementById('walletCheckoutToggle').disabled = walletBalance <= 0;
+
+      // Render substitution preferences
+      renderSubPreferences();
+
+      // Timing initialization
+      selectTiming(deliveryTiming);
+      document.getElementById('timeSlotSelect').value = scheduledSlot;
+
+      const st = subtotal(), df = deliveryFee(), pr = promoDiscount(), gt = grandTotal();
+      document.getElementById('coSubtotal').textContent = 'NPR ' + st;
+      document.getElementById('coDelivery').innerHTML = df === 0 ? '<span class="text-brand font-bold">FREE</span>' : 'NPR ' + df;
+      document.getElementById('coPromoRow').style.display = pr > 0 ? 'flex' : 'none';
+      document.getElementById('coPromo').textContent = '– NPR ' + pr;
+
+      // Wallet summary row
+      document.getElementById('coWalletRow').style.display = walletUsedAmount > 0 ? 'flex' : 'none';
+      document.getElementById('coWallet').textContent = '– NPR ' + walletUsedAmount;
+
+      document.getElementById('coTotal').textContent = 'NPR ' + gt;
+
+      const btn = document.querySelector('#screen-checkout button.btn-primary');
+      if (btn) {
+        if (serviceOffline) {
+          btn.disabled = true;
+          btn.innerHTML = 'Store Closed';
+        } else {
+          btn.disabled = false;
+          btn.innerHTML = `<span id="placeOrderLabel">Place order · NPR ${gt}</span>`;
+        }
+      }
+    }
+    function selectPay(id) { payMethod = id; renderCheckout(); }
+    function applyPromo() {
+      const code = (document.getElementById('promoInput').value || '').toUpperCase().trim();
+      const msg = document.getElementById('promoMsg');
+      msg.classList.remove('hidden');
+      if (code === 'CHUT10') {
+        promo = { code, pct: 0.10, max: 50 };
+        msg.textContent = '✓ CHUT10 applied — 10% off (max NPR 50)';
+        msg.className = 'text-xs font-semibold mt-2 text-brand';
+      } else if (code === '') {
+        promo = null; msg.textContent = 'Enter a code'; msg.className = 'text-xs font-semibold mt-2 text-slate-400';
+      } else {
+        promo = null; msg.textContent = '✕ Invalid or expired code';
+        msg.className = 'text-xs font-semibold mt-2 text-red-500';
+      }
+      renderCheckout();
+    }
+
+    let placingTimer = null;
+    let placingSeconds = 10;
+
+    function placeOrder() {
+      if (serviceOffline) {
+        toast('Closed', 'Store is closed right now.');
+        return;
+      }
+      startPlacingOrder();
+    }
+
+    function updatePlacingCountdownText(val) {
+      const el = document.getElementById('placingCountdown');
+      if (el) {
+        el.textContent = val;
+        el.classList.remove('animate-scale-num');
+        void el.offsetWidth; // trigger reflow
+        el.classList.add('animate-scale-num');
+      }
+    }
+
+    function triggerChutkiSnap() {
+      const hand = document.getElementById('chutkiHand');
+      const sparks = document.getElementById('chutkiSparks');
+      if (hand && sparks) {
+        hand.classList.remove('animate-chutki-hand');
+        sparks.classList.remove('animate-chutki-sparks');
+        void hand.offsetWidth; // trigger reflow
+        hand.classList.add('animate-chutki-hand');
+        sparks.classList.add('animate-chutki-sparks');
+      }
+    }
+
+    function startPlacingOrder() {
+      placingSeconds = 10;
+      go('placing');
+
+      updatePlacingCountdownText(placingSeconds);
+      setTimeout(triggerChutkiSnap, 50);
+
+      const circle = document.getElementById('placingProgressCircle');
+      const radius = 70;
+      const circumference = 2 * Math.PI * radius;
+      circle.style.strokeDasharray = circumference;
+      circle.style.strokeDashoffset = 0;
+
+      if (placingTimer) clearInterval(placingTimer);
+
+      placingTimer = setInterval(() => {
+        placingSeconds--;
+        updatePlacingCountdownText(placingSeconds);
+        triggerChutkiSnap();
+
+        const offset = circumference - (placingSeconds / 10) * circumference;
+        circle.style.strokeDashoffset = offset;
+
+        if (placingSeconds <= 0) {
+          clearInterval(placingTimer);
+          confirmOrderPlacement();
+        }
+      }, 1000);
+    }
+
+    function cancelPlacingOrder() {
+      if (placingTimer) clearInterval(placingTimer);
+      go('checkout');
+      toast('Order Cancelled', 'Your order was successfully cancelled.');
+    }
+
+    function confirmOrderPlacement() {
+      const oid = '#BW-00' + (50 + Math.floor(Math.random() * 50));
+      const itemList = Object.entries(cart).map(([id, q]) => ({ id, q, p: PRODUCTS.find(x => x.id === id) }));
+      const st = subtotal(), df = deliveryFee(), pr = promoDiscount(), gt = grandTotal();
+      const payName = (PAY.find(p => p.id === payMethod) || { name: 'eSewa' }).name;
+
+      let finalPayName = payName;
+      if (walletUsedAmount > 0) {
+        walletBalance -= walletUsedAmount;
+        localStorage.setItem('chutkima_wallet_balance', walletBalance.toString());
+        
+        walletTransactions.unshift({
+          id: 'wtx' + Date.now(),
+          amount: -walletUsedAmount,
+          type: 'payment',
+          reason: 'Order payment',
+          orderId: oid,
+          at: new Date().toISOString()
+        });
+        localStorage.setItem('chutkima_wallet_transactions', JSON.stringify(walletTransactions));
+
+        finalPayName += ' + Wallet (NPR ' + walletUsedAmount + ')';
+        const balEl = document.getElementById('profileWalletBalance');
+        if (balEl) balEl.textContent = 'NPR ' + walletBalance;
+      }
+
+      ORDERS.unshift({
+        id: oid, status: 'Confirmed', live: true, rated: false, cancelled: false,
+        total: gt, subtotal: st, delivery: df, promo: pr,
+        payMethod: finalPayName, items: itemList,
+        summary: itemList.slice(0, 3).map(x => x.p.name.trim()).join(', ') + (itemList.length > 3 ? ` +${itemList.length - 3}` : ''),
+        date: 'Just now', placedAt: Date.now(), eta: deliveryTiming === 'scheduled' ? scheduledSlot : '12–18 minutes',
+        subPreference: subPreference,
+        scheduledFor: deliveryTiming === 'scheduled' ? scheduledSlot : null
+      });
+
+      activeOrderId = oid;
+      document.getElementById('successOrderId').textContent = oid;
+      document.getElementById('trackOrderId').textContent = oid;
+      document.getElementById('successEta').textContent = deliveryTiming === 'scheduled' ? scheduledSlot : '12–18 minutes';
+
+      cart = {}; promo = null; walletApplied = false; walletUsedAmount = 0;
+      document.getElementById('promoInput').value = '';
+      refreshActiveBanner();
+      go('success');
+      toast('Order Confirmed', 'Your order has been placed.');
+    }
+
+    /* ---------------- tracking ---------------- */
+    const STEPS = ['Confirmed', 'Packing', 'Picked Up', 'Out for Delivery', 'Arrived', 'Delivered'];
+    let trackStep = 1, trackTimer = null, mapAnim = null;
+    function renderTimeline() {
+      document.getElementById('timeline').innerHTML = STEPS.map((s, i) => {
+        const done = i <= trackStep;
+        const last = i === STEPS.length - 1;
+        return `<div class="flex gap-3">
+      <div class="flex flex-col items-center">
+        <div class="timeline-dot w-7 h-7 rounded-full flex items-center justify-center text-xs ${done ? 'done' : 'bg-slate-100 text-slate-300'}">
+          ${done ? '<i class="fa-solid fa-check"></i>' : (i + 1)}
+        </div>
+        ${!last ? `<div class="timeline-line w-0.5 flex-1 min-h-[26px] ${i < trackStep ? 'done' : 'bg-slate-100'}"></div>` : ''}
+      </div>
+      <div class="pb-4 ${last ? 'pb-0' : ''}">
+        <p class="text-sm font-bold ${done ? 'text-slate-800' : 'text-slate-300'}">${s}</p>
+        ${i === trackStep ? '<p class="text-[11px] text-brand font-semibold mt-0.5">In progress…</p>' : ''}
+        ${i === STEPS.length - 1 && done ? `<button onclick="openRateRider()" class="mt-1.5 text-[11px] font-bold text-amber-600 bg-amber-50 px-2.5 py-1 rounded-full"><i class="fa-solid fa-bolt mr-1"></i>Rate your rider</button>` : ''}
+      </div>
+    </div>`;
+      }).join('');
+      // mark order delivered when tracker reaches last step
+      if (trackStep === STEPS.length - 1) {
+        const o = ORDERS.find(x => x.id === activeOrderId);
+        if (o && o.live) {
+          o.live = false; o.status = 'Delivered'; o.deliveredAt = nowStamp();
+          refreshActiveBanner();
+        }
+      }
+    }
+    function startTracking() {
+      trackStep = 1; renderTimeline(); drawTrackMap();
+      if (trackTimer) clearInterval(trackTimer);
+      trackTimer = setInterval(() => {
+        if (trackStep < STEPS.length - 1) {
+          trackStep++;
+          // sync status to order
+          const o = ORDERS.find(x => x.id === activeOrderId);
+          if (o) o.status = STEPS[trackStep];
+          renderTimeline();
+          refreshActiveBanner();
+        } else clearInterval(trackTimer);
+      }, 2400);
+    }
+    function drawTrackMap() {
+      const cv = document.getElementById('trackMap'); if (!cv) return;
+      const ctx = cv.getContext('2d'); const dpr = window.devicePixelRatio || 1;
+      cv.width = cv.clientWidth * dpr; cv.height = cv.clientHeight * dpr; ctx.scale(dpr, dpr);
+      const W = cv.clientWidth, H = cv.clientHeight;
+      const store = { x: W * 0.18, y: H * 0.72 }, cust = { x: W * 0.82, y: H * 0.3 };
+      let t = 0;
+      if (mapAnim) cancelAnimationFrame(mapAnim);
+      function frame() {
+        ctx.fillStyle = '#eef2f4'; ctx.fillRect(0, 0, W, H);
+        ctx.strokeStyle = '#dde3e7'; ctx.lineWidth = 2;
+        for (let i = 20; i < W; i += 44) { ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, H); ctx.stroke(); }
+        for (let j = 20; j < H; j += 44) { ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(W, j); ctx.stroke(); }
+        ctx.strokeStyle = '#0B8570'; ctx.lineWidth = 3.5; ctx.setLineDash([8, 6]);
+        ctx.beginPath(); ctx.moveTo(store.x, store.y); ctx.lineTo(cust.x, store.y); ctx.lineTo(cust.x, cust.y); ctx.stroke();
+        ctx.setLineDash([]);
+        node(ctx, store.x, store.y, '#3b82f6', 'Store');
+        node(ctx, cust.x, cust.y, '#0B8570', 'You');
+        t = (t + 0.004) % 1;
+        let rx, ry;
+        if (t < 0.5) { rx = store.x + (cust.x - store.x) * (t * 2); ry = store.y; }
+        else { rx = cust.x; ry = store.y + (cust.y - store.y) * ((t - 0.5) * 2); }
+        ctx.fillStyle = '#f59e0b'; ctx.beginPath(); ctx.arc(rx, ry, 7, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        if (document.getElementById('screen-tracking').classList.contains('active')) mapAnim = requestAnimationFrame(frame);
+      }
+      function node(ctx, x, y, c, label) {
+        ctx.fillStyle = c; ctx.beginPath(); ctx.arc(x, y, 8, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+        ctx.fillStyle = '#334155'; ctx.font = 'bold 11px Plus Jakarta Sans'; ctx.textAlign = 'center';
+        ctx.fillText(label, x, y - 14);
+      }
+      frame();
+    }
+
+    /* ---------------- orders (richer model) ---------------- */
+    let activeOrderId = '#BW-0043'; // currently-tracked order
+    let viewingOrderId = null;       // which order is open in detail
+
+    const ORDERS = [
+      {
+        id: '#BW-0043', status: 'Out for Delivery', live: true, rated: false, cancelled: false,
+        total: 540, subtotal: 460, delivery: 40, promo: 0, payMethod: 'eSewa',
+        items: [{ id: 'WW', q: 3, p: PRODUCTS.find(p => p.id === 'WW') }, { id: 'DM', q: 2, p: PRODUCTS.find(p => p.id === 'DM') }, { id: 'RC', q: 1, p: PRODUCTS.find(p => p.id === 'RC') }],
+        summary: 'Wai Wai, Milk, Rice', date: 'Just now', eta: '6 minutes', subPreference: 'call'
+      },
+      {
+        id: '#BW-0042', status: 'Delivered', live: false, rated: false, cancelled: false,
+        total: 285, subtotal: 225, delivery: 60, promo: 0, payMethod: 'Cash on Delivery',
+        items: [
+          { id: 'TM', q: 1, p: PRODUCTS.find(p => p.id === 'TM') },
+          { id: 'ON', q: 1, p: PRODUCTS.find(p => p.id === 'ON'), substituted: true, originalName: 'Premium Red Onion' },
+          { id: 'EG', q: 1, p: PRODUCTS.find(p => p.id === 'EG') }
+        ],
+        summary: 'Tomato, Onion, Eggs', date: 'Yesterday, 6:14 PM', deliveredAt: 'Yesterday, 6:32 PM', subPreference: 'replace'
+      },
+      {
+        id: '#BW-0039', status: 'Delivered', live: false, rated: true, cancelled: false,
+        total: 175, subtotal: 115, delivery: 60, promo: 0, payMethod: 'Khalti',
+        items: [{ id: 'CK', q: 1, p: PRODUCTS.find(p => p.id === 'CK') }, { id: 'BS', q: 1, p: PRODUCTS.find(p => p.id === 'BS') }],
+        summary: 'Coca-Cola, Biscuit', date: '12 Jun, 1:40 PM', deliveredAt: '12 Jun, 2:02 PM', subPreference: 'refund'
+      },
+      {
+        id: '#BW-0031', status: 'Cancelled', live: false, rated: false, cancelled: true,
+        total: 90, subtotal: 90, delivery: 0, promo: 0, payMethod: 'Cash on Delivery',
+        items: [{ id: 'ON', q: 1, p: PRODUCTS.find(p => p.id === 'ON') }],
+        summary: 'Onion', date: '8 Jun, 9:02 AM', subPreference: 'call'
+      },
+    ];
+
+    let currentOrdersTab = 'All';
+
+    function filterOrdersTab(tab) {
+      currentOrdersTab = tab;
+      const btnAll = document.getElementById('btn-orders-all');
+      const btnActive = document.getElementById('btn-orders-active');
+      const btnDelivered = document.getElementById('btn-orders-delivered');
+      
+      [btnAll, btnActive, btnDelivered].forEach(b => {
+        if (b) {
+          b.className = "bg-white text-slate-500 px-4 h-9 rounded-full text-sm font-bold border border-slate-200 whitespace-nowrap";
+        }
+      });
+      
+      const activeBtn = tab === 'All' ? btnAll : (tab === 'Active' ? btnActive : btnDelivered);
+      if (activeBtn) {
+        activeBtn.className = "chip-active px-4 h-9 rounded-full text-sm font-bold border border-slate-200 whitespace-nowrap";
+      }
+      renderOrders();
+    }
+
+    const Icons = {
+      CheckCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 mr-1"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>`,
+      Clock: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 mr-1"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>`,
+      XCircle: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 mr-1"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>`,
+      Bell: `<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3 h-3 mr-1"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>`,
+      ShoppingBag: `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 text-slate-600"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"></path><path d="M3 6h18"></path><path d="M16 10a4 4 0 0 1-8 0"></path></svg>`,
+      Package: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 text-slate-400 shrink-0"><line x1="16.5" y1="9.4" x2="7.5" y2="4.21"></line><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>`,
+      ChevronRight: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-4 h-4 inline"><polyline points="9 18 15 12 9 6"></polyline></svg>`,
+      RotateCcw: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 mr-1.5 inline"><polyline points="1 4 1 10 7 10"></polyline><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"></path></svg>`,
+      User: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 text-slate-500"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>`
+    };
+
+    function getStarIcon(fillClass, strokeClass) {
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="w-3.5 h-3.5 ${fillClass} ${strokeClass} inline"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>`;
+    }
+
+    function badgeFor(o) {
+      if (o.cancelled) return { text: 'Canceled', cls: 'bg-red-100 text-red-700 border-red-200', icon: Icons.XCircle };
+      const tx = walletTransactions.find(t => t.orderId && (o.id.includes(t.orderId) || t.orderId.includes(o.id)));
+      if (tx) {
+        const isFull = tx.amount >= o.total;
+        return { text: isFull ? 'Refunded' : 'Partially Refunded', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200', icon: Icons.CheckCircle };
+      }
+      if (o.live) return { text: o.status === 'Out for Delivery' ? 'Processing' : o.status, cls: 'bg-blue-100 text-blue-700 border-blue-200', icon: Icons.Clock, live: true };
+      return { text: 'Delivered', cls: 'bg-green-100 text-green-700 border-green-200', icon: Icons.CheckCircle };
+    }
+
+    function renderOrders() {
+      // Filter logic matching the React tabs
+      const filteredOrders = ORDERS.filter(order => {
+        if (currentOrdersTab === 'All') return true;
+        if (currentOrdersTab === 'Active' && order.live) return true;
+        if (currentOrdersTab === 'Delivered' && !order.live) return true;
+        return false;
+      });
+
+      if (filteredOrders.length === 0) {
+        document.getElementById('ordersList').innerHTML = `<div class="flex flex-col items-center justify-center py-20 text-slate-400">
+          <i class="fa-solid fa-inbox text-5xl mb-3 opacity-40"></i>
+          <p class="font-bold text-slate-500">No orders found.</p>
+          <p class="text-sm mt-1 text-slate-400">Try checking a different tab.</p>
+        </div>`;
+        return;
+      }
+
+      document.getElementById('ordersList').innerHTML = filteredOrders.map(o => {
+        const b = badgeFor(o);
+        const tx = walletTransactions.find(t => t.orderId && (o.id.includes(t.orderId) || t.orderId.includes(o.id)));
+        const totalItems = o.items.reduce((acc, item) => acc + item.q, 0);
+
+        // Payment chip (orange for COD, blue for Prepaid)
+        const isCOD = o.payMethod && o.payMethod.toLowerCase().includes('cash');
+        const payChip = isCOD 
+          ? `<span class="text-[10px] font-extrabold px-2 py-0.5 bg-orange-100 text-orange-700 rounded-md">COD</span>`
+          : `<span class="text-[10px] font-extrabold px-2 py-0.5 bg-cyan-100 text-cyan-700 rounded-md">Prepaid</span>`;
+
+        // Scheduled / New chip
+        const isNew = o.id === '#BW-0043'; // Simulating latest active order as new
+        const newChip = isNew
+          ? `<span class="flex items-center px-2 py-0.5 text-[11px] font-bold bg-amber-100 text-amber-700 rounded-full">${Icons.Bell} New</span>`
+          : '';
+
+        // Rider card info
+        const hasRider = o.status === 'Out for Delivery' || o.status === 'Delivered';
+        const riderSection = hasRider ? `
+          <div class="flex justify-between items-center mt-3 bg-slate-50/70 p-2.5 rounded-xl border border-slate-100/80">
+            <div class="flex items-center gap-2">
+              <div class="bg-white p-1 rounded-full shadow-sm border border-slate-100">
+                ${Icons.User}
+              </div>
+              <span class="text-[13px] text-slate-600">
+                ${o.status === 'Delivered' ? 'Delivered by ' : 'Rider: '} 
+                <span class="font-semibold text-slate-800">Bikash Karki</span>
+              </span>
+            </div>
+            
+            <!-- Rating Logic matching React code -->
+            ${o.status === 'Delivered' && !o.rated ? `
+              <button onclick="event.stopPropagation();openRateRider('${o.id}')" class="flex items-center gap-1 text-[12px] font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-lg border border-orange-100 active:bg-orange-100 transition-colors">
+                ${getStarIcon('', 'text-orange-600')} Rate Rider
+              </button>
+            ` : o.rated ? `
+              <span class="flex items-center gap-1 text-[12px] font-bold text-slate-700 bg-white px-2 py-1 rounded-lg border border-slate-100 shadow-sm">
+                ${getStarIcon('fill-amber-400 text-amber-400', 'text-amber-400')} 5
+              </span>
+            ` : `
+              <span class="flex items-center gap-1 text-[12px] font-bold text-slate-600">
+                ${getStarIcon('fill-slate-200 text-slate-400', 'text-slate-400')} 4.8
+              </span>
+            `}
+          </div>
+        ` : '';
+
+        // Action button at bottom right
+        const actionBtn = o.live ? `
+          <button onclick="event.stopPropagation();trackOrder('${o.id}')" class="flex items-center justify-center gap-1 text-sm font-bold text-blue-600 bg-blue-50 px-3 py-1.5 rounded-lg active:bg-blue-100 shrink-0">
+            Track ${Icons.ChevronRight}
+          </button>
+        ` : `
+          <button onclick="event.stopPropagation();reorder()" class="flex items-center justify-center gap-1.5 text-sm font-bold text-white bg-slate-900 px-4 py-2 rounded-xl shadow-md active:bg-slate-800 shrink-0">
+            ${Icons.RotateCcw} Reorder
+          </button>
+        `;
+
+        return `<div onclick="openOrderDetail('${o.id}')" class="bg-white p-4 rounded-2xl shadow-sm border ${o.live ? 'border-blue-200' : 'border-slate-100'} mb-4 relative overflow-hidden transition-all active:scale-[0.98]">
+      <div class="flex justify-between items-start mb-3">
+        <div>
+          <span class="text-slate-500 font-medium text-sm">${o.id}</span>
+          <div class="flex gap-2 items-center mt-2">
+            ${newChip}
+            ${payChip}
+          </div>
+        </div>
+        <span class="flex items-center px-2.5 py-1 text-xs font-semibold rounded-full border ${b.cls}">
+          ${b.icon} ${b.text}
+        </span>
+      </div>
+
+      <div class="flex justify-between items-center mb-1 mt-4">
+        <div class="flex items-center gap-2">
+          <div class="bg-slate-50 p-2 rounded-lg">
+            ${Icons.ShoppingBag}
+          </div>
+          <div>
+            <h3 class="font-bold text-slate-800 text-base leading-tight">Bhai Bhai Super Store</h3>
+            <p class="text-xs text-slate-500 mt-0.5">${o.date}</p>
+          </div>
+        </div>
+        <div class="text-right">
+          <span class="block font-bold text-slate-900 text-lg">NPR ${o.total}</span>
+        </div>
+      </div>
+
+      ${riderSection}
+
+      <hr class="my-3 border-slate-100 border-dashed" />
+
+      <div class="flex justify-between items-center">
+        <div class="flex items-center gap-2 max-w-[60%]">
+          ${Icons.Package}
+          <div class="truncate">
+            <span class="text-sm font-semibold text-slate-700 block">${totalItems} items</span>
+            <p class="text-[11px] text-slate-400 truncate w-full" title="${o.summary}">${o.summary}</p>
+          </div>
+        </div>
+        
+        ${actionBtn}
+      </div>
+    </div>`;
+      }).join('');
+    }
+    function reorder() {
+      cart = { 'WW': 2, 'TS': 1, 'DM': 2 }; updateBadges();
+      go('cart'); toast('Items added', 'Previous order added to your cart');
+    }
+
+    function trackOrder(id) { activeOrderId = id; go('tracking'); }
+
+    /* ---------------- order detail ---------------- */
+    function openOrderDetail(id) {
+      viewingOrderId = id;
+      const o = ORDERS.find(x => x.id === id); if (!o) return;
+      document.getElementById('odOrderId').textContent = id;
+      const b = badgeFor(o);
+      const badge = document.getElementById('odStatusBadge');
+      badge.className = 'ml-auto text-[11px] font-bold px-2.5 py-1 rounded-full ' + b.cls + ' flex items-center gap-1';
+      badge.innerHTML = (b.live ? '<span class="w-1.5 h-1.5 bg-brand rounded-full animate-pulse"></span>' : '') + b.text;
+
+      // status-aware blocks
+      document.getElementById('odLiveBlock').classList.toggle('hidden', !o.live);
+      document.getElementById('odDeliveredBlock').classList.toggle('hidden', !(o.status === 'Delivered'));
+      document.getElementById('odRiderCard').classList.toggle('hidden', o.cancelled);
+
+      if (o.scheduledFor) {
+        document.getElementById('odLiveBlock').classList.remove('hidden');
+        document.getElementById('odEta').textContent = o.scheduledFor;
+        document.querySelector('#odLiveBlock p.uppercase').textContent = 'Scheduled Delivery';
+      } else {
+        document.getElementById('odEta').textContent = o.eta || '—';
+        document.querySelector('#odLiveBlock p.uppercase').textContent = 'Estimated arrival';
+      }
+
+      document.getElementById('odDeliveredAt').textContent = o.deliveredAt || '';
+
+      // Render substitution adjustment card
+      const adjCard = document.getElementById('odSubAdjustmentCard');
+      if (o.substitutionAdjustment) {
+        adjCard.classList.remove('hidden');
+        const adj = o.substitutionAdjustment;
+        const icon = document.getElementById('odSubAdjIcon');
+        const title = document.getElementById('odSubAdjTitle');
+        const desc = document.getElementById('odSubAdjDesc');
+        const actions = document.getElementById('odSubAdjActions');
+
+        if (adj.type === 'excess') {
+          icon.className = 'w-10 h-10 rounded-xl bg-emerald-50 text-emerald-500 flex items-center justify-center flex-shrink-0';
+          icon.innerHTML = '<i class="fa-solid fa-circle-check"></i>';
+          title.textContent = 'Refund Due: NPR ' + adj.amount;
+
+          if (adj.status === 'pending') {
+            desc.textContent = 'Items were substituted with cheaper options. You will be refunded NPR ' + adj.amount + ' via your choice:';
+            actions.innerHTML = `
+                  <button onclick="resolveCustomerAdj('wallet', ${adj.amount})" class="btn-primary !h-9 !text-xs">Refund to Wallet</button>
+                  <button onclick="resolveCustomerAdj('cash_rider', ${adj.amount})" class="btn-ghost !h-9 !text-xs mt-1.5">Refund Cash via Rider</button>
+              `;
+          } else {
+            let label = adj.option === 'wallet' ? 'Refunded to Wallet' : (adj.option === 'cash_rider' ? 'Refunded Cash via Rider' : 'Refunded');
+            desc.textContent = '✓ Resolved: ' + label + ' (NPR ' + adj.amount + ')';
+            actions.innerHTML = '';
+          }
+        } else { // short
+          icon.className = 'w-10 h-10 rounded-xl bg-amber-50 text-amber-500 flex items-center justify-center flex-shrink-0';
+          icon.innerHTML = '<i class="fa-solid fa-bell"></i>';
+          title.textContent = 'Pay Short Cash Gap: NPR ' + adj.amount;
+
+          if (adj.status === 'pending') {
+            desc.textContent = 'More expensive substitutions were made. Please pay the outstanding NPR ' + adj.amount + ':';
+
+            const walletDisabled = walletBalance < adj.amount;
+            actions.innerHTML = `
+                  <button onclick="resolveCustomerAdj('wallet', ${adj.amount})" ${walletDisabled ? 'disabled' : ''} class="btn-primary !h-9 !text-xs ${walletDisabled ? 'opacity-50 pointer-events-none' : ''}">
+                      Pay NPR ${adj.amount} from Wallet (Bal: NPR ${walletBalance})
+                  </button>
+                  <button onclick="resolveCustomerAdj('online', ${adj.amount})" class="btn-ghost !h-9 !text-xs mt-1.5">
+                      Pay Online (eSewa / Khalti)
+                  </button>
+                  <button onclick="resolveCustomerAdj('collect_cash', ${adj.amount})" class="btn-ghost !h-9 !text-xs mt-1.5">
+                      Pay Cash to Rider at Doorstep
+                  </button>
+              `;
+          } else {
+            let label = '';
+            if (adj.option === 'wallet') label = 'Paid from Wallet';
+            else if (adj.option === 'online') label = 'Paid Online (eSewa/Khalti)';
+            else if (adj.option === 'collect_cash') label = 'Paying Cash to Rider';
+            else if (adj.option === 'collect_qr') label = 'Paying QR to Rider';
+            else if (adj.option === 'charge_wallet') label = 'Paid via App';
+            desc.textContent = '✓ Resolved: ' + label + ' (NPR ' + adj.amount + ')';
+            actions.innerHTML = '';
+          }
+        }
+      } else {
+        adjCard.classList.add('hidden');
+      }
+
+      // items with dynamic substitution badges
+      document.getElementById('odItems').innerHTML = o.items.map(it => `
+    <div class="flex items-center gap-3">
+      <div class="w-11 h-11 rounded-xl bg-slate-50 flex items-center justify-center text-xl">${it.p.emoji}</div>
+      <div class="flex-1">
+        <p class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+          ${it.p.name.trim()}
+          ${it.substituted ? `<span class="text-[9px] font-bold text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded-full border border-amber-200">Substituted</span>` : ''}
+        </p>
+        <p class="text-[11px] text-slate-400">
+          ${it.p.w} × ${it.q}
+          ${it.substituted && it.originalName ? ` · was ${it.originalName}` : ''}
+        </p>
+      </div>
+      <span class="text-sm font-extrabold text-slate-800">NPR ${it.p.price * it.q}</span>
+    </div>`).join('');
+
+      // bill summary
+      const isPrepaid = !o.payMethod.includes('Cash on Delivery');
+      const badgeEl = document.getElementById('odPayBadge');
+      if (isPrepaid) {
+          badgeEl.className = 'text-[10px] font-bold bg-emerald-50 text-emerald-700 px-2.5 py-0.5 rounded-full flex items-center gap-1';
+          badgeEl.innerHTML = '<i class="fa-solid fa-circle-check text-emerald-600"></i> Prepaid';
+      } else {
+          badgeEl.className = 'text-[10px] font-bold bg-orange-50 text-orange-700 px-2.5 py-0.5 rounded-full flex items-center gap-1';
+          badgeEl.innerHTML = '<i class="fa-solid fa-money-bill-wave text-orange-600"></i> COD';
+      }
+
+      const tx = walletTransactions.find(t => t.orderId && (o.id.includes(t.orderId) || t.orderId.includes(o.id)));
+      const refundDetailBlock = document.getElementById('odRefundDetailBlock');
+      const refundRow = document.getElementById('odRefundRow');
+      const totalEl = document.getElementById('odTotal');
+
+      if (tx) {
+          // Show refund detail card
+          refundDetailBlock.classList.remove('hidden');
+          refundDetailBlock.classList.add('flex');
+          document.getElementById('odRefundDetailText').innerHTML = `<strong>NPR ${tx.amount}</strong> credited to Wallet.<br><span class="text-[10px] text-slate-500">${tx.reason || 'Order refund'}</span>`;
+
+          // Show refund row in bill summary
+          refundRow.classList.remove('hidden');
+          refundRow.classList.add('flex');
+          document.getElementById('odRefundAmount').textContent = '– NPR ' + tx.amount;
+
+          // Adjust total paid
+          totalEl.textContent = 'NPR ' + Math.max(0, o.total - tx.amount);
+      } else {
+          refundDetailBlock.classList.add('hidden');
+          refundDetailBlock.classList.remove('flex');
+          refundRow.classList.add('hidden');
+          refundRow.classList.remove('flex');
+          totalEl.textContent = 'NPR ' + o.total;
+      }
+
+      const deliveryText = o.delivery === 0 ? '<span class="text-brand font-bold">FREE</span>' : 'NPR ' + o.delivery;
+      document.getElementById('odSubtotal').textContent = 'NPR ' + o.subtotal;
+      document.getElementById('odDelivery').innerHTML = deliveryText;
+
+      const adjEl = document.getElementById('odAdjustmentCard');
+      if (!o.substitutionAdjustment) {
+          adjEl.innerHTML = '';
+      } else {
+          const adj = o.substitutionAdjustment;
+          const isShort = adj.type === 'short';
+          const adjTypeLabel = isShort ? 'Short Cash (more expensive substitution)' : 'Excess Cash (cheaper substitution)';
+          const adjStatusLabel = adj.status === 'pending' ? 'PENDING RESOLUTION' : 'RESOLVED';
+          const cardBgColor = isShort 
+              ? (adj.status === 'pending' ? 'bg-amber-50/50 border-amber-100' : 'bg-slate-50 border-slate-100')
+              : (adj.status === 'pending' ? 'bg-emerald-50/30 border-emerald-100' : 'bg-emerald-50/50 border-emerald-200');
+          const labelColor = isShort ? 'text-amber-800' : 'text-emerald-800';
+          const statusColor = adj.status === 'pending' ? 'text-amber-600' : 'text-emerald-600';
+
+          let optionName = '';
+          if (adj.status === 'resolved') {
+              if (adj.option === 'wallet') optionName = isShort ? 'Paid from Wallet' : 'Refunded to Wallet';
+              else if (adj.option === 'online') optionName = 'Paid Online (Difference)';
+              else if (adj.option === 'collect_cash') optionName = 'Paid Cash to Rider';
+              else if (adj.option === 'collect_qr') optionName = 'Paid QR to Rider';
+              else if (adj.option === 'cash_rider') optionName = 'Cash Refunded by Rider';
+              else if (adj.option === 'charge_wallet') optionName = 'Paid from Wallet';
+          }
+
+          adjEl.innerHTML = `
+              <div class="mt-3.5 p-3.5 ${cardBgColor} border rounded-2xl">
+                  <div class="flex justify-between items-center font-bold ${labelColor} text-xs">
+                      <span>${adjTypeLabel}</span>
+                      <span class="font-extrabold text-sm text-slate-800">NPR ${adj.amount}</span>
+                  </div>
+                  <div class="mt-2.5 pt-2 border-t border-slate-200/50 flex justify-between items-center text-[10px] font-extrabold uppercase tracking-wider">
+                      <span class="${statusColor}">${adjStatusLabel}</span>
+                      ${adj.status === 'resolved' ? `<span class="text-slate-400 font-bold lowercase">via ${optionName}</span>` : ''}
+                  </div>
+              </div>
+          `;
+      }
+
+      // display substitution preference in receipt details
+      const subPrefLabel = {
+        'call': '📞 Call me to choose',
+        'replace': '🔄 Replace with similar item',
+        'refund': '❌ Don\'t substitute, refund'
+      }[o.subPreference || 'call'];
+      document.getElementById('odSubPreferenceVal').textContent = subPrefLabel;
+
+      // action visibility
+      document.getElementById('odRateBtn').classList.toggle('hidden', !(o.status === 'Delivered' && !o.rated));
+      // cancel allowed only before pickup
+      const cancellable = o.live && ['Confirmed', 'Packing'].includes(o.status);
+      document.getElementById('odCancelBtn').classList.toggle('hidden', !cancellable);
+
+      go('order-detail');
+    }
+
+    function resolveCustomerAdj(option, amount) {
+      const o = ORDERS.find(x => x.id === viewingOrderId);
+      if (!o || !o.substitutionAdjustment) return;
+
+      const adj = o.substitutionAdjustment;
+      adj.status = 'resolved';
+      adj.option = option;
+
+      if (option === 'wallet') {
+        if (adj.type === 'excess') {
+          walletBalance += amount;
+          localStorage.setItem('chutkima_wallet_balance', walletBalance.toString());
+          walletTransactions.unshift({
+            id: 'wtx' + Date.now(),
+            amount: amount,
+            type: 'refund',
+            reason: 'Substitution Refund',
+            orderId: o.id,
+            at: new Date().toISOString()
+          });
+          localStorage.setItem('chutkima_wallet_transactions', JSON.stringify(walletTransactions));
+          toast('Refunded to Wallet', 'NPR ' + amount + ' added to your wallet.');
+        } else {
+          walletBalance -= amount;
+          localStorage.setItem('chutkima_wallet_balance', walletBalance.toString());
+          walletTransactions.unshift({
+            id: 'wtx' + Date.now(),
+            amount: -amount,
+            type: 'payment',
+            reason: 'Substitution Payment',
+            orderId: o.id,
+            at: new Date().toISOString()
+          });
+          localStorage.setItem('chutkima_wallet_transactions', JSON.stringify(walletTransactions));
+          toast('Paid from Wallet', 'NPR ' + amount + ' deducted from your wallet.');
+        }
+        const balEl = document.getElementById('profileWalletBalance');
+        if (balEl) balEl.textContent = 'NPR ' + walletBalance;
+      } else if (option === 'online') {
+        toast('Paid Online', 'NPR ' + amount + ' paid successfully via eSewa.');
+      } else if (option === 'collect_cash') {
+        toast('Doorstep Cash selected', 'Rider will collect NPR ' + amount + ' cash at doorstep.');
+      } else if (option === 'cash_rider') {
+        toast('Doorstep Cash Refund', 'Rider will refund NPR ' + amount + ' cash at doorstep.');
+      }
+
+      openOrderDetail(viewingOrderId);
+    }
+
+    function simCustomerAdj(type) {
+      const o = ORDERS.find(x => x.id === activeOrderId) || ORDERS[0];
+      if (!o) {
+        toast('No active order', 'Place an order first to simulate adjustment.');
+        return;
+      }
+      o.substitutionAdjustment = {
+        type: type,
+        amount: type === 'short' ? 60 : 45,
+        status: 'pending'
+      };
+      if (o.items && o.items.length > 0) {
+        o.items[0].substituted = true;
+        o.items[0].originalName = o.items[0].p.name + ' (Original)';
+      }
+      toast('Adjustment Simulated', 'Substitution adjustment loaded for order ' + o.id);
+      go('order-detail');
+      openOrderDetail(o.id);
+    }
+
+    /* ---------------- active order banner on home ---------------- */
+    function refreshActiveBanner() {
+      const live = ORDERS.find(o => o.live);
+      const el = document.getElementById('activeOrderBanner'); if (!el) return;
+      if (!live) { el.classList.add('hidden'); return; }
+      el.classList.remove('hidden');
+      activeOrderId = live.id;
+      document.getElementById('activeOrderId').textContent = live.id;
+      let msg = '';
+      if (live.status === 'Confirmed') msg = 'Confirmed · packing soon';
+      else if (live.status === 'Packing') msg = 'Packing your items…';
+      else if (live.status === 'Picked Up') msg = 'Rider picked up your order';
+      else if (live.status === 'Out for Delivery') msg = 'On the way · arrives in 6 min';
+      else if (live.status === 'Arrived') msg = 'Rider has arrived!';
+      else msg = live.status;
+      document.getElementById('activeOrderStatus').textContent = msg;
+    }
+    function openActiveOrder() {
+      const live = ORDERS.find(o => o.live);
+      if (live) openOrderDetail(live.id);
+    }
+
+    /* ---------------- rate rider ---------------- */
+    const RATE_LABELS = ['', 'Very bad', 'Not great', 'Okay', 'Good', 'Excellent!'];
+    const RATE_TAGS_BAD = ['Late delivery', 'Rude behavior', 'Wrong items', 'Damaged items', 'Asked extra money'];
+    const RATE_TAGS_GOOD = ['On time', 'Polite', 'Careful with items', 'Helpful', 'Friendly'];
+    let rateState = { value: 0, tags: new Set(), tip: 0, fromScreen: 'order-detail' };
+
+    function openRateRider(id) {
+      if (id) viewingOrderId = id;
+      const o = ORDERS.find(x => x.id === viewingOrderId) || ORDERS[0];
+      document.getElementById('rateOrderId').textContent = o.id;
+      rateState = { value: 0, tags: new Set(), tip: 0, fromScreen: document.querySelector('.screen.active').id.replace('screen-', '') };
+      document.getElementById('rateComment').value = '';
+      document.querySelectorAll('#ratingStars .rate-star').forEach(s => s.className = 'rate-star w-12 h-12 text-3xl text-slate-200');
+      document.querySelectorAll('#rateTips .tip-btn').forEach(t => t.className = 'tip-btn h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600');
+      document.getElementById('rateLabel').textContent = 'Tap a star to rate';
+      renderRateTags();
+      go('rate-rider');
+    }
+    function setRating(v) {
+      rateState.value = v;
+      document.querySelectorAll('#ratingStars .rate-star').forEach(s => {
+        const sv = +s.dataset.v;
+        s.className = 'rate-star w-12 h-12 text-3xl ' + (sv <= v ? 'text-amber-400' : 'text-slate-200');
+      });
+      document.getElementById('rateLabel').textContent = RATE_LABELS[v];
+      renderRateTags();
+    }
+    function renderRateTags() {
+      const v = rateState.value;
+      const list = v === 0 ? [] : (v <= 3 ? RATE_TAGS_BAD : RATE_TAGS_GOOD);
+      document.getElementById('rateTags').innerHTML = list.map(t => {
+        const sel = rateState.tags.has(t);
+        return `<button onclick="toggleRateTag('${t}')" class="px-3 h-9 rounded-full text-xs font-bold border ${sel ? 'chip-active' : 'bg-white text-slate-600 border-slate-200'}">${t}</button>`;
+      }).join('') || '<p class="text-xs text-slate-300">Choose a star rating first</p>';
+    }
+    function toggleRateTag(t) {
+      if (rateState.tags.has(t)) rateState.tags.delete(t); else rateState.tags.add(t);
+      renderRateTags();
+    }
+    function setTip(amt) {
+      rateState.tip = amt;
+      document.querySelectorAll('#rateTips .tip-btn').forEach(b => {
+        const v = +b.dataset.tip;
+        b.className = 'tip-btn h-11 rounded-xl border text-sm font-bold ' + (v === amt ? 'border-brand bg-brand-soft text-brand' : 'border-slate-200 bg-white text-slate-600');
+      });
+    }
+    function submitRating() {
+      if (rateState.value === 0) { toast('Pick a rating', 'Tap 1–5 stars to continue'); return; }
+      const o = ORDERS.find(x => x.id === viewingOrderId); if (o) o.rated = true;
+      toast('Thank you!', rateState.tip > 0 ? `Rating saved · NPR ${rateState.tip} tip added` : 'Your feedback helps our riders');
+      go('order-detail');
+      openOrderDetail(viewingOrderId);
+    }
+    function goBackFromRate() {
+      if (rateState.fromScreen === 'tracking') go('tracking');
+      else if (rateState.fromScreen === 'orders') go('orders');
+      else { go('order-detail'); openOrderDetail(viewingOrderId); }
+    }
+
+    /* ---------------- report issue ---------------- */
+    const REPORT_CATEGORIES = [
+      { id: 'missing', label: 'Item missing from order', icon: 'fa-box-open' },
+      { id: 'damaged', label: 'Item damaged or expired', icon: 'fa-circle-xmark' },
+      { id: 'wrong', label: 'Wrong item delivered', icon: 'fa-tag' },
+      { id: 'late', label: 'Order arrived very late', icon: 'fa-stopwatch' },
+      { id: 'rider', label: 'Issue with rider behavior', icon: 'fa-user' },
+      { id: 'payment', label: 'Payment / refund issue', icon: 'fa-wallet' },
+      { id: 'other', label: 'Something else', icon: 'fa-bell' },
+    ];
+    let reportState = { category: null };
+    function openReport() {
+      reportState = { category: null };
+      document.getElementById('reportText').value = '';
+      document.getElementById('reportOrderId').textContent = viewingOrderId || '#BW-0043';
+      document.getElementById('reportCategories').innerHTML = REPORT_CATEGORIES.map(c => `
+    <button onclick="pickReportCat('${c.id}')" data-cat="${c.id}" class="report-cat w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white text-left">
+      <div class="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center text-slate-600"><i class="fa-solid ${c.icon}"></i></div>
+      <span class="flex-1 text-sm font-bold text-slate-800">${c.label}</span>
+      <i class="fa-regular fa-circle text-slate-300"></i>
+    </button>`).join('');
+      go('report');
+    }
+    function pickReportCat(id) {
+      reportState.category = id;
+      document.querySelectorAll('.report-cat').forEach(b => {
+        const sel = b.dataset.cat === id;
+        b.className = 'report-cat w-full flex items-center gap-3 p-3 rounded-xl border bg-white text-left ' + (sel ? 'border-brand bg-brand-soft' : 'border-slate-200');
+        b.querySelector('svg:last-child,i:last-child')?.remove();
+        const ic = document.createElement('i');
+        ic.className = sel ? 'fa-solid fa-circle-check text-brand' : 'fa-regular fa-circle text-slate-300';
+        b.appendChild(ic);
+      });
+    }
+    function submitReport() {
+      if (!reportState.category) { toast('Pick a category', 'Select what went wrong'); return; }
+      toast('Report submitted', 'Our team will reach you on WhatsApp within 24 hrs');
+      go('order-detail');
+      openOrderDetail(viewingOrderId);
+    }
+
+    /* ---------------- cancel order ---------------- */
+    const CANCEL_REASONS = [
+      'Changed my mind',
+      'Ordered by mistake',
+      'Wrong items added',
+      'Delivery taking too long',
+      'Found cheaper elsewhere',
+      'Other reason',
+    ];
+    let cancelReason = null;
+    function openCancelSheet() {
+      cancelReason = null;
+      document.getElementById('cancelReasons').innerHTML = CANCEL_REASONS.map((r, i) => `
+    <button onclick="pickCancelReason(${i})" data-i="${i}" class="cancel-reason w-full flex items-center gap-3 p-3 rounded-xl border border-slate-200 bg-white text-left">
+      <i class="fa-regular fa-circle text-slate-300"></i>
+      <span class="flex-1 text-sm font-bold text-slate-800">${r}</span>
+    </button>`).join('');
+      document.getElementById('cancelSheet').classList.remove('hidden');
+    }
+    function closeCancelSheet() { document.getElementById('cancelSheet').classList.add('hidden'); }
+    function pickCancelReason(i) {
+      cancelReason = CANCEL_REASONS[i];
+      document.querySelectorAll('.cancel-reason').forEach(b => {
+        const sel = +b.dataset.i === i;
+        b.className = 'cancel-reason w-full flex items-center gap-3 p-3 rounded-xl border bg-white text-left ' + (sel ? 'border-red-400 bg-red-50' : 'border-slate-200');
+        const ic = b.querySelector('i,svg'); if (ic) ic.outerHTML = sel ? '<i class="fa-solid fa-circle-check text-red-500"></i>' : '<i class="fa-regular fa-circle text-slate-300"></i>';
+      });
+    }
+    function confirmCancel() {
+      if (!cancelReason) { toast('Reason required', 'Pick a reason to continue'); return; }
+      const o = ORDERS.find(x => x.id === viewingOrderId); if (o) { o.live = false; o.cancelled = true; o.status = 'Cancelled'; }
+      closeCancelSheet();
+      refreshActiveBanner();
+      toast('Order cancelled', o && o.payMethod !== 'Cash on Delivery' ? 'Refund will reach you in 3 business days' : 'Order cancelled successfully');
+      openOrderDetail(viewingOrderId);
+    }
+
+    function nowStamp() {
+      const d = new Date(); let h = d.getHours(), m = d.getMinutes();
+      const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; m = ('' + m).padStart(2, '0');
+      return `Today, ${h}:${m} ${ap}`;
+    }
+
+    /* ---------------- wishlist ---------------- */
+    function toggleWish(id) {
+      if (wishlist.has(id)) wishlist.delete(id); else wishlist.add(id);
+      refreshAll();
+    }
+    function renderWishlist() {
+      const items = PRODUCTS.filter(p => wishlist.has(p.id));
+      document.getElementById('wishEmpty').style.display = items.length ? 'none' : 'flex';
+      document.getElementById('wishGrid').innerHTML = items.map(productCard).join('');
+    }
+
+    /* ---------------- misc ---------------- */
+    function setLang(l) {
+      document.getElementById('langNp').className = l === 'np' ? 'px-3 py-1 rounded-md bg-white text-brand shadow-sm' : 'px-3 py-1 rounded-md text-slate-400';
+      document.getElementById('langEn').className = l === 'en' ? 'px-3 py-1 rounded-md bg-white text-brand shadow-sm' : 'px-3 py-1 rounded-md text-slate-400';
+      toast('Language updated', l === 'np' ? 'नेपाली selected' : 'English selected');
+    }
+    let toastT = null;
+    function toast(title, body) {
+      document.getElementById('toastTitle').textContent = title;
+      document.getElementById('toastBody').textContent = body;
+      const t = document.getElementById('toast');
+      t.style.transform = 'translate(-50%,0)'; t.style.opacity = '1';
+      clearTimeout(toastT);
+      toastT = setTimeout(() => { t.style.transform = 'translate(-50%,-128px)'; t.style.opacity = '0'; }, 2400);
+    }
+
+    /* ---------------- wallet sync & custom notifications ---------------- */
+    function renderWalletHistory() {
+      const historyList = document.getElementById('walletHistoryList');
+      if (!historyList) return;
+      
+      if (walletTransactions.length === 0) {
+        historyList.innerHTML = `<p class="text-xs text-slate-400 py-2 text-center">No transactions yet.</p>`;
+        return;
+      }
+      
+      historyList.innerHTML = walletTransactions.map(tx => {
+        const isRefund = tx.amount > 0;
+        const colorClass = isRefund ? 'text-emerald-600' : 'text-slate-800';
+        const sign = isRefund ? '+' : '';
+        const dateStr = new Date(tx.at).toLocaleDateString([], { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+        return `
+          <div class="flex items-center justify-between py-1.5 border-b border-slate-50 last:border-0">
+            <div>
+              <p class="text-xs font-bold text-slate-800">${tx.reason}</p>
+              <p class="text-[10px] text-slate-400 font-semibold">${tx.orderId ? tx.orderId + ' · ' : ''}${dateStr}</p>
+            </div>
+            <span class="text-sm font-extrabold ${colorClass}">${sign}NPR ${tx.amount}</span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function showRefundReceivedNotification(amount, orderId, reason) {
+      document.getElementById('refundModalAmount').textContent = 'NPR ' + amount;
+      document.getElementById('refundModalOrderId').textContent = 'Order #' + orderId;
+      document.getElementById('refundModalReason').textContent = 'Reason: ' + reason;
+      document.getElementById('refundModalNewBalance').textContent = 'NPR ' + walletBalance;
+      
+      const modal = document.getElementById('refundReceivedModal');
+      const content = document.getElementById('refundReceivedModalContent');
+      
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        content.classList.remove('scale-95', 'opacity-0');
+        content.classList.add('scale-100', 'opacity-100');
+      }, 50);
+    }
+
+    function closeRefundModal() {
+      const modal = document.getElementById('refundReceivedModal');
+      const content = document.getElementById('refundReceivedModalContent');
+      content.classList.remove('scale-100', 'opacity-100');
+      content.classList.add('scale-95', 'opacity-0');
+      setTimeout(() => {
+        modal.classList.add('hidden');
+      }, 300);
+    }
+
+    function simWalletRefund() {
+      const amount = 150;
+      const orderRef = 'BW-00' + Math.floor(10 + Math.random() * 90);
+      const reason = 'Item replacement discount / loyalty refund';
+      const at = new Date().toISOString();
+      
+      // Update balance
+      walletBalance = walletBalance + amount;
+      localStorage.setItem('chutkima_wallet_balance', walletBalance.toString());
+      
+      // Add transaction
+      walletTransactions.unshift({
+        id: 'wtx' + Date.now(),
+        amount: amount,
+        type: 'refund',
+        reason: reason,
+        orderId: orderRef,
+        at: at
+      });
+      localStorage.setItem('chutkima_wallet_transactions', JSON.stringify(walletTransactions));
+      
+      // Set trigger event
+      localStorage.setItem('chutkima_wallet_refund_received', JSON.stringify({
+        amount: amount,
+        orderId: orderRef,
+        reason: reason,
+        at: at,
+        timestamp: Date.now()
+      }));
+    }
+
+    let lastSeenRefundTime = parseInt(localStorage.getItem('last_seen_refund_time') || '0');
+    
+    // Check for incoming refunds every 1.5 seconds
+    setInterval(() => {
+      try {
+        const dataStr = localStorage.getItem('chutkima_wallet_refund_received');
+        if (dataStr) {
+          const refundData = JSON.parse(dataStr);
+          if (refundData && refundData.timestamp > lastSeenRefundTime) {
+            lastSeenRefundTime = refundData.timestamp;
+            localStorage.setItem('last_seen_refund_time', lastSeenRefundTime.toString());
+            
+            // Instantly update local variables
+            walletBalance = parseFloat(localStorage.getItem('chutkima_wallet_balance')) || walletBalance;
+            walletTransactions = JSON.parse(localStorage.getItem('chutkima_wallet_transactions')) || walletTransactions;
+            
+            // Trigger instant display alert/toast!
+            showRefundReceivedNotification(refundData.amount, refundData.orderId, refundData.reason);
+            
+            // Refresh screen if visible
+            const activeScreen = document.querySelector('.screen.active');
+            if (activeScreen && activeScreen.id === 'screen-profile') {
+              const balEl = document.getElementById('profileWalletBalance');
+              if (balEl) {
+                balEl.parentElement.parentElement.classList.add('scale-105', 'bg-emerald-600');
+                balEl.parentElement.parentElement.classList.remove('bg-white/12');
+                setTimeout(() => {
+                  balEl.parentElement.parentElement.classList.remove('scale-105', 'bg-emerald-600');
+                  balEl.parentElement.parentElement.classList.add('bg-white/12');
+                }, 1000);
+                balEl.textContent = 'NPR ' + walletBalance;
+              }
+              renderWalletHistory();
+            }
+          }
+        }
+      } catch (e) {
+        console.error('Error checking refund receipt:', e);
+      }
+    }, 1500);
+
+    /* ---------------- init ---------------- */
+    renderOnb();
+    go('onboarding');
+    document.getElementById('bottomNav').style.display = 'none';
+    updateBadges();
+  </script>
+
+  <script>
+    /* ============================================================
+       INLINE SVG ICON ENGINE
+       Replaces all <i class="fa-..."> with self-contained SVGs so
+       icons render with zero external dependency. Handles both
+       static markup and dynamically-injected icons via observer.
+       ============================================================ */
+    const ICONS = {
+      'arrow-left': '<path d="M19 12H5"/><path d="m12 19-7-7 7-7"/>',
+      'arrow-right': '<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>',
+      'basket-shopping': '<path d="m5 11 4-7"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.8 11 1.5 8.2a2 2 0 0 0 2 1.8h9.4a2 2 0 0 0 2-1.8L20.2 11"/><path d="M9 14v3"/><path d="M15 14v3"/>',
+      'box': '<path d="M11 21.7a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16V8a2 2 0 0 0-1-1.7l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.7z"/><path d="m3.3 7 8.7 5 8.7-5"/><path d="M12 22V12"/>',
+      'box-open': '<path d="m5 11 4-7"/><path d="m19 11-4-7"/><path d="M2 11h20"/><path d="m3.8 11 1.5 8.2a2 2 0 0 0 2 1.8h9.4a2 2 0 0 0 2-1.8L20.2 11"/>',
+      'briefcase': '<rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>',
+      'building': '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
+      'building-columns': '<path d="m4 11 8-5 8 5"/><path d="M3 22h18"/><path d="M6 18v-7M10 18v-7M14 18v-7M18 18v-7"/>',
+      'bell': '<path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>',
+      'bolt': '<path d="M13 2 4.1 12.5a.5.5 0 0 0 .4.8H11l-1 8.7 8.9-10.8a.5.5 0 0 0-.4-.8H12z"/>',
+      'battery-three-quarters': '<rect x="2" y="7" width="16" height="10" rx="2"/><path d="M22 11v2"/><rect x="4" y="9" width="9" height="6" rx="1" fill="currentColor" stroke="none"/>',
+      'check': '<path d="M20 6 9 17l-5-5"/>',
+      'chevron-down': '<path d="m6 9 6 6 6-6"/>',
+      'chevron-right': '<path d="m9 18 6-6-6-6"/>',
+      'circle': '<circle cx="12" cy="12" r="9"/>',
+      'circle-check': '<circle cx="12" cy="12" r="9"/><path d="m8.5 12 2.5 2.5 4.5-5"/>',
+      'circle-xmark': '<circle cx="12" cy="12" r="9"/><path d="m15 9-6 6M9 9l6 6"/>',
+      'gift': '<rect x="3" y="8" width="18" height="4" rx="1"/><path d="M12 8v13"/><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7"/><path d="M7.5 8a2.5 2.5 0 0 1 0-5C11 3 12 8 12 8s1-5 4.5-5a2.5 2.5 0 0 1 0 5"/>',
+      'grip': '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/>',
+      'heart': '<path d="M19 14c1.5-1.5 3-3.2 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.8 0-3 .5-4.5 2-1.5-1.5-2.7-2-4.5-2A5.5 5.5 0 0 0 2 8.5C2 10.8 3.5 12.5 5 14l7 7z"/>',
+      'house': '<path d="M3 9.5 12 3l9 6.5V20a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1z"/><path d="M9 21v-7h6v7"/>',
+      'language': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18 14 14 0 0 1 0-18"/>',
+      'location-crosshairs': '<circle cx="12" cy="12" r="7"/><circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>',
+      'location-dot': '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="2.5"/>',
+      'map-location-dot': '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0z"/><circle cx="12" cy="10" r="2.5"/>',
+      'magnifying-glass': '<circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/>',
+      'mobile-screen': '<rect x="6" y="2" width="12" height="20" rx="2.5"/><path d="M12 18h.01"/>',
+      'money-bill-wave': '<rect x="2" y="6" width="20" height="12" rx="2"/><circle cx="12" cy="12" r="2.5"/><path d="M6 12h.01M18 12h.01"/>',
+      'moon': '<path d="M12 3a6.4 6.4 0 0 0 9 9 9 9 0 1 1-9-9z"/>',
+      'phone': '<path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2 4.2 2 2 0 0 1 4 2h3a2 2 0 0 1 2 1.7c.1 1 .4 1.9.7 2.8a2 2 0 0 1-.5 2.1L8.1 9.9a16 16 0 0 0 6 6l1.3-1.2a2 2 0 0 1 2.1-.5c.9.3 1.8.6 2.8.7A2 2 0 0 1 22 16.9z"/>',
+      'plus': '<path d="M5 12h14M12 5v14"/>',
+      'receipt': '<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1z"/><path d="M8 7h8M8 11h8M8 15h5"/>',
+      'right-from-bracket': '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><path d="m16 17 5-5-5-5"/><path d="M21 12H9"/>',
+      'repeat': '<path d="m17 2 4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="m7 22-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/>',
+      'signal': '<path d="M3 18v-2"/><path d="M8 18v-5"/><path d="M13 18v-9"/><path d="M18 18V5"/>',
+      'signs-post': '<path d="M12 3v18"/><path d="M16 6H8L5 9l3 3h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1z"/>',
+      'stopwatch': '<path d="M10 2h4"/><circle cx="12" cy="13" r="8"/><path d="M12 13V9"/>',
+      'tag': '<path d="M12.6 2.6A2 2 0 0 0 11.2 2H4a2 2 0 0 0-2 2v7.2a2 2 0 0 0 .6 1.4l8.7 8.7a2.4 2.4 0 0 0 3.4 0l6.6-6.6a2.4 2.4 0 0 0 0-3.4z"/><circle cx="7.5" cy="7.5" r="1" fill="currentColor" stroke="none"/>',
+      'ticket': '<path d="M2 9a3 3 0 0 1 0 6v2a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-2a3 3 0 0 1 0-6V7a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2z"/><path d="M13 5v2M13 11v2M13 17v2"/>',
+      'truck-fast': '<path d="M10 17h4V5a1 1 0 0 0-1-1H2"/><path d="M14 8h4l3 3v5a1 1 0 0 1-1 1h-1"/><path d="M2 9h5M1 13h4"/><circle cx="7.5" cy="17.5" r="2"/><circle cx="17.5" cy="17.5" r="2"/>',
+      'user': '<path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>',
+      'wallet': '<path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"/><path d="M3 5v14a2 2 0 0 0 2 2h16v-5"/><path d="M18 12a2 2 0 0 0 0 4h4v-4z"/>',
+      'wifi': '<path d="M5 12.5a10 10 0 0 1 14 0"/><path d="M8.5 16a5 5 0 0 1 7 0"/><path d="M2 9a15 15 0 0 1 20 0"/><path d="M12 20h.01"/>',
+    };
+    // icons that should be solid-filled when fa-solid is used
+    const FILLED = { heart: true };
+
+    function svgFor(iEl) {
+      const cls = iEl.className.split(/\s+/);
+      let name = null, variant = 'solid';
+      cls.forEach(c => {
+        if (c === 'fa-solid' || c === 'fa-brands') variant = 'solid';
+        else if (c === 'fa-regular') variant = 'regular';
+        else if (c.startsWith('fa-')) name = c.slice(3);
+      });
+      const inner = ICONS[name];
+      if (!inner) return null;
+      const filled = FILLED[name] && variant === 'solid';
+      // keep all non-fa classes (color/size/margin/animation)
+      const keep = cls.filter(c => !c.startsWith('fa-')).join(' ');
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('viewBox', '0 0 24 24');
+      svg.setAttribute('width', '1em'); svg.setAttribute('height', '1em');
+      svg.setAttribute('fill', filled ? 'currentColor' : 'none');
+      svg.setAttribute('stroke', filled ? 'none' : 'currentColor');
+      svg.setAttribute('stroke-width', '2');
+      svg.setAttribute('stroke-linecap', 'round');
+      svg.setAttribute('stroke-linejoin', 'round');
+      svg.setAttribute('class', keep);
+      svg.style.display = 'inline-block';
+      svg.style.verticalAlign = '-0.125em';
+      if (iEl.getAttribute('style')) svg.style.cssText += ';' + iEl.getAttribute('style');
+      svg.innerHTML = inner;
+      return svg;
+    }
+    function convertIcons(root) {
+      (root.querySelectorAll ? root.querySelectorAll('i[class*="fa-"]') : []).forEach(iEl => {
+        const s = svgFor(iEl);
+        if (s) iEl.replaceWith(s);
+      });
+    }
+    // initial pass
+    convertIcons(document);
+    // watch for dynamically injected icons
+    new MutationObserver(muts => {
+      muts.forEach(m => m.addedNodes.forEach(n => {
+        if (n.nodeType === 1) {
+          if (n.tagName === 'I' && /\bfa-/.test(n.className)) { const s = svgFor(n); if (s) n.replaceWith(s); }
+          else convertIcons(n);
+        }
+      }));
+    }).observe(document.body, { childList: true, subtree: true });
+  </script>
+
+</body>
+
+</html>

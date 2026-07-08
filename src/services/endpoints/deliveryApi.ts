@@ -38,19 +38,31 @@ export const deliveryApi = api.injectEndpoints({
       invalidatesTags: ['Zone'],
     }),
 
-    toggleZone: build.mutation<Zone, string>({
-      async queryFn(id) {
+    toggleZone: build.mutation<Zone, { id: string; reason?: string }>({
+      async queryFn({ id, reason }) {
         await mockDelay(150)
         const z = zones.find((x) => x.id === id)
         if (!z) return { error: { status: 404, data: 'Not found' } as never }
         z.active = !z.active
+        if (!z.active) {
+          z.offlineReason = reason || 'Unspecified'
+        } else {
+          z.offlineReason = undefined
+        }
         return { data: clone(z) }
       },
-      async onQueryStarted(id, { dispatch, queryFulfilled }) {
+      async onQueryStarted({ id, reason }, { dispatch, queryFulfilled }) {
         const patch = dispatch(
           deliveryApi.util.updateQueryData('getZones', undefined, (draft) => {
             const z = draft.find((x) => x.id === id)
-            if (z) z.active = !z.active
+            if (z) {
+              z.active = !z.active
+              if (!z.active) {
+                z.offlineReason = reason || 'Unspecified'
+              } else {
+                z.offlineReason = undefined
+              }
+            }
           }),
         )
         try {

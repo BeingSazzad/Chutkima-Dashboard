@@ -6,6 +6,7 @@ import { DataTable, type Column } from '@/components/ui/Table'
 import { Tabs, type TabItem } from '@/components/ui/Tabs'
 import { Button } from '@/components/ui/Button'
 import { Select } from '@/components/ui/Select'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Modal } from '@/components/ui/Modal'
 import { Textarea } from '@/components/ui/Textarea'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
@@ -417,7 +418,7 @@ export default function OrdersPage() {
           </div>
           <div className="grid grid-cols-2 gap-3 sm:flex sm:flex-wrap">
             <div className="w-full sm:w-40">
-              <Select value={zone} onChange={(e) => setZone(e.target.value)} placeholder="All zones" options={zones.map((z) => ({ label: z.name, value: z.name }))} />
+              <SearchableSelect value={zone} onChange={setZone} placeholder="All zones" options={zones.map((z) => ({ label: z.name, value: z.name }))} />
             </div>
             <div className="w-full sm:w-40">
               <Select

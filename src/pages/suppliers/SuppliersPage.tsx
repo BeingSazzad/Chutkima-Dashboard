@@ -468,6 +468,7 @@ function ReturnModal({ open, onClose, suppliers }: { open: boolean; onClose: () 
   const [supplierId, setSupplierId] = useState('')
   const [reason, setReason] = useState<ReturnReason | ''>('')
   const [comments, setComments] = useState('')
+  const [voucher, setVoucher] = useState<SupplierReturn | null>(null)
 
   // Local state for items list: { productId, quantity }
   const [items, setItems] = useState<{ productId: string; quantity: number }[]>([])
@@ -481,6 +482,7 @@ function ReturnModal({ open, onClose, suppliers }: { open: boolean; onClose: () 
       setReason('')
       setComments('')
       setItems([])
+      setVoucher(null)
     }
   }
 
@@ -513,14 +515,73 @@ function ReturnModal({ open, onClose, suppliers }: { open: boolean; onClose: () 
   const canSubmit = items.length > 0 && !!reason
   const submit = async () => {
     if (!canSubmit) return
-    await create({
+    const res = await create({
       supplierId: supplierId || null,
       reason: reason as ReturnReason,
       comments,
       adminName: user?.name,
       items,
     }).unwrap()
-    onClose()
+    setVoucher(res)
+  }
+
+  if (voucher) {
+    return (
+      <Modal
+        open={open}
+        onClose={() => { setVoucher(null); onClose(); }}
+        title="Supplier Return Confirmed"
+        description="Return voucher has been generated successfully."
+        size="md"
+        footer={
+          <div className="flex justify-between w-full">
+            <Button
+              variant="outline"
+              leftIcon={<Printer className="h-4 w-4" />}
+              onClick={() => printSupplierReturn(voucher)}
+            >
+              Print Return Note
+            </Button>
+            <Button onClick={() => { setVoucher(null); onClose(); }}>Close</Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <div className="flex flex-col items-center justify-center py-4 bg-emerald-50/50 rounded-2xl border border-emerald-100">
+            <div className="h-12 w-12 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center text-xl font-bold mb-2">✓</div>
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Voucher Reference</p>
+            <button 
+              onClick={() => {
+                printSupplierReturn(voucher)
+              }}
+              className="text-2xl font-mono font-black text-brand-600 hover:text-brand-850 hover:underline mt-1"
+              title="Click to print/view return note"
+            >
+              {voucher.reference}
+            </button>
+            <p className="text-[10px] text-slate-400 mt-1">Click code to print / preview</p>
+          </div>
+
+          <div className="rounded-xl border border-slate-200 overflow-hidden bg-white text-xs">
+            <div className="bg-slate-50 p-3 border-b border-slate-200 flex justify-between font-bold text-slate-700">
+              <span>Returned Items Summary</span>
+              <span>Total: {voucher.quantity} units</span>
+            </div>
+            <div className="divide-y divide-slate-100 p-2 max-h-40 overflow-y-auto">
+              {voucher.items?.map((it, idx) => (
+                <div key={idx} className="flex justify-between py-2 px-1">
+                  <div>
+                    <span className="font-semibold text-slate-800">{it.productName}</span>
+                    <span className="font-mono text-slate-400 block mt-0.5">{it.sku}</span>
+                  </div>
+                  <span className="font-bold text-slate-700">{it.quantity} units</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </Modal>
+    )
   }
 
   return (
@@ -533,7 +594,7 @@ function ReturnModal({ open, onClose, suppliers }: { open: boolean; onClose: () 
       footer={
         <>
           <Button variant="outline" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit} loading={isLoading} disabled={!canSubmit} className="bg-brand-600 hover:bg-brand-700 text-white font-bold px-4 py-2 rounded-xl">
+          <Button onClick={submit} loading={isLoading} disabled={!canSubmit}>
             Confirm return
           </Button>
         </>

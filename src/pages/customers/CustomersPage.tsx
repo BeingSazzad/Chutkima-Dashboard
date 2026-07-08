@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/Badge'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Select } from '@/components/ui/Select'
+import { SearchableSelect } from '@/components/ui/SearchableSelect'
 import { Modal } from '@/components/ui/Modal'
 import { ConfirmDialog } from '@/components/ui/ConfirmDialog'
 import { Avatar } from '@/components/shared/Avatar'
@@ -241,7 +242,7 @@ function EditCustomerModal({ customer, onClose }: { customer: Customer | null; o
         </div>
         <Input label="Address" value={form.address} onChange={(e) => set('address', e.target.value)} />
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <Select label="Zone" value={form.zone} onChange={(e) => set('zone', e.target.value)} options={zones.map((z) => ({ label: z.name, value: z.name }))} />
+          <SearchableSelect label="Zone" value={form.zone} onChange={(val) => set('zone', val)} options={zones.map((z) => ({ label: z.name, value: z.name }))} placeholder="Select zone" />
           <Select
             label="Tier"
             value={form.tier}

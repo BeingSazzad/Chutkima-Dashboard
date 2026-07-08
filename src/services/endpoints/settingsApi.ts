@@ -141,6 +141,11 @@ export const settingsApi = api.injectEndpoints({
       async queryFn(payload) {
         await mockDelay(250)
         Object.assign(systemControls, payload)
+        try {
+          localStorage.setItem('chutkima_rider_earnings_enabled', JSON.stringify(payload.riderEarningsEnabled))
+        } catch (e) {
+          console.error('LocalStorage write failed:', e)
+        }
         return { data: clone(systemControls) }
       },
       invalidatesTags: ['SystemControls'],

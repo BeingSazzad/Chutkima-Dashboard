@@ -30,6 +30,23 @@ export default function DeliveryZonesPage() {
   const [formFor, setFormFor] = useState<Zone | 'new' | null>(null)
   const [deleteFor, setDeleteFor] = useState<Zone | null>(null)
   const [fenceFor, setFenceFor] = useState<Zone | null>(null)
+  const [pauseFor, setPauseFor] = useState<Zone | null>(null)
+  const [toggle] = useToggleZoneMutation()
+
+  const handleToggle = (z: Zone) => {
+    if (z.active) {
+      setPauseFor(z)
+    } else {
+      toggle({ id: z.id })
+    }
+  }
+
+  const handleConfirmPause = async (reason?: string) => {
+    if (pauseFor && reason) {
+      await toggle({ id: pauseFor.id, reason }).unwrap()
+    }
+    setPauseFor(null)
+  }
 
   return (
     <>
@@ -37,12 +54,19 @@ export default function DeliveryZonesPage() {
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <FeeConfigCard />
-        <ZonesCard onAdd={() => setFormFor('new')} onEdit={setFormFor} onDelete={setDeleteFor} onFence={setFenceFor} />
+        <ZonesCard 
+          onAdd={() => setFormFor('new')} 
+          onEdit={setFormFor} 
+          onDelete={setDeleteFor} 
+          onFence={setFenceFor}
+          onToggle={handleToggle}
+        />
       </div>
 
       <ZoneFormModal zone={formFor} onClose={() => setFormFor(null)} />
       <GeofenceModal zone={fenceFor} onClose={() => setFenceFor(null)} />
       <DeleteZone zone={deleteFor} onClose={() => setDeleteFor(null)} />
+      <PauseZoneModal zone={pauseFor} onClose={handleConfirmPause} />
     </>
   )
 }
@@ -143,15 +167,16 @@ function ZonesCard({
   onEdit,
   onDelete,
   onFence,
+  onToggle,
 }: {
   onAdd: () => void
   onEdit: (z: Zone) => void
   onDelete: (z: Zone) => void
   onFence: (z: Zone) => void
+  onToggle: (z: Zone) => void
 }) {
   const { data: zones = [], isLoading } = useGetZonesQuery()
   const { data: stores = [] } = useGetStoresQuery()
-  const [toggle] = useToggleZoneMutation()
   const [menuFor, setMenuFor] = useState<string | null>(null)
   const storeName = (id?: string) => stores.find((s) => s.id === id)?.name
 
@@ -203,12 +228,12 @@ function ZonesCard({
                     ));
                   })()}
                   {z.geofence.length >= 3 && <Badge tone="bg-brand-50 text-brand-700 ring-brand-600/15">Geo-fenced</Badge>}
-                  {!z.active && <Badge>Paused</Badge>}
+                  {!z.active && <Badge tone="bg-red-50 text-red-700 ring-red-600/15">{z.offlineReason ? `Paused: ${z.offlineReason}` : 'Paused'}</Badge>}
                 </div>
               </div>
               {/* Primary toggle stays visible; secondary actions tuck into a kebab menu to cut clutter. */}
               <div className="flex shrink-0 items-center gap-1">
-                <Switch checked={z.active} onChange={() => toggle(z.id)} size="sm" aria-label={`Toggle ${z.name}`} />
+                <Switch checked={z.active} onChange={() => onToggle(z)} size="sm" aria-label={`Toggle ${z.name}`} />
                 <div className="relative">
                   <button
                     onClick={() => setMenuFor((id) => (id === z.id ? null : z.id))}
@@ -386,5 +411,78 @@ function DeleteZone({ zone, onClose }: { zone: Zone | null; onClose: () => void 
       description={zone ? `"${zone.name}" will no longer be serviceable.` : undefined}
       confirmLabel="Delete zone"
     />
+  )
+}
+
+function PauseZoneModal({ zone, onClose }: { zone: Zone | null; onClose: (reason?: string) => void }) {
+  const [reason, setReason] = useState('')
+  const [selectedPreset, setSelectedPreset] = useState('')
+  
+  const presets = [
+    'Heavy rain in Butwal',
+    'Adverse weather conditions',
+    'High delivery volume / peak hours',
+    'Rider shortage in this area',
+  ]
+
+  useEffect(() => {
+    if (!zone) {
+      setReason('')
+      setSelectedPreset('')
+    }
+  }, [zone])
+
+  const submit = () => {
+    onClose(reason.trim() || selectedPreset || 'Temporary closure')
+  }
+
+  return (
+    <Modal
+      open={!!zone}
+      onClose={() => onClose()}
+      title="Pause Delivery Zone?"
+      description={zone ? `Specify why "${zone.name}" is being paused. This will be shown to customers.` : undefined}
+      footer={
+        <>
+          <Button variant="outline" onClick={() => onClose()}>Cancel</Button>
+          <Button onClick={submit}>Pause Zone</Button>
+        </>
+      }
+    >
+      <div className="space-y-4 pt-2">
+        <div>
+          <label className="mb-2 block text-xs font-semibold text-slate-500 uppercase tracking-wide">Select a reason</label>
+          <div className="space-y-2">
+            {presets.map((p) => (
+              <label key={p} className="flex items-center gap-2 rounded-xl border border-slate-100 p-3 hover:bg-slate-50 cursor-pointer text-sm">
+                <input
+                  type="radio"
+                  name="pause_preset"
+                  checked={selectedPreset === p}
+                  onChange={() => {
+                    setSelectedPreset(p)
+                    setReason('')
+                  }}
+                  className="h-4 w-4 text-brand-600 focus:ring-brand-500"
+                />
+                <span className="font-semibold text-slate-700">{p}</span>
+              </label>
+            ))}
+          </div>
+        </div>
+        
+        <div>
+          <label className="mb-1 block text-xs font-semibold text-slate-500 uppercase tracking-wide">Or write a custom message</label>
+          <Input
+            value={reason}
+            onChange={(e) => {
+              setReason(e.target.value)
+              setSelectedPreset('')
+            }}
+            placeholder="e.g. Flooding near intersection / maintenance"
+          />
+        </div>
+      </div>
+    </Modal>
   )
 }
